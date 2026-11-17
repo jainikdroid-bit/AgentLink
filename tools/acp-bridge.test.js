@@ -151,3 +151,15 @@ test('stopping works, and the known-agents table pins the adapters', async () =>
   } finally { t.close() }
   for (const agent of AGENTS.filter((a) => a.cmd === 'npx')) assert.match(agent.args.join(' '), /@\d+\.\d+\.\d+$/, `${agent.id} must be pinned to a version`)
 })
+
+test('the known-agents table covers the popular ACP agents, each once, with fixed arguments', () => {
+  const ids = AGENTS.map((a) => a.id)
+  for (const id of ['opencode', 'claude', 'codex', 'gemini', 'goose', 'qwen', 'copilot', 'cursor', 'kimi', 'vibe', 'auggie', 'droid', 'kiro']) {
+    assert.ok(ids.includes(id), `${id} missing`)
+  }
+  assert.equal(new Set(ids).size, ids.length, 'ids must be unique')
+  for (const agent of AGENTS) {
+    assert.ok(agent.name && agent.bin && agent.cmd && Array.isArray(agent.args), agent.id)
+    assert.ok(!/[\s;&|<>`$]/.test(agent.cmd), `${agent.id}: command must be a bare program name`)
+  }
+})

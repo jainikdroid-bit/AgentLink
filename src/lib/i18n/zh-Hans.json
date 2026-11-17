@@ -669,7 +669,7 @@
     "folderHint": "留空：电脑的主文件夹",
     "installed": "电脑上已安装",
     "refresh": "重新查找",
-    "none": "电脑上没有找到受支持的智能体。请安装一个（Claude Code、Codex、Gemini CLI、Goose、Qwen Code 等），然后重新查找。",
+    "none": "电脑上没有找到受支持的智能体。请安装一个（Claude Code、Codex、Gemini CLI、Cursor、Kimi Code 等），然后重新查找。",
     "start": "启动",
     "outdated": "电脑上的助手版本过旧。请在电脑上再次运行安装命令，然后重新查找。",
     "unreachable": "无法连接电脑上的助手。电脑是否已开机并联网？",
@@ -689,6 +689,8 @@
     "limit": "智能体因达到上限而停止。",
     "sendFailed": "发送失败：{{error}}",
     "plan": "计划",
-    "safeMode": "智能体原先处于不经询问就运行工具的“{{from}}”模式。已切换为“{{to}}”，改为先征求你的同意。可用上方按钮更改。"
+    "safeMode": "智能体原先处于不经询问就运行工具的“{{from}}”模式。已切换为“{{to}}”，改为先征求你的同意。可用上方按钮更改。",
+    "notInstalled": "已支持，但电脑上未安装",
+    "notInstalledHint": "在电脑上安装其中任意一个，然后点“重新查找”。"
   }
 }

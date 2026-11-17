@@ -1,0 +1,4 @@
+v0.16.1 — six more coding agents
+- Other agents: Cursor, Kimi Code, Mistral Vibe, Augment (Auggie), Factory Droid and Kiro join Claude Code, Codex, Gemini CLI, Goose, Qwen Code, Copilot and OpenCode.
+- The Other agents screen also lists the supported agents not installed on the computer yet.
+- Re-run the setup command on the computer to update the launcher.

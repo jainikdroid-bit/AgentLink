@@ -669,7 +669,7 @@
     "folderHint": "Boş: bilgisayarın ana klasörü",
     "installed": "Bilgisayarda kurulu",
     "refresh": "Yeniden ara",
-    "none": "Bilgisayarda desteklenen bir ajan bulunamadı. Birini kurun (Claude Code, Codex, Gemini CLI, Goose, Qwen Code…) ve yeniden arayın.",
+    "none": "Bilgisayarda desteklenen bir ajan bulunamadı. Birini kurun (Claude Code, Codex, Gemini CLI, Cursor, Kimi Code…) ve yeniden arayın.",
     "start": "Başlat",
     "outdated": "Bilgisayardaki yardımcı bunun için çok eski. Kurulum komutunu bilgisayarda yeniden çalıştırın, sonra yeniden arayın.",
     "unreachable": "Bilgisayardaki yardımcıya ulaşılamıyor. Açık ve çevrimiçi mi?",
@@ -689,6 +689,8 @@
     "limit": "Ajan sınırına ulaştığı için durdu.",
     "sendFailed": "Gönderilemedi: {{error}}",
     "plan": "Plan",
-    "safeMode": "Ajan, araçları sormadan çalıştıran “{{from}}” modundaydı. Önce size sorması için “{{to}}” moduna geçirildi. Yukarıdaki düğmelerle değiştirebilirsiniz."
+    "safeMode": "Ajan, araçları sormadan çalıştıran “{{from}}” modundaydı. Önce size sorması için “{{to}}” moduna geçirildi. Yukarıdaki düğmelerle değiştirebilirsiniz.",
+    "notInstalled": "Destekleniyor, bilgisayarda kurulu değil",
+    "notInstalledHint": "Bunlardan birini bilgisayara kurun, sonra “Yeniden ara” düğmesine dokunun."
   }
 }

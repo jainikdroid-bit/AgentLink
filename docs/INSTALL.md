@@ -52,7 +52,8 @@ the computer by itself, you type the digits. The code works once, for 10 minutes
 directly whenever the phone is on the same Wi-Fi (it first checks that it is really your computer). Away from home it uses
 Tailscale as before. If Windows asks whether Node.js may use the network, allow private networks. Turn it off: `--no-lan`.
 
-**Other coding agents.** Besides OpenCode, the app can chat with Claude Code, Codex, Gemini CLI, Goose, Qwen Code and
+**Other coding agents.** Besides OpenCode, the app can chat with Claude Code, Codex, Gemini CLI, Cursor, Kimi Code, Mistral Vibe,
+Augment (Auggie), Factory Droid, Kiro, Goose, Qwen Code and
 GitHub Copilot CLI that are installed on the computer, through the open Agent Client Protocol. On the Sessions tab tap
 **Other agents**, pick one and start. It uses the agent’s own login and tools on the computer; the phone shows its
 answers, plan, tool calls and file changes, and asks you before the agent acts. The agent keeps running when you leave

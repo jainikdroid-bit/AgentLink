@@ -45,6 +45,14 @@ const AGENTS = [
   { id: 'goose', name: 'Goose', bin: 'goose', cmd: 'goose', args: ['acp'] },
   { id: 'qwen', name: 'Qwen Code', bin: 'qwen', cmd: 'qwen', args: ['--acp'] },
   { id: 'copilot', name: 'GitHub Copilot', bin: 'copilot', cmd: 'copilot', args: ['--acp'] },
+  // Added in 0.16.1; flags from each vendor's ACP docs (cursor.com/docs/cli/acp, kimi.com kimi-acp,
+  // docs.mistral.ai vibe, docs.augmentcode.com/cli/acp, Factory droid, kiro.dev/docs/cli/acp).
+  { id: 'cursor', name: 'Cursor', bin: 'cursor-agent', cmd: 'cursor-agent', args: ['acp'] },
+  { id: 'kimi', name: 'Kimi Code', bin: 'kimi', cmd: 'kimi', args: ['acp'] },
+  { id: 'vibe', name: 'Mistral Vibe', bin: 'vibe-acp', cmd: 'vibe-acp', args: [] },
+  { id: 'auggie', name: 'Augment (Auggie)', bin: 'auggie', cmd: 'auggie', args: ['--acp'] },
+  { id: 'droid', name: 'Factory Droid', bin: 'droid', cmd: 'droid', args: ['exec', '--output-format', 'acp'] },
+  { id: 'kiro', name: 'Kiro', bin: 'kiro-cli', cmd: 'kiro-cli', args: ['acp'] },
 ]
 
 /** Is a program on PATH? (where.exe on Windows, command -v elsewhere.) */

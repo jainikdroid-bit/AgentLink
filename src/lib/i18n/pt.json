@@ -669,7 +669,7 @@
     "folderHint": "Vazio: a pasta pessoal do computador",
     "installed": "Instalados no computador",
     "refresh": "Procurar de novo",
-    "none": "Nenhum agente compatível encontrado no computador. Instale um (Claude Code, Codex, Gemini CLI, Goose, Qwen Code…) e procure de novo.",
+    "none": "Nenhum agente compatível encontrado no computador. Instale um (Claude Code, Codex, Gemini CLI, Cursor, Kimi Code…) e procure de novo.",
     "start": "Iniciar",
     "outdated": "O auxiliar no computador é antigo demais. Execute o comando de instalação no computador de novo e procure outra vez.",
     "unreachable": "Não foi possível falar com o auxiliar no computador. Ele está ligado e online?",
@@ -689,6 +689,8 @@
     "limit": "O agente parou ao atingir o limite.",
     "sendFailed": "Não foi possível enviar: {{error}}",
     "plan": "Plano",
-    "safeMode": "O agente estava no modo “{{from}}”, que executa ferramentas sem perguntar. Mudei para “{{to}}” para que ele pergunte antes. Troque pelos botões acima."
+    "safeMode": "O agente estava no modo “{{from}}”, que executa ferramentas sem perguntar. Mudei para “{{to}}” para que ele pergunte antes. Troque pelos botões acima.",
+    "notInstalled": "Compatíveis, não instalados no computador",
+    "notInstalledHint": "Instale um deles no computador e toque em “Procurar de novo”."
   }
 }

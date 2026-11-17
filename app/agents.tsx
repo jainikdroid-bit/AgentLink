@@ -10,8 +10,8 @@ import { AcpApiError, listAgents, type AgentInfo, type RunningAgent } from "../s
 
 const FOLDER_KEY = "acp_last_folder"
 
-// Other coding agents on the computer: the ones installed there (Claude Code, Codex, Gemini CLI, Goose, ...),
-// and the ones already running, which can be reopened where they were left.
+// Other coding agents on the computer: the ones installed there (Claude Code, Codex, Gemini CLI, Cursor, ...),
+// the ones already running, which can be reopened where they were left, and the supported ones not installed yet.
 export default function AgentsScreen() {
   const { t } = useTranslation()
   const { activeConnection, clientBase } = useConnections()
@@ -23,6 +23,7 @@ export default function AgentsScreen() {
     [activeConnection, clientBase],
   )
   const [agents, setAgents] = useState<AgentInfo[]>([])
+  const [missing, setMissing] = useState<AgentInfo[]>([])
   const [running, setRunning] = useState<RunningAgent[]>([])
   const [loading, setLoading] = useState(true)
   const [problem, setProblem] = useState<string | null>(null)
@@ -35,6 +36,7 @@ export default function AgentsScreen() {
     try {
       const result = await listAgents(target)
       setAgents(result.agents.filter((a) => a.installed))
+      setMissing(result.agents.filter((a) => !a.installed))
       setRunning(result.running.filter((r) => !r.exited))
     } catch (error) {
       setProblem(error instanceof AcpApiError && error.outdated ? t("acp.outdated") : t("acp.unreachable"))
@@ -97,6 +99,20 @@ export default function AgentsScreen() {
           <Text style={s.start}>{t("acp.start")}</Text>
         </TouchableOpacity>
       ))}
+
+      {missing.length > 0 && !problem ? (
+        <>
+          <Text style={s.section}>{t("acp.notInstalled")}</Text>
+          <Text style={s.body}>{t("acp.notInstalledHint")}</Text>
+          <View style={s.chips}>
+            {missing.map((agent) => (
+              <View key={agent.id} style={s.chip} testID={`acp-missing-${agent.id}`}>
+                <Text style={s.chipText}>{agent.name}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
     </ScrollView>
   )
 }
@@ -115,4 +131,7 @@ const s = StyleSheet.create({
   cardTitle: { color: cyber.text, fontSize: 15, fontWeight: "600" },
   cardSub: { color: cyber.muted, fontSize: 12, fontFamily: cyber.mono },
   start: { color: cyber.cyan, fontSize: 14, fontWeight: "600" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: cyber.border },
+  chipText: { color: cyber.muted, fontSize: 13 },
 })

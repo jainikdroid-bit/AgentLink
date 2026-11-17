@@ -669,7 +669,7 @@
     "folderHint": "Vacío: la carpeta personal del ordenador",
     "installed": "Instalados en el ordenador",
     "refresh": "Buscar de nuevo",
-    "none": "No se encontró ningún agente compatible en el ordenador. Instala uno (Claude Code, Codex, Gemini CLI, Goose, Qwen Code…) y busca de nuevo.",
+    "none": "No se encontró ningún agente compatible en el ordenador. Instala uno (Claude Code, Codex, Gemini CLI, Cursor, Kimi Code…) y busca de nuevo.",
     "start": "Iniciar",
     "outdated": "El ayudante del ordenador es demasiado antiguo. Ejecuta de nuevo el comando de instalación en el ordenador y busca otra vez.",
     "unreachable": "No se puede contactar con el ayudante del ordenador. ¿Está encendido y con conexión?",
@@ -689,6 +689,8 @@
     "limit": "El agente se detuvo al llegar a su límite.",
     "sendFailed": "No se pudo enviar: {{error}}",
     "plan": "Plan",
-    "safeMode": "El agente estaba en el modo «{{from}}», que ejecuta herramientas sin preguntar. Se cambió a «{{to}}» para que te pregunte antes. Puedes cambiarlo con los botones de arriba."
+    "safeMode": "El agente estaba en el modo «{{from}}», que ejecuta herramientas sin preguntar. Se cambió a «{{to}}» para que te pregunte antes. Puedes cambiarlo con los botones de arriba.",
+    "notInstalled": "Compatibles, no instalados en el ordenador",
+    "notInstalledHint": "Instala uno de ellos en el ordenador y pulsa «Buscar de nuevo»."
   }
 }

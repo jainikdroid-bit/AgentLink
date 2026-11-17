@@ -669,7 +669,7 @@
     "folderHint": "Vide : le dossier personnel de l’ordinateur",
     "installed": "Installés sur l’ordinateur",
     "refresh": "Chercher à nouveau",
-    "none": "Aucun agent compatible trouvé sur l’ordinateur. Installez-en un (Claude Code, Codex, Gemini CLI, Goose, Qwen Code…) puis cherchez à nouveau.",
+    "none": "Aucun agent compatible trouvé sur l’ordinateur. Installez-en un (Claude Code, Codex, Gemini CLI, Cursor, Kimi Code…) puis cherchez à nouveau.",
     "start": "Démarrer",
     "outdated": "L’assistant de l’ordinateur est trop ancien. Relancez la commande d’installation sur l’ordinateur, puis cherchez à nouveau.",
     "unreachable": "Impossible de joindre l’assistant de l’ordinateur. Est-il allumé et en ligne ?",
@@ -689,6 +689,8 @@
     "limit": "L’agent s’est arrêté à sa limite.",
     "sendFailed": "Envoi impossible : {{error}}",
     "plan": "Plan",
-    "safeMode": "L’agent était en mode « {{from}} », qui exécute les outils sans demander. Passé en « {{to}} » : il vous demande d’abord. Changez-le avec les boutons ci-dessus."
+    "safeMode": "L’agent était en mode « {{from}} », qui exécute les outils sans demander. Passé en « {{to}} » : il vous demande d’abord. Changez-le avec les boutons ci-dessus.",
+    "notInstalled": "Pris en charge, non installés sur l’ordinateur",
+    "notInstalledHint": "Installez l’un d’eux sur l’ordinateur, puis touchez « Chercher à nouveau »."
   }
 }

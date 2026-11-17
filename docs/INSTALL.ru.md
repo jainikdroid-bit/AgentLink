@@ -55,7 +55,8 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 в том же Wi-Fi (сначала проверяет, что это именно ваш компьютер). Вне дома — как раньше, через Tailscale. Если Windows
 спросит, можно ли Node.js пользоваться сетью, разрешите частные сети. Отключить: `--no-lan`.
 
-**Другие агенты для кода.** Кроме OpenCode, приложение умеет общаться с Claude Code, Codex, Gemini CLI, Goose, Qwen Code и
+**Другие агенты для кода.** Кроме OpenCode, приложение умеет общаться с Claude Code, Codex, Gemini CLI, Cursor, Kimi Code, Mistral Vibe,
+Augment (Auggie), Factory Droid, Kiro, Goose, Qwen Code и
 GitHub Copilot CLI, установленными на компьютере, через открытый протокол Agent Client Protocol. На вкладке «Сеансы» нажмите
 **Другие агенты**, выберите агента и запустите. Он работает со своим входом и инструментами на компьютере; телефон показывает
 ответы, план, вызовы инструментов и правки файлов и спрашивает вас перед действиями агента. Агент продолжает работать, когда

@@ -669,7 +669,7 @@
     "folderHint": "Leer: Home-Ordner des Computers",
     "installed": "Auf dem Computer installiert",
     "refresh": "Erneut suchen",
-    "none": "Auf dem Computer wurde kein unterstützter Agent gefunden. Installiere einen (Claude Code, Codex, Gemini CLI, Goose, Qwen Code…) und suche erneut.",
+    "none": "Auf dem Computer wurde kein unterstützter Agent gefunden. Installiere einen (Claude Code, Codex, Gemini CLI, Cursor, Kimi Code…) und suche erneut.",
     "start": "Starten",
     "outdated": "Der Helfer auf dem Computer ist dafür zu alt. Führe den Einrichtungsbefehl dort erneut aus und suche dann erneut.",
     "unreachable": "Der Helfer auf dem Computer ist nicht erreichbar. Ist er an und online?",
@@ -689,6 +689,8 @@
     "limit": "Der Agent hat sein Limit erreicht.",
     "sendFailed": "Senden fehlgeschlagen: {{error}}",
     "plan": "Plan",
-    "safeMode": "Der Agent war im Modus „{{from}}“ und führte Werkzeuge ohne Nachfrage aus. Umgestellt auf „{{to}}“: Er fragt dich jetzt zuerst. Mit den Schaltflächen oben kannst du den Modus ändern."
+    "safeMode": "Der Agent war im Modus „{{from}}“ und führte Werkzeuge ohne Nachfrage aus. Umgestellt auf „{{to}}“: Er fragt dich jetzt zuerst. Mit den Schaltflächen oben kannst du den Modus ändern.",
+    "notInstalled": "Unterstützt, aber nicht auf dem Computer installiert",
+    "notInstalledHint": "Installiere einen davon auf dem Computer und tippe auf „Erneut suchen“."
   }
 }

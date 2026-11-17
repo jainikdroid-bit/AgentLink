@@ -669,7 +669,7 @@
     "folderHint": "Empty: the computer’s home folder",
     "installed": "Installed on the computer",
     "refresh": "Look again",
-    "none": "No supported agent found on the computer. Install one (Claude Code, Codex, Gemini CLI, Goose, Qwen Code…) and look again.",
+    "none": "No supported agent found on the computer. Install one (Claude Code, Codex, Gemini CLI, Cursor, Kimi Code…) and look again.",
     "start": "Start",
     "outdated": "The helper on the computer is too old for this. Run the setup command on the computer again, then look again.",
     "unreachable": "Cannot reach the helper on the computer. Is it on and online?",
@@ -689,6 +689,8 @@
     "limit": "The agent stopped at its limit.",
     "sendFailed": "Could not send: {{error}}",
     "plan": "Plan",
-    "safeMode": "The agent was in “{{from}}” mode, which runs tools without asking. Switched to “{{to}}” so it asks you first. Change it with the buttons above."
+    "safeMode": "The agent was in “{{from}}” mode, which runs tools without asking. Switched to “{{to}}” so it asks you first. Change it with the buttons above.",
+    "notInstalled": "Supported, not installed on the computer",
+    "notInstalledHint": "Install one of these on the computer, then tap “Look again”."
   }
 }
