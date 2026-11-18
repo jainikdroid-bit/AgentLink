@@ -15,7 +15,8 @@
       "notifications": "Notificações",
       "privacy": "Privacidade",
       "about": "Sobre",
-      "mcp": "Conectores (MCP)"
+      "mcp": "Conectores (MCP)",
+      "chat": "Chat"
     },
     "security": {
       "biometricOpen": {
@@ -85,6 +86,20 @@
       "title": "Escolher mascote",
       "cheri": "Cheri",
       "rig": "RIG"
+    },
+    "chat": {
+      "showThinking": {
+        "label": "Exibir raciocínio expandido",
+        "description": "O raciocínio do agente é exibido expandido, para você acompanhar como ele decide."
+      },
+      "showActions": {
+        "label": "Exibir código e comandos expandidos",
+        "description": "Comandos, edições e outras ações são exibidos expandidos, em vez de em uma lista recolhida."
+      },
+      "replyInMyLanguage": {
+        "label": "Agente fala meu idioma",
+        "description": "Peça ao agente para pensar e responder no idioma do aplicativo."
+      }
     }
   },
   "session": {
@@ -468,6 +483,11 @@
         "hoursAgo": "{{count}}h atrás",
         "daysAgo": "{{count}}d atrás"
       }
+    },
+    "actions": {
+      "title": "Ações ({{count}})",
+      "show": "Mostrar",
+      "hide": "Ocultar"
     }
   },
   "demo": {
@@ -692,5 +712,74 @@
     "safeMode": "O agente estava no modo “{{from}}”, que executa ferramentas sem perguntar. Mudei para “{{to}}” para que ele pergunte antes. Troque pelos botões acima.",
     "notInstalled": "Compatíveis, não instalados no computador",
     "notInstalledHint": "Instale um deles no computador e toque em “Procurar de novo”."
+  },
+  "status": {
+    "no-connection": {
+      "title": "Nenhum computador",
+      "body": "Adicione seu computador em Conexões para começar."
+    },
+    "checking": {
+      "title": "Verificando…",
+      "body": "Procurando seu computador e seu servidor."
+    },
+    "online-idle": {
+      "title": "Online",
+      "body": "O computador e o servidor estão respondendo. O agente está pronto."
+    },
+    "online-busy": {
+      "title": "Trabalhando",
+      "body": "O agente está processando sua solicitação."
+    },
+    "reconnecting": {
+      "title": "Reconectando…",
+      "body": "A conexão em tempo real caiu. O aplicativo continua tentando; as mensagens chegarão quando reconectar."
+    },
+    "computer-unreachable": {
+      "title": "Computador offline",
+      "body": "O celular não consegue alcançar seu computador. Verifique se está ligado, ativo e conectado (rede doméstica ou Tailscale)."
+    },
+    "server-stopped": {
+      "title": "Servidor parado",
+      "body": "O computador responde, mas o servidor do agente não está em execução. Inicie-o aqui."
+    },
+    "auth-failed": {
+      "title": "Senha incorreta",
+      "body": "O computador recusou a senha. Emparelhe novamente ou corrija a senha na conexão."
+    },
+    "action": {
+      "retry": "Tentar novamente",
+      "fixPassword": "Corrigir senha",
+      "openConnections": "Abrir conexões",
+      "checkNow": "Verificar agora"
+    },
+    "chain": {
+      "phone": "Celular",
+      "computer": "Computador",
+      "server": "Servidor",
+      "agent": "Agente"
+    },
+    "link": {
+      "ok": "OK",
+      "fail": "Sem resposta",
+      "unknown": "Desconhecido"
+    },
+    "checkedAt": "Última verificação em {{time}}",
+    "notChecked": "Ainda não verificado"
+  },
+  "errors": {
+    "load": {
+      "unauthorized": "Não foi possível carregar as sessões: o computador recusou a senha.",
+      "timeout": "Não foi possível carregar as sessões: o computador demorou para responder.",
+      "unreachable": "Não foi possível carregar as sessões: o computador não está acessível.",
+      "server-error": "Não foi possível carregar as sessões: o servidor reportou um erro.",
+      "unknown": "Não foi possível carregar as sessões: {{detail}}"
+    },
+    "send": {
+      "unauthorized": "Mensagem não enviada: o computador recusou a senha.",
+      "timeout": "Mensagem não enviada: o computador demorou para responder.",
+      "unreachable": "Mensagem não enviada: o computador não está acessível.",
+      "server-error": "Mensagem não enviada: o servidor reportou um erro.",
+      "unknown": "Mensagem não enviada: {{detail}}"
+    }
   }
 }

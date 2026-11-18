@@ -1,0 +1,5 @@
+v0.18.0 — clearer chat and connection status
+- The agent's thinking is shown open; commands and edits fold into one "Actions" line. Change both in Settings → Chat.
+- The agent is asked to think and reply in your language (can be turned off).
+- A status chip shows whether the computer, server and agent answer, explains what is wrong and offers the fix.
+- Error messages now say what happened.

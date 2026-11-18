@@ -6,12 +6,14 @@ import { ToolCallCard } from "./ToolCallCard"
 import { ReasoningBlock } from "./ReasoningBlock"
 import type { Message, Part } from "../../lib/sdk"
 import { hasSelectableContent } from "../../lib/message-text"
+import { stripReplyLanguage } from "../../lib/reply-language"
 import * as Speech from "expo-speech"
 import { speakableText } from "../../lib/speakable"
 import { reasoningSummary } from "../../lib/agent-phase"
 import { deviceLocaleTags } from "../../lib/i18n/config"
 import { resolveSpeechLang } from "../../lib/speech-lang"
 import { useSettings } from "../../stores/settings"
+import { ActionsGroup } from "./ActionsGroup"
 
 const SCREEN_WIDTH = Dimensions.get("window").width
 
@@ -39,6 +41,7 @@ export const MessageBubble = memo(
   function MessageBubble({ message, parts, isDark, onSelectText, onEdit }: Props) {
     const isUser = message.role === "user"
     const locale = useSettings((st) => st.locale)
+    const showActions = useSettings((st) => st.showActions)
     const [speaking, setSpeaking] = useState(false)
     const spokenText = isUser ? "" : speakableText(parts)
     // Stop reading if this bubble goes away while it is speaking.
@@ -63,7 +66,9 @@ export const MessageBubble = memo(
     const reasoningParts = parts.filter((p) => p.type === "reasoning")
     const toolParts = parts.filter((p) => p.type === "tool")
     const fileParts = parts.filter((p) => p.type === "file" && isImageMime(p.mime))
-    const text = textParts.map((p) => p.text).join("\n") || ""
+    const joined = textParts.map((p) => p.text).join("\n") || ""
+    // v2 servers keep the "reply in my language" line inside the text; the user should not see it.
+    const text = isUser ? stripReplyLanguage(joined) : joined
     const reasoning = reasoningParts.map((p) => p.text).join("\n") || ""
     const thinking = reasoningSummary(parts)
 
@@ -176,9 +181,13 @@ export const MessageBubble = memo(
           ))}
 
         {/* Tool calls */}
-        {toolParts.map((tool) => (
-          <ToolCallCard key={tool.id} tool={tool} isDark={isDark} />
-        ))}
+        {toolParts.length > 0 && (
+          <ActionsGroup names={toolParts.map((tool) => tool.tool)} testID="message-actions">
+            {toolParts.map((tool) => (
+              <ToolCallCard key={tool.id} tool={tool} isDark={isDark} defaultExpanded={showActions} />
+            ))}
+          </ActionsGroup>
+        )}
 
         {/* Run-level failure (assistant message carries `error` when the agent
             errored out — provider failure, aborted stream, etc.). Without this

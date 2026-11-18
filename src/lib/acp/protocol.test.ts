@@ -178,3 +178,13 @@ test("an agent that starts in a no-questions mode is switched to the safe one, w
   assert.equal(nextHandshakeStep(calm, "/w", "1"), null)
   assert.ok(!calm.items.some((i) => i.type === "notice"))
 })
+
+test("the reply-language preface goes to the agent but not into the user's bubble", () => {
+  const msg = promptRequest(3, "s1", "Hello", [], "Please think and reply in Russian.")
+  const prompt = (msg.params as { prompt: { text: string }[] }).prompt
+  assert.equal(prompt.length, 2)
+  assert.equal(prompt[0].text, "Please think and reply in Russian.")
+  const state = run([...handshake, sent(msg)])
+  const user = state.items.find((i) => i.type === "user")
+  assert.ok(user && user.type === "user" && user.text === "Hello")
+})

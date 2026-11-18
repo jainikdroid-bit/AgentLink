@@ -13,6 +13,9 @@ import { ReasoningBlock } from "../src/components/chat/ReasoningBlock"
 import { ToolCallRow } from "../src/components/acp/ToolCallRow"
 import { PlanCard } from "../src/components/acp/PlanCard"
 import { PermissionCard } from "../src/components/acp/PermissionCard"
+import { ActionsGroup } from "../src/components/chat/ActionsGroup"
+import { groupConsecutive, type Grouped } from "../src/lib/tool-summary"
+import { useSettings } from "../src/stores/settings"
 
 // A chat with another coding agent on the computer (Claude Code, Codex, Gemini CLI, ...) over the Agent Client
 // Protocol. Everything shown here is rebuilt from the agent's event stream, so closing the screen leaves the
@@ -35,7 +38,10 @@ export default function AgentChatScreen() {
   const agentName = params.name || state.agentName || String(params.agent)
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
-  const list = useRef<FlatList<ChatItem>>(null)
+  const list = useRef<FlatList<Grouped<ChatItem>>>(null)
+  const showActions = useSettings((st) => st.showActions)
+  // Runs of tool calls fold into one "Actions (N)" line, like in the opencode chat.
+  const rows = useMemo(() => groupConsecutive(state.items, (item) => item.type === "tool"), [state.items])
   const nearBottom = useRef(true)
 
   useEffect(() => {
@@ -75,6 +81,17 @@ export default function AgentChatScreen() {
     if (!ready) return { tone: "info" as const, text: t("acp.connecting") }
     return null
   })()
+
+  const renderRow = ({ item: row }: { item: Grouped<ChatItem> }) => {
+    if (row.kind === "group") {
+      return (
+        <ActionsGroup names={row.items.map((i) => (i.type === "tool" ? i.call.kind ?? i.call.title : undefined))} testID="acp-actions">
+          {row.items.map((i) => (i.type === "tool" ? <ToolCallRow key={i.id} call={i.call} defaultOpen={showActions} /> : null))}
+        </ActionsGroup>
+      )
+    }
+    return renderItem({ item: row.item })
+  }
 
   const renderItem = ({ item }: { item: ChatItem }) => {
     switch (item.type) {
@@ -129,9 +146,9 @@ export default function AgentChatScreen() {
       ) : null}
       <FlatList
         ref={list}
-        data={state.items}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
+        data={rows}
+        keyExtractor={(row) => (row.kind === "group" ? row.id : row.item.id)}
+        renderItem={renderRow}
         contentContainerStyle={s.listContent}
         keyboardShouldPersistTaps="handled"
         onScroll={(e) => {

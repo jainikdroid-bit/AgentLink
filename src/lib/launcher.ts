@@ -27,3 +27,16 @@ export function interpretStart(status: number, body: unknown): StartOutcome {
 export function canStartFromPhone(conn: { launcherPort?: number } | null | undefined): boolean {
   return !!conn && Number.isInteger(conn.launcherPort) && (conn.launcherPort as number) > 0
 }
+
+/** What GET /status on the launcher said: does the launcher answer, and is the opencode server up behind it? */
+export type LauncherProbe =
+  | { kind: "answers"; serverUp: boolean }
+  | { kind: "unauthorized" }
+  | { kind: "unreachable" }
+
+export function interpretLauncherStatus(status: number, body: unknown): LauncherProbe {
+  if (status === 401 || status === 403) return { kind: "unauthorized" }
+  const b = (body ?? {}) as { ok?: boolean; server?: { running?: boolean; healthy?: boolean } }
+  if (status >= 200 && status < 300 && b.ok) return { kind: "answers", serverUp: !!(b.server?.running && b.server?.healthy) }
+  return { kind: "unreachable" }
+}

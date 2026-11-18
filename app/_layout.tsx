@@ -22,6 +22,7 @@ import { replyPermission } from "../src/lib/permission-actions"
 import { useTunnelDiscovery } from "../src/lib/useTunnelDiscovery"
 import { usePhoneBridge } from "../src/lib/usePhoneBridge"
 import { useTailnetLifecycle } from "../src/lib/useTailnetLifecycle"
+import { useConnectionHealth } from "../src/lib/useConnectionHealth"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 
 // The app is dark-only: a minimal blue-black look with neon accents.
@@ -134,6 +135,7 @@ function RootLayout() {
   usePhoneBridge()
   useTailnetLifecycle()
   useTunnelDiscovery()
+  useConnectionHealth()
   const { hasShareIntent } = useShareIntentContext()
   useEffect(() => {
     // Another app shared something with us: let the user pick the conversation.

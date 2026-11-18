@@ -15,7 +15,8 @@
       "notifications": "Bildirimler",
       "privacy": "Gizlilik",
       "about": "Hakkında",
-      "mcp": "Bağlantı Noktaları (MCP)"
+      "mcp": "Bağlantı Noktaları (MCP)",
+      "chat": "Sohbet"
     },
     "security": {
       "biometricOpen": {
@@ -85,6 +86,20 @@
       "title": "Maskot seçin",
       "cheri": "Cheri",
       "rig": "RIG"
+    },
+    "chat": {
+      "showThinking": {
+        "label": "Düşünceyi açık göster",
+        "description": "Aracın düşünce süreci açık gösterilir, böylece karar mekanizmasını takip edebilirsiniz."
+      },
+      "showActions": {
+        "label": "Kod ve komutları açık göster",
+        "description": "Komutlar, düzenlemeler ve diğer işlemler katlı liste yerine açıkça gösterilir."
+      },
+      "replyInMyLanguage": {
+        "label": "Aracı kendi dilimde konuşsun",
+        "description": "Aracı, uygulama dilinde düşünmesini ve yanıt vermesini isteyin."
+      }
     }
   },
   "session": {
@@ -468,6 +483,11 @@
         "hoursAgo": "{{count}} saat önce",
         "daysAgo": "{{count}} gün önce"
       }
+    },
+    "actions": {
+      "title": "İşlemler ({{count}})",
+      "show": "Göster",
+      "hide": "Gizle"
     }
   },
   "demo": {
@@ -692,5 +712,74 @@
     "safeMode": "Ajan, araçları sormadan çalıştıran “{{from}}” modundaydı. Önce size sorması için “{{to}}” moduna geçirildi. Yukarıdaki düğmelerle değiştirebilirsiniz.",
     "notInstalled": "Destekleniyor, bilgisayarda kurulu değil",
     "notInstalledHint": "Bunlardan birini bilgisayara kurun, sonra “Yeniden ara” düğmesine dokunun."
+  },
+  "status": {
+    "no-connection": {
+      "title": "Bilgisayar yok",
+      "body": "Başlamak için Bağlantılar bölümüne bilgisayarınızı ekleyin."
+    },
+    "checking": {
+      "title": "Kontrol ediliyor…",
+      "body": "Bilgisayarınız ve sunucusu aranıyor."
+    },
+    "online-idle": {
+      "title": "Çevrimiçi",
+      "body": "Bilgisayar ve sunucu yanıt veriyor. Aracı hazır."
+    },
+    "online-busy": {
+      "title": "Çalışıyor",
+      "body": "Aracı isteğiniz üzerinde çalışıyor."
+    },
+    "reconnecting": {
+      "title": "Yeniden bağlanıyor…",
+      "body": "Canlı bağlantı kesildi. Uygulama tekrar bağlanmaya çalışıyor; bağlantı kurulduğunda mesajlar iletilir."
+    },
+    "computer-unreachable": {
+      "title": "Bilgisayar çevrimdışı",
+      "body": "Telefon bilgisayarınıza bağlanamıyor. Bilgisayarın açık, uyanık ve çevrimiçi olduğundan emin olun (ev ağı veya Tailscale)."
+    },
+    "server-stopped": {
+      "title": "Sunucu durduruldu",
+      "body": "Bilgisayar yanıt veriyor ancak aracı sunucusu çalışmıyor. Buradan başlatın."
+    },
+    "auth-failed": {
+      "title": "Yanlış şifre",
+      "body": "Bilgisayar şifreyi reddetti. Tekrar eşleşin veya bağlantıdaki şifreyi düzeltin."
+    },
+    "action": {
+      "retry": "Yeniden dene",
+      "fixPassword": "Şifreyi düzelt",
+      "openConnections": "Bağlantıları aç",
+      "checkNow": "Şimdi kontrol et"
+    },
+    "chain": {
+      "phone": "Telefon",
+      "computer": "Bilgisayar",
+      "server": "Sunucu",
+      "agent": "Aracı"
+    },
+    "link": {
+      "ok": "Tamam",
+      "fail": "Yanıt yok",
+      "unknown": "Bilinmiyor"
+    },
+    "checkedAt": "Son kontrol: {{time}}",
+    "notChecked": "Henüz kontrol edilmedi"
+  },
+  "errors": {
+    "load": {
+      "unauthorized": "Oturumlar yüklenemedi: Bilgisayar şifreyi reddetti.",
+      "timeout": "Oturumlar yüklenemedi: Bilgisayar yanıt verirken çok uzun sürdü.",
+      "unreachable": "Oturumlar yüklenemedi: Bilgisayara ulaşılamıyor.",
+      "server-error": "Oturumlar yüklenemedi: Sunucu bir hata bildirdi.",
+      "unknown": "Oturumlar yüklenemedi: {{detail}}"
+    },
+    "send": {
+      "unauthorized": "Mesaj gönderilemedi: Bilgisayar şifreyi reddetti.",
+      "timeout": "Mesaj gönderilemedi: Bilgisayar yanıt verirken çok uzun sürdü.",
+      "unreachable": "Mesaj gönderilemedi: Bilgisayara ulaşılamıyor.",
+      "server-error": "Mesaj gönderilemedi: Sunucu bir hata bildirdi.",
+      "unknown": "Mesaj gönderilemedi: {{detail}}"
+    }
   }
 }

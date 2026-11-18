@@ -417,6 +417,8 @@ export function createV1Client(config: ClientConfig) {
           model?: { providerID: string; modelID: string }
           agent?: string
           variant?: string
+          // Appended to the agent's system prompt by the server, so the visible message stays clean.
+          system?: string
         },
       ): Promise<void> => {
         const url = `${config.baseUrl}/session/${sessionID}/prompt_async`

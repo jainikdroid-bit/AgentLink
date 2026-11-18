@@ -15,7 +15,8 @@
       "notifications": "Notificaciones",
       "privacy": "Privacidad",
       "about": "Acerca de",
-      "mcp": "Conectores (MCP)"
+      "mcp": "Conectores (MCP)",
+      "chat": "Chat"
     },
     "security": {
       "biometricOpen": {
@@ -85,6 +86,20 @@
       "title": "Elige la mascota",
       "cheri": "Cheri",
       "rig": "RIG"
+    },
+    "chat": {
+      "showThinking": {
+        "label": "Mostrar razonamiento",
+        "description": "El razonamiento del agente se muestra desplegado para que puedas seguir cómo decide."
+      },
+      "showActions": {
+        "label": "Mostrar código y comandos",
+        "description": "Los comandos, ediciones y otras acciones se muestran desplegados en lugar de en una lista colapsada."
+      },
+      "replyInMyLanguage": {
+        "label": "El agente habla mi idioma",
+        "description": "Pide al agente que piense y responda en el idioma de la app."
+      }
     }
   },
   "session": {
@@ -468,6 +483,11 @@
         "hoursAgo": "hace {{count}}h",
         "daysAgo": "hace {{count}}d"
       }
+    },
+    "actions": {
+      "title": "Acciones ({{count}})",
+      "show": "Mostrar",
+      "hide": "Ocultar"
     }
   },
   "demo": {
@@ -692,5 +712,74 @@
     "safeMode": "El agente estaba en el modo «{{from}}», que ejecuta herramientas sin preguntar. Se cambió a «{{to}}» para que te pregunte antes. Puedes cambiarlo con los botones de arriba.",
     "notInstalled": "Compatibles, no instalados en el ordenador",
     "notInstalledHint": "Instala uno de ellos en el ordenador y pulsa «Buscar de nuevo»."
+  },
+  "status": {
+    "no-connection": {
+      "title": "Sin equipo",
+      "body": "Agrega tu equipo en Conexiones para comenzar."
+    },
+    "checking": {
+      "title": "Comprobando…",
+      "body": "Buscando tu equipo y su servidor."
+    },
+    "online-idle": {
+      "title": "En línea",
+      "body": "El equipo y el servidor responden. El agente está listo."
+    },
+    "online-busy": {
+      "title": "Trabajando",
+      "body": "El agente está trabajando en tu solicitud."
+    },
+    "reconnecting": {
+      "title": "Reconectando…",
+      "body": "Se perdió la conexión en vivo. La app sigue intentando; los mensajes llegarán cuando se restablezca."
+    },
+    "computer-unreachable": {
+      "title": "Equipo desconectado",
+      "body": "El teléfono no puede alcanzar tu equipo. Verifica que esté encendido, activo y en línea (red doméstica o Tailscale)."
+    },
+    "server-stopped": {
+      "title": "Servidor detenido",
+      "body": "El equipo responde, pero el servidor del agente no está en ejecución. Inícialo desde aquí."
+    },
+    "auth-failed": {
+      "title": "Contraseña incorrecta",
+      "body": "El equipo rechazó la contraseña. Vuelve a emparejar o corrige la contraseña en la conexión."
+    },
+    "action": {
+      "retry": "Reintentar",
+      "fixPassword": "Corregir contraseña",
+      "openConnections": "Abrir conexiones",
+      "checkNow": "Comprobar ahora"
+    },
+    "chain": {
+      "phone": "Teléfono",
+      "computer": "Equipo",
+      "server": "Servidor",
+      "agent": "Agente"
+    },
+    "link": {
+      "ok": "OK",
+      "fail": "Sin respuesta",
+      "unknown": "Desconocido"
+    },
+    "checkedAt": "Última comprobación: {{time}}",
+    "notChecked": "Sin comprobar aún"
+  },
+  "errors": {
+    "load": {
+      "unauthorized": "No se pudieron cargar las sesiones: el equipo rechazó la contraseña.",
+      "timeout": "No se pudieron cargar las sesiones: el equipo tardó demasiado en responder.",
+      "unreachable": "No se pudieron cargar las sesiones: no se puede alcanzar el equipo.",
+      "server-error": "No se pudieron cargar las sesiones: el servidor reportó un error.",
+      "unknown": "No se pudieron cargar las sesiones: {{detail}}"
+    },
+    "send": {
+      "unauthorized": "Mensaje no enviado: el equipo rechazó la contraseña.",
+      "timeout": "Mensaje no enviado: el equipo tardó demasiado en responder.",
+      "unreachable": "Mensaje no enviado: no se puede alcanzar el equipo.",
+      "server-error": "Mensaje no enviado: el servidor reportó un error.",
+      "unknown": "Mensaje no enviado: {{detail}}"
+    }
   }
 }

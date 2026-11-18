@@ -15,7 +15,8 @@
       "notifications": "Notifications",
       "privacy": "Confidentialité",
       "about": "À propos",
-      "mcp": "Connecteurs (MCP)"
+      "mcp": "Connecteurs (MCP)",
+      "chat": "Chat"
     },
     "security": {
       "biometricOpen": {
@@ -85,6 +86,20 @@
       "title": "Choisir la mascotte",
       "cheri": "Cheri",
       "rig": "RIG"
+    },
+    "chat": {
+      "showThinking": {
+        "label": "Afficher la réflexion",
+        "description": "Le raisonnement de l'agent est affiché en détail pour que vous puissiez suivre sa prise de décision."
+      },
+      "showActions": {
+        "label": "Afficher le code et les commandes",
+        "description": "Les commandes, modifications et autres actions sont affichées en détail plutôt que dans une liste repliée."
+      },
+      "replyInMyLanguage": {
+        "label": "L'agent parle ma langue",
+        "description": "Demandez à l'agent de réfléchir et de répondre dans la langue de l'application."
+      }
     }
   },
   "session": {
@@ -468,6 +483,11 @@
         "hoursAgo": "il y a {{count}} h",
         "daysAgo": "il y a {{count}} j"
       }
+    },
+    "actions": {
+      "title": "Actions ({{count}})",
+      "show": "Afficher",
+      "hide": "Masquer"
     }
   },
   "demo": {
@@ -692,5 +712,74 @@
     "safeMode": "L’agent était en mode « {{from}} », qui exécute les outils sans demander. Passé en « {{to}} » : il vous demande d’abord. Changez-le avec les boutons ci-dessus.",
     "notInstalled": "Pris en charge, non installés sur l’ordinateur",
     "notInstalledHint": "Installez l’un d’eux sur l’ordinateur, puis touchez « Chercher à nouveau »."
+  },
+  "status": {
+    "no-connection": {
+      "title": "Aucun ordinateur",
+      "body": "Ajoutez votre ordinateur dans Connexions pour commencer."
+    },
+    "checking": {
+      "title": "Vérification…",
+      "body": "Recherche de votre ordinateur et de son serveur."
+    },
+    "online-idle": {
+      "title": "En ligne",
+      "body": "L'ordinateur et le serveur répondent. L'agent est prêt."
+    },
+    "online-busy": {
+      "title": "En cours",
+      "body": "L'agent travaille sur votre demande."
+    },
+    "reconnecting": {
+      "title": "Reconnexion…",
+      "body": "La connexion en direct a été perdue. L'application continue d'essayer ; les messages arriveront une fois la connexion rétablie."
+    },
+    "computer-unreachable": {
+      "title": "Ordinateur hors ligne",
+      "body": "Le téléphone ne parvient pas à joindre votre ordinateur. Vérifiez qu'il est allumé, actif et connecté (réseau local ou Tailscale)."
+    },
+    "server-stopped": {
+      "title": "Serveur arrêté",
+      "body": "L'ordinateur répond, mais le serveur de l'agent n'est pas en cours d'exécution. Démarrez-le depuis ici."
+    },
+    "auth-failed": {
+      "title": "Mot de passe incorrect",
+      "body": "L'ordinateur a refusé le mot de passe. Appairez à nouveau ou corrigez le mot de passe dans la connexion."
+    },
+    "action": {
+      "retry": "Réessayer",
+      "fixPassword": "Corriger le mot de passe",
+      "openConnections": "Ouvrir les connexions",
+      "checkNow": "Vérifier maintenant"
+    },
+    "chain": {
+      "phone": "Téléphone",
+      "computer": "Ordinateur",
+      "server": "Serveur",
+      "agent": "Agent"
+    },
+    "link": {
+      "ok": "OK",
+      "fail": "Pas de réponse",
+      "unknown": "Inconnu"
+    },
+    "checkedAt": "Dernière vérification à {{time}}",
+    "notChecked": "Pas encore vérifié"
+  },
+  "errors": {
+    "load": {
+      "unauthorized": "Impossible de charger les sessions : l'ordinateur a refusé le mot de passe.",
+      "timeout": "Impossible de charger les sessions : l'ordinateur a mis trop de temps à répondre.",
+      "unreachable": "Impossible de charger les sessions : l'ordinateur est injoignable.",
+      "server-error": "Impossible de charger les sessions : le serveur a signalé une erreur.",
+      "unknown": "Impossible de charger les sessions : {{detail}}"
+    },
+    "send": {
+      "unauthorized": "Message non envoyé : l'ordinateur a refusé le mot de passe.",
+      "timeout": "Message non envoyé : l'ordinateur a mis trop de temps à répondre.",
+      "unreachable": "Message non envoyé : l'ordinateur est injoignable.",
+      "server-error": "Message non envoyé : le serveur a signalé une erreur.",
+      "unknown": "Message non envoyé : {{detail}}"
+    }
   }
 }

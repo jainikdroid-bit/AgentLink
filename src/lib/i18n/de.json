@@ -15,7 +15,8 @@
       "notifications": "Benachrichtigungen",
       "privacy": "Datenschutz",
       "about": "Über",
-      "mcp": "Connectors (MCP)"
+      "mcp": "Connectors (MCP)",
+      "chat": "Chat"
     },
     "security": {
       "biometricOpen": {
@@ -85,6 +86,20 @@
       "title": "Maskottchen wählen",
       "cheri": "Cheri",
       "rig": "RIG"
+    },
+    "chat": {
+      "showThinking": {
+        "label": "Gedanken offen anzeigen",
+        "description": "Die Argumentation des Agents wird offen angezeigt, damit Sie den Entscheidungsprozess nachvollziehen können."
+      },
+      "showActions": {
+        "label": "Code und Befehle offen anzeigen",
+        "description": "Befehle, Änderungen und andere Aktionen werden offen statt in einer zusammengeklappten Liste angezeigt."
+      },
+      "replyInMyLanguage": {
+        "label": "Agent spricht meine Sprache",
+        "description": "Fordern Sie den Agent auf, in der Sprache der App zu denken und zu antworten."
+      }
     }
   },
   "session": {
@@ -468,6 +483,11 @@
         "hoursAgo": "vor {{count}} Std.",
         "daysAgo": "vor {{count}} Tagen"
       }
+    },
+    "actions": {
+      "title": "Aktionen ({{count}})",
+      "show": "Anzeigen",
+      "hide": "Ausblenden"
     }
   },
   "demo": {
@@ -692,5 +712,74 @@
     "safeMode": "Der Agent war im Modus „{{from}}“ und führte Werkzeuge ohne Nachfrage aus. Umgestellt auf „{{to}}“: Er fragt dich jetzt zuerst. Mit den Schaltflächen oben kannst du den Modus ändern.",
     "notInstalled": "Unterstützt, aber nicht auf dem Computer installiert",
     "notInstalledHint": "Installiere einen davon auf dem Computer und tippe auf „Erneut suchen“."
+  },
+  "status": {
+    "no-connection": {
+      "title": "Kein Computer",
+      "body": "Fügen Sie Ihren Computer unter Verbindungen hinzu, um zu beginnen."
+    },
+    "checking": {
+      "title": "Überprüfung…",
+      "body": "Suche nach Ihrem Computer und dessen Server."
+    },
+    "online-idle": {
+      "title": "Online",
+      "body": "Computer und Server sind erreichbar. Der Agent ist bereit."
+    },
+    "online-busy": {
+      "title": "In Arbeit",
+      "body": "Der Agent bearbeitet Ihre Anfrage."
+    },
+    "reconnecting": {
+      "title": "Verbindung wird wiederhergestellt…",
+      "body": "Die Echtzeitverbindung wurde getrennt. Die App versucht weiter; Nachrichten kommen an, sobald die Verbindung wiederhergestellt ist."
+    },
+    "computer-unreachable": {
+      "title": "Computer offline",
+      "body": "Das Telefon kann Ihren Computer nicht erreichen. Stellen Sie sicher, dass er eingeschaltet, wach und online ist (Heimnetzwerk oder Tailscale)."
+    },
+    "server-stopped": {
+      "title": "Server gestoppt",
+      "body": "Der Computer ist erreichbar, aber der Agent-Server läuft nicht. Starten Sie ihn hier."
+    },
+    "auth-failed": {
+      "title": "Falsches Passwort",
+      "body": "Der Computer hat das Passwort abgelehnt. Erneut koppeln oder das Passwort in der Verbindung korrigieren."
+    },
+    "action": {
+      "retry": "Erneut versuchen",
+      "fixPassword": "Passwort korrigieren",
+      "openConnections": "Verbindungen öffnen",
+      "checkNow": "Jetzt prüfen"
+    },
+    "chain": {
+      "phone": "Telefon",
+      "computer": "Computer",
+      "server": "Server",
+      "agent": "Agent"
+    },
+    "link": {
+      "ok": "OK",
+      "fail": "Keine Antwort",
+      "unknown": "Unbekannt"
+    },
+    "checkedAt": "Zuletzt geprüft um {{time}}",
+    "notChecked": "Noch nicht geprüft"
+  },
+  "errors": {
+    "load": {
+      "unauthorized": "Sitzungen konnten nicht geladen werden: Der Computer hat das Passwort abgelehnt.",
+      "timeout": "Sitzungen konnten nicht geladen werden: Der Computer hat zu lange für die Antwort gebraucht.",
+      "unreachable": "Sitzungen konnten nicht geladen werden: Der Computer ist nicht erreichbar.",
+      "server-error": "Sitzungen konnten nicht geladen werden: Der Server meldete einen Fehler.",
+      "unknown": "Sitzungen konnten nicht geladen werden: {{detail}}"
+    },
+    "send": {
+      "unauthorized": "Nachricht nicht gesendet: Der Computer hat das Passwort abgelehnt.",
+      "timeout": "Nachricht nicht gesendet: Der Computer hat zu lange für die Antwort gebraucht.",
+      "unreachable": "Nachricht nicht gesendet: Der Computer ist nicht erreichbar.",
+      "server-error": "Nachricht nicht gesendet: Der Server meldete einen Fehler.",
+      "unknown": "Nachricht nicht gesendet: {{detail}}"
+    }
   }
 }

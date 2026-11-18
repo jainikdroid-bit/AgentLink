@@ -50,3 +50,12 @@ test("does not mutate the inputs", () => {
   assert.equal(merged.notifications.a, false)
   assert.notEqual(merged.notifications, defaults.notifications)
 })
+
+test("upgrade path: settings added later (chat toggles) come back as their defaults", () => {
+  const defaults = { ...DEFAULTS, showThinking: true, showActions: false, replyInMyLanguage: true }
+  const merged = mergeStoredSettings(defaults, { pageSize: 50 } as Partial<typeof defaults>)
+  assert.equal(merged.showThinking, true)
+  assert.equal(merged.showActions, false)
+  assert.equal(merged.replyInMyLanguage, true)
+  assert.equal(mergeStoredSettings(defaults, { showThinking: false } as Partial<typeof defaults>).showThinking, false)
+})

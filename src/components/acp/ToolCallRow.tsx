@@ -21,8 +21,8 @@ const ICONS: Record<ToolKind, string> = {
 const MAX_TEXT = 3000
 
 /** One tool call of the agent: what it is doing, and (tap) what it returned or changed. */
-export function ToolCallRow({ call }: { call: ToolCall }) {
-  const [open, setOpen] = useState(false)
+export function ToolCallRow({ call, defaultOpen = false }: { call: ToolCall; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
   const hasBody = call.content.length > 0 || call.locations.length > 0
   const status =
     call.status === "completed" ? <Ionicons name="checkmark-circle" size={16} color={cyber.green} />

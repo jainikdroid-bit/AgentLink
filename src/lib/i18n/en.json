@@ -15,7 +15,8 @@
       "notifications": "Notifications",
       "privacy": "Privacy",
       "about": "About",
-      "mcp": "Connectors (MCP)"
+      "mcp": "Connectors (MCP)",
+      "chat": "Chat"
     },
     "security": {
       "biometricOpen": {
@@ -85,6 +86,20 @@
       "title": "Choose mascot",
       "cheri": "Cheri",
       "rig": "RIG"
+    },
+    "chat": {
+      "showThinking": {
+        "label": "Show thinking open",
+        "description": "The agent's reasoning is shown unfolded, so you can follow how it decides."
+      },
+      "showActions": {
+        "label": "Show code and commands open",
+        "description": "Commands, edits and other actions are shown unfolded instead of in a folded list."
+      },
+      "replyInMyLanguage": {
+        "label": "Agent speaks my language",
+        "description": "Ask the agent to think and reply in the app's language."
+      }
     }
   },
   "session": {
@@ -468,6 +483,11 @@
         "hoursAgo": "{{count}}h ago",
         "daysAgo": "{{count}}d ago"
       }
+    },
+    "actions": {
+      "title": "Actions ({{count}})",
+      "show": "Show",
+      "hide": "Hide"
     }
   },
   "demo": {
@@ -692,5 +712,74 @@
     "safeMode": "The agent was in “{{from}}” mode, which runs tools without asking. Switched to “{{to}}” so it asks you first. Change it with the buttons above.",
     "notInstalled": "Supported, not installed on the computer",
     "notInstalledHint": "Install one of these on the computer, then tap “Look again”."
+  },
+  "status": {
+    "no-connection": {
+      "title": "No computer",
+      "body": "Add your computer in Connections to start."
+    },
+    "checking": {
+      "title": "Checking…",
+      "body": "Looking for your computer and its server."
+    },
+    "online-idle": {
+      "title": "Online",
+      "body": "The computer and the server answer. The agent is ready."
+    },
+    "online-busy": {
+      "title": "Working",
+      "body": "The agent is working on your request."
+    },
+    "reconnecting": {
+      "title": "Reconnecting…",
+      "body": "The live connection dropped. The app keeps trying; messages arrive once it is back."
+    },
+    "computer-unreachable": {
+      "title": "Computer offline",
+      "body": "The phone can't reach your computer. Check that it is on, awake and online (home network or Tailscale)."
+    },
+    "server-stopped": {
+      "title": "Server stopped",
+      "body": "The computer answers, but the agent server is not running. Start it from here."
+    },
+    "auth-failed": {
+      "title": "Wrong password",
+      "body": "The computer refused the password. Pair again or fix the password in the connection."
+    },
+    "action": {
+      "retry": "Retry",
+      "fixPassword": "Fix password",
+      "openConnections": "Open connections",
+      "checkNow": "Check now"
+    },
+    "chain": {
+      "phone": "Phone",
+      "computer": "Computer",
+      "server": "Server",
+      "agent": "Agent"
+    },
+    "link": {
+      "ok": "OK",
+      "fail": "No answer",
+      "unknown": "Unknown"
+    },
+    "checkedAt": "Last checked at {{time}}",
+    "notChecked": "Not checked yet"
+  },
+  "errors": {
+    "load": {
+      "unauthorized": "Couldn't load sessions: the computer refused the password.",
+      "timeout": "Couldn't load sessions: the computer took too long to answer.",
+      "unreachable": "Couldn't load sessions: the computer can't be reached.",
+      "server-error": "Couldn't load sessions: the server reported an error.",
+      "unknown": "Couldn't load sessions: {{detail}}"
+    },
+    "send": {
+      "unauthorized": "Message not sent: the computer refused the password.",
+      "timeout": "Message not sent: the computer took too long to answer.",
+      "unreachable": "Message not sent: the computer can't be reached.",
+      "server-error": "Message not sent: the server reported an error.",
+      "unknown": "Message not sent: {{detail}}"
+    }
   }
 }

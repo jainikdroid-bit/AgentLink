@@ -16,6 +16,7 @@ import { apiErrorFor, isAuthStatus } from "./api-error"
 import { loadSessionList } from "./session-list"
 import type { FileRoot } from "./file-roots"
 import { createV1Client } from "./sdk-v1"
+import { withReplyLanguage } from "./reply-language"
 import { detectServerApi, type ProbeRequest, type ServerApi, type ServerIdentity } from "./api-detect"
 import {
   formAnswerFromFields,
@@ -569,6 +570,9 @@ function createV2Client(config: ClientConfig) {
           model?: { providerID: string; modelID: string }
           agent?: string
           variant?: string
+          // Extra instruction for the agent. The v2 prompt route has no separate system field (not
+          // verified against the server), so it travels as a leading line of the text instead.
+          system?: string
         },
       ): Promise<void> => {
         if (params.model) {
@@ -589,10 +593,13 @@ function createV2Client(config: ClientConfig) {
             body: JSON.stringify({ agent: params.agent }),
           })
         }
-        const text = params.parts
-          .filter((p): p is { type: "text"; text: string } => p.type === "text")
-          .map((p) => p.text)
-          .join("\n")
+        const text = withReplyLanguage(
+          params.parts
+            .filter((p): p is { type: "text"; text: string } => p.type === "text")
+            .map((p) => p.text)
+            .join("\n"),
+          params.system ?? null,
+        )
         const files = params.parts
           .filter((p): p is { type: "file"; mime: string; url: string; filename?: string } => p.type === "file")
           .map((p) => ({ uri: p.url, ...(p.filename ? { name: p.filename } : {}) }))

@@ -34,6 +34,7 @@ import { Mascot } from "../../src/components/Mascot"
 import { RunnerGame } from "../../src/components/RunnerGame"
 import { filterSessions, splitPinned, togglePin, parsePinned, PINNED_KEY } from "../../src/lib/session-filter"
 import { StartServerBar } from "../../src/components/StartServerBar"
+import { ConnectionStatusChip } from "../../src/components/ConnectionStatus"
 import { canStartFromPhone } from "../../src/lib/launcher"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { GUIDE_DONE_KEY, shouldAutoShowGuide } from "../../src/lib/guide"
@@ -602,7 +603,7 @@ export default function SessionsScreen() {
         testID="connection-status-bar"
       >
         <View style={styles.connectionInfo}>
-          <View style={[styles.connectionDot, { backgroundColor: "#34f5a5" }]} testID="connection-status-dot" />
+          <ConnectionStatusChip />
           <Text style={[styles.connectionName, isDark && styles.textDark]} numberOfLines={1}>
             {activeConnection.name}
           </Text>

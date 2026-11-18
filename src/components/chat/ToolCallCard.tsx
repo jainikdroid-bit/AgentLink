@@ -310,11 +310,13 @@ function duration(start?: number, end?: number): string | null {
 interface Props {
   tool: Part
   isDark: boolean
+  /** Start unfolded (Settings → Chat → show code and commands open). */
+  defaultExpanded?: boolean
 }
 
-export function ToolCallCard({ tool, isDark }: Props) {
+export function ToolCallCard({ tool, isDark, defaultExpanded = false }: Props) {
   const { t } = useTranslation()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const icon = (tool.tool && TOOL_ICONS[tool.tool]) || "extension-puzzle-outline"
   const status = tool.state?.status || "pending"
   const color = statusColor(status)

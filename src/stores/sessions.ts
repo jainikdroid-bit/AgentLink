@@ -2,6 +2,10 @@ import { create } from "zustand"
 import { ApiError, type Session, type Message, type Part, type Event, type MessageWithParts, type Client } from "../lib/sdk"
 import { useConnections } from "./connections"
 import { useSettings } from "./settings"
+import i18n, { deviceLocaleTags } from "../lib/i18n/config"
+import { resolveLocale } from "../lib/i18n/locale-resolve"
+import { replyLanguageInstruction } from "../lib/reply-language"
+import { classifyFailure, failureMessageKey } from "../lib/failure-kind"
 import { extractPromptFromParts, type PromptFromParts } from "../lib/prompt-from-parts"
 import { mergeIncomingMessage } from "../lib/message-merge"
 import { isColdSessionLoad, isLiveEventForSession } from "../lib/session-load-reconcile"
@@ -17,6 +21,12 @@ function parseMessages(response: MessageWithParts[]): { messages: Message[]; par
   }
 
   return { messages, parts }
+}
+
+/** A message that says what went wrong (unreachable, timeout, wrong password, server error) in the app's language. */
+function failureText(error: unknown, scope: "load" | "send"): string {
+  const detail = error instanceof Error ? error.message : String(error)
+  return i18n.t(failureMessageKey(classifyFailure(error), scope), { detail })
 }
 
 function pageSize(): number {
@@ -112,7 +122,7 @@ export const useSessions = create<SessionsState>((set, get) => ({
       const sessions = await client.session.list({ roots: true, limit: 50 })
       set({ sessions, isLoading: false })
     } catch (error) {
-      set({ error: "Failed to load sessions", isLoading: false })
+      set({ error: failureText(error, "load"), isLoading: false })
     }
   },
 
@@ -317,12 +327,15 @@ export const useSessions = create<SessionsState>((set, get) => ({
       // Await submission (POST to /prompt_async resolves fast, well before the
       // streamed response) so a failure here can propagate to the caller — SSE
       // events still update messages/parts/status in real-time on success.
-      await client.session.prompt(session.id, { parts: promptParts, model, agent, variant })
+      // The language request rides along as a system instruction, never in the optimistic copy above.
+      const settings = useSettings.getState()
+      const system = replyLanguageInstruction(resolveLocale(settings.locale, deviceLocaleTags()), settings.replyInMyLanguage)
+      await client.session.prompt(session.id, { parts: promptParts, model, agent, variant, ...(system ? { system } : {}) })
     } catch (err) {
       console.error("[sendMessage] error:", err)
       const stillCurrent = get().currentSession?.id === session.id
       set((state) => ({
-        ...(stillCurrent ? { error: String(err) } : {}),
+        ...(stillCurrent ? { error: failureText(err, "send") } : {}),
         sending: { ...state.sending, [session.id]: false },
       }))
       if (stillCurrent) get().refreshMessages()

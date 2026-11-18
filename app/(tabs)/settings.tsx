@@ -82,7 +82,10 @@ export default function SettingsScreen() {
   const { t } = useTranslation()
 
   const { settings, hasBiometrics, updateSettings, lock } = useAuth()
-  const { notifications, setNotification, locale, setLocale, mascot, setMascot } = useSettings()
+  const {
+    notifications, setNotification, locale, setLocale, mascot, setMascot,
+    showThinking, setShowThinking, showActions, setShowActions, replyInMyLanguage, setReplyInMyLanguage,
+  } = useSettings()
   const [osGranted, setOsGranted] = useState<boolean | null>(null)
 
   // Settings is where a user goes to ask "what am I running?". Answer it, and if
@@ -205,6 +208,30 @@ export default function SettingsScreen() {
             right={<Ionicons name="chevron-forward" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />}
           />
         )}
+      </SettingSection>
+
+      <SettingSection title={t("settings.sections.chat")} isDark={isDark}>
+        <SettingRow
+          icon="bulb-outline"
+          label={t("settings.chat.showThinking.label")}
+          description={t("settings.chat.showThinking.description")}
+          isDark={isDark}
+          right={<Switch value={showThinking} onValueChange={(value) => void setShowThinking(value)} trackColor={{ false: "#767577", true: "#34f5a5" }} />}
+        />
+        <SettingRow
+          icon="terminal-outline"
+          label={t("settings.chat.showActions.label")}
+          description={t("settings.chat.showActions.description")}
+          isDark={isDark}
+          right={<Switch value={showActions} onValueChange={(value) => void setShowActions(value)} trackColor={{ false: "#767577", true: "#34f5a5" }} />}
+        />
+        <SettingRow
+          icon="language-outline"
+          label={t("settings.chat.replyInMyLanguage.label")}
+          description={t("settings.chat.replyInMyLanguage.description")}
+          isDark={isDark}
+          right={<Switch value={replyInMyLanguage} onValueChange={(value) => void setReplyInMyLanguage(value)} trackColor={{ false: "#767577", true: "#34f5a5" }} />}
+        />
       </SettingSection>
 
       <SettingSection title={t("settings.sections.notifications")} isDark={isDark}>

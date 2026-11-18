@@ -2,6 +2,10 @@
 // event stream (protocol.ts); this hook starts or reopens the agent, keeps the stream connected (reading on from
 // the last event it has after a drop), drives the handshake and sends what the person does.
 import { useCallback, useEffect, useReducer, useRef, useState } from "react"
+import { useSettings } from "../../stores/settings"
+import { deviceLocaleTags } from "../i18n/config"
+import { resolveLocale } from "../i18n/locale-resolve"
+import { replyLanguageInstruction } from "../reply-language"
 import pkg from "../../../package.json"
 import { AcpApiError, sendMessage, startAgent, stopAgent, streamEvents, type AcpTarget } from "./api"
 import {
@@ -127,7 +131,9 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
     if (!current.sessionId) throw new Error("the chat is not ready yet")
     const id = Math.max(current.nextId, idFloor.current)
     idFloor.current = id + 1
-    await post(promptRequest(id, current.sessionId, text, images))
+    const settings = useSettings.getState()
+    const preface = replyLanguageInstruction(resolveLocale(settings.locale, deviceLocaleTags()), settings.replyInMyLanguage)
+    await post(promptRequest(id, current.sessionId, text, images, preface))
   }, [post])
 
   const cancel = useCallback(async () => {

@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { launcherUrl, interpretStart, canStartFromPhone } from "./launcher.ts"
+import { launcherUrl, interpretStart, canStartFromPhone, interpretLauncherStatus } from "./launcher.ts"
 
 test("launcher url keeps the host and swaps the port", () => {
   assert.equal(launcherUrl("http://100.92.64.0:4096", 4095), "http://100.92.64.0:4095")
@@ -35,4 +35,16 @@ test("only connections paired with a launcher offer the start button", () => {
 test("tunnel mode puts the launcher under a path of the public address", () => {
   assert.equal(launcherUrl("https://a-b.trycloudflare.com/", 4095, true), "https://a-b.trycloudflare.com/__oc/launcher")
   assert.equal(launcherUrl("http://100.1.2.3:4096", 4095), "http://100.1.2.3:4095")
+})
+
+test("interpretLauncherStatus: answers with the server state", () => {
+  assert.deepEqual(interpretLauncherStatus(200, { ok: true, server: { running: true, healthy: true } }), { kind: "answers", serverUp: true })
+  assert.deepEqual(interpretLauncherStatus(200, { ok: true, server: { running: false, healthy: false } }), { kind: "answers", serverUp: false })
+  assert.deepEqual(interpretLauncherStatus(200, { ok: true }), { kind: "answers", serverUp: false })
+})
+
+test("interpretLauncherStatus: bad password and garbage", () => {
+  assert.deepEqual(interpretLauncherStatus(401, null), { kind: "unauthorized" })
+  assert.deepEqual(interpretLauncherStatus(500, null), { kind: "unreachable" })
+  assert.deepEqual(interpretLauncherStatus(200, "x"), { kind: "unreachable" })
 })

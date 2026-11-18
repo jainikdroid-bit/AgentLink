@@ -355,7 +355,8 @@ export function reduce(state: AcpState, event: StreamEvent): AcpState {
         else if (msg.method === "session/set_mode") next = { ...next, safeSwitch: null, modeId: str(msg.params?.modeId) || next.modeId }
         else if (msg.method === "session/prompt") {
           const blocks: unknown[] = Array.isArray(msg.params?.prompt) ? msg.params.prompt : []
-          const text = blocks.map((b) => (isObject(b) && b.type === "text" ? str(b.text) : "")).join("")
+          const isPreface = (b: unknown) => isObject(b) && isObject(b._meta) && b._meta[PREFACE_META] === true
+          const text = blocks.map((b) => (isObject(b) && b.type === "text" && !isPreface(b) ? str(b.text) : "")).join("")
           const images = blocks.filter((b) => isObject(b) && b.type === "image").length
           next = withItem({ ...next, busy: true, error: null }, (id) => ({ id, type: "user", text, images }))
         }
@@ -397,8 +398,12 @@ export const setModeRequest = (id: number, sessionId: string, modeId: string): R
 
 export const authenticateRequest = (id: number, methodId: string): RpcMessage => ({ jsonrpc: "2.0", id, method: "authenticate", params: { methodId } })
 
-export function promptRequest(id: number, sessionId: string, text: string, images: { data: string; mimeType: string }[] = []): RpcMessage {
-  const prompt: unknown[] = [{ type: "text", text }, ...images.map((i) => ({ type: "image", data: i.data, mimeType: i.mimeType }))]
+/** Marks the app's own instruction block so the chat shows only what the user typed. */
+export const PREFACE_META = "agentlink/preface"
+
+export function promptRequest(id: number, sessionId: string, text: string, images: { data: string; mimeType: string }[] = [], preface: string | null = null): RpcMessage {
+  // `preface` (e.g. "Please think and reply in Russian.") goes in its own leading block, apart from the user's words.
+  const prompt: unknown[] = [...(preface ? [{ type: "text", text: preface, _meta: { [PREFACE_META]: true } }] : []), { type: "text", text }, ...images.map((i) => ({ type: "image", data: i.data, mimeType: i.mimeType }))]
   return { jsonrpc: "2.0", id, method: "session/prompt", params: { sessionId, prompt } }
 }
 

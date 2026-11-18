@@ -13,6 +13,12 @@ interface Settings {
   notifications: Record<Category, boolean>
   locale: LocalePreference
   mascot: MascotKind
+  /** Show the agent's reasoning open instead of folded. */
+  showThinking: boolean
+  /** Show the agent's actions (commands, edits) open instead of folded. */
+  showActions: boolean
+  /** Ask the agent to think and reply in the app's language. */
+  replyInMyLanguage: boolean
 }
 
 const DEFAULTS: Settings = {
@@ -20,6 +26,9 @@ const DEFAULTS: Settings = {
   notifications: { ...defaultPreferences },
   locale: "system",
   mascot: DEFAULT_MASCOT,
+  showThinking: true,
+  showActions: false,
+  replyInMyLanguage: true,
 }
 
 interface SettingsState extends Settings {
@@ -29,10 +38,14 @@ interface SettingsState extends Settings {
   setNotification: (category: Category, enabled: boolean) => Promise<void>
   setLocale: (locale: LocalePreference) => Promise<void>
   setMascot: (mascot: MascotKind) => Promise<void>
+  setShowThinking: (value: boolean) => Promise<void>
+  setShowActions: (value: boolean) => Promise<void>
+  setReplyInMyLanguage: (value: boolean) => Promise<void>
 }
 
 function snapshot(get: () => SettingsState): Settings {
-  return { pageSize: get().pageSize, notifications: get().notifications, locale: get().locale, mascot: get().mascot }
+  const { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage } = get()
+  return { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage }
 }
 
 async function persist(settings: Settings) {
@@ -77,5 +90,20 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setMascot: async (mascot) => {
     set({ mascot })
     await persist({ ...snapshot(get), mascot })
+  },
+
+  setShowThinking: async (showThinking) => {
+    set({ showThinking })
+    await persist({ ...snapshot(get), showThinking })
+  },
+
+  setShowActions: async (showActions) => {
+    set({ showActions })
+    await persist({ ...snapshot(get), showActions })
+  },
+
+  setReplyInMyLanguage: async (replyInMyLanguage) => {
+    set({ replyInMyLanguage })
+    await persist({ ...snapshot(get), replyInMyLanguage })
   },
 }))

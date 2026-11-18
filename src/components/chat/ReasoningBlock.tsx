@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from "reac
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { formatElapsed, tailLines } from "../../lib/agent-phase"
+import { useSettings } from "../../stores/settings"
 
 interface Props {
   text: string
@@ -73,7 +74,8 @@ function SweepBar({ color }: { color: string }) {
 
 export function ReasoningBlock({ text, isDark, streaming = false, durationMs = 0 }: Props) {
   const { t } = useTranslation()
-  const [expanded, setExpanded] = useState(false)
+  const showThinking = useSettings((s) => s.showThinking)
+  const [expanded, setExpanded] = useState(showThinking)
 
   const label = streaming
     ? t("chat.reasoningBlock.live")
