@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "Termux no está disponible en esta compilación.",
-      "not-installed": "Termux no está instalado. Instálalo desde F-Droid.",
+      "not-installed": "Termux no está instalado. Usa la configuración paso a paso de abajo.",
       "no-permission": "AgentLink todavía no puede ejecutar comandos en Termux.",
       "ready": "Termux está listo.",
       "grant": "Permitir AgentLink en Termux",
       "setupHint": "Termux también debe aceptar comandos de otras apps. Ejecuta esto una vez en Termux:",
       "copy": "Copiar",
-      "copied": "Copiado"
+      "copied": "Copiado",
+      "wizard": "Configurar Termux paso a paso"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "Cheri",
     "hide": "Ocultar a Cheri",
     "openSettings": "Ajustes del avatar"
+  },
+  "termuxSetup": {
+    "title": "Configurar Termux",
+    "intro": "Termux permite que el agente de IA ejecute comandos en tu teléfono. Sigue los pasos de abajo; cada uno se pone en verde al terminar.",
+    "unavailable": "La configuración de Termux no está disponible en esta versión de la app.",
+    "install": {
+      "title": "Instalar Termux",
+      "body": "Descarga Termux desde su versión oficial en GitHub e instálalo. Android te pedirá confirmar la instalación.",
+      "done": "Termux está instalado.",
+      "loadFailed": "No se pudo obtener la última versión de Termux: {{error}}",
+      "version": "Última versión {{version}} · {{size}}",
+      "download": "Descargar e instalar",
+      "downloading": "Descargando… {{percent}}%",
+      "cancel": "Cancelar",
+      "retry": "Reintentar",
+      "needPermission": "Android necesita tu permiso para que esta app instale aplicaciones. Permítelo en la siguiente pantalla y vuelve aquí.",
+      "openSettings": "Abrir la pantalla de permiso",
+      "checksum": "El archivo descargado está dañado (la suma de comprobación no coincide). Inténtalo de nuevo.",
+      "failed": "Falló la descarga: {{error}}",
+      "signatureNote": "Si antes instalaste Termux desde F-Droid o Google Play, desinstálalo primero: las versiones de distintas fuentes no se pueden instalar una sobre otra.",
+      "releasePage": "Abrir la página de la versión"
+    },
+    "open": {
+      "title": "Abre Termux una vez",
+      "body": "Abre Termux y espera a que termine su primera configuración (cerca de un minuto, necesita internet). Luego vuelve aquí.",
+      "button": "Abrir Termux",
+      "confirm": "Listo, Termux ya arrancó",
+      "done": "Termux ya se abrió."
+    },
+    "allow": {
+      "title": "Permite comandos de otras apps",
+      "body": "Copia la línea de abajo, pégala en Termux y pulsa Enter. Permite que otras apps ejecuten comandos en Termux.",
+      "copy": "Copiar la línea",
+      "copied": "Copiado",
+      "confirm": "Listo, ya la pegué",
+      "done": "Ajuste aplicado."
+    },
+    "permission": {
+      "title": "Da permiso a AgentLink",
+      "body": "Android preguntará si esta app puede ejecutar comandos en Termux. Permítelo.",
+      "button": "Permitir en Android",
+      "done": "Permiso concedido.",
+      "denied": "No se concedió el permiso. Si Android ya no pregunta, abre los ajustes del sistema de esta app, «Permisos», y permite «Ejecutar comandos en el entorno de Termux»."
+    },
+    "test": {
+      "title": "Prueba",
+      "body": "Ejecuta un comando inofensivo en Termux y muestra la respuesta.",
+      "button": "Ejecutar prueba",
+      "running": "Probando…",
+      "ok": "¡Funciona! Termux respondió: {{output}}",
+      "failed": "La prueba falló: {{error}}",
+      "revisit": "Vuelve al paso {{n}} ({{name}}) y revísalo.",
+      "generic": "Comprueba que Termux se abrió una vez (paso 2), que pegaste la línea (paso 3) y que el permiso está concedido (paso 4)."
+    },
+    "finish": {
+      "title": "Cómo lo usa el agente",
+      "body": "El agente puede usar Termux cuando están activados Ajustes, Herramientas del teléfono y el interruptor de Termux, y el ordenador se configuró con -PhoneTools.",
+      "settings": "Ir a Ajustes"
+    }
   }
 }

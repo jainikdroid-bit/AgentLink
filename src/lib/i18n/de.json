@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "Termux ist in diesem Build nicht verfügbar.",
-      "not-installed": "Termux ist nicht installiert. Installiere es aus F-Droid.",
+      "not-installed": "Termux ist nicht installiert. Nutze die Schritt-für-Schritt-Einrichtung unten.",
       "no-permission": "AgentLink darf noch keine Befehle in Termux ausführen.",
       "ready": "Termux ist bereit.",
       "grant": "AgentLink in Termux erlauben",
       "setupHint": "Termux muss auch Befehle anderer Apps annehmen. Führe dies einmal in Termux aus:",
       "copy": "Kopieren",
-      "copied": "Kopiert"
+      "copied": "Kopiert",
+      "wizard": "Termux Schritt für Schritt einrichten"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "Cheri",
     "hide": "Cheri ausblenden",
     "openSettings": "Avatar-Einstellungen"
+  },
+  "termuxSetup": {
+    "title": "Termux einrichten",
+    "intro": "Mit Termux kann der KI-Agent Befehle auf deinem Handy ausführen. Folge den Schritten unten; jeder wird grün, sobald er erledigt ist.",
+    "unavailable": "Die Termux-Einrichtung ist in dieser App-Version nicht verfügbar.",
+    "install": {
+      "title": "Termux installieren",
+      "body": "Lade Termux aus dem offiziellen GitHub-Release herunter und installiere es. Android bittet dich, die Installation zu bestätigen.",
+      "done": "Termux ist installiert.",
+      "loadFailed": "Die neueste Termux-Version konnte nicht abgerufen werden: {{error}}",
+      "version": "Neueste Version {{version}} · {{size}}",
+      "download": "Herunterladen und installieren",
+      "downloading": "Wird heruntergeladen… {{percent}} %",
+      "cancel": "Abbrechen",
+      "retry": "Erneut versuchen",
+      "needPermission": "Android braucht deine Erlaubnis, dass diese App andere Apps installieren darf. Erlaube es auf dem nächsten Bildschirm und komm dann zurück.",
+      "openSettings": "Berechtigungsbildschirm öffnen",
+      "checksum": "Die heruntergeladene Datei ist beschädigt (Prüfsumme stimmt nicht). Versuche es erneut.",
+      "failed": "Download fehlgeschlagen: {{error}}",
+      "signatureNote": "Falls du Termux früher aus F-Droid oder Google Play installiert hast, entferne es zuerst: Versionen aus verschiedenen Quellen lassen sich nicht übereinander installieren.",
+      "releasePage": "Release-Seite öffnen"
+    },
+    "open": {
+      "title": "Termux einmal öffnen",
+      "body": "Öffne Termux und warte, bis die Ersteinrichtung fertig ist (etwa eine Minute, Internet nötig). Komm dann hierher zurück.",
+      "button": "Termux öffnen",
+      "confirm": "Fertig, Termux ist gestartet",
+      "done": "Termux wurde geöffnet."
+    },
+    "allow": {
+      "title": "Befehle anderer Apps erlauben",
+      "body": "Kopiere die Zeile unten, füge sie in Termux ein und drücke Enter. Sie erlaubt anderen Apps, Befehle in Termux auszuführen.",
+      "copy": "Zeile kopieren",
+      "copied": "Kopiert",
+      "confirm": "Fertig, ich habe sie eingefügt",
+      "done": "Einstellung übernommen."
+    },
+    "permission": {
+      "title": "AgentLink die Berechtigung geben",
+      "body": "Android fragt, ob diese App Befehle in Termux ausführen darf. Erlaube es.",
+      "button": "In Android erlauben",
+      "done": "Berechtigung erteilt.",
+      "denied": "Die Berechtigung wurde nicht erteilt. Fragt Android nicht mehr, öffne die Systemeinstellungen dieser App, „Berechtigungen“, und erlaube „Befehle in der Termux-Umgebung ausführen“."
+    },
+    "test": {
+      "title": "Test",
+      "body": "Führt einen harmlosen Befehl in Termux aus und zeigt die Antwort.",
+      "button": "Test starten",
+      "running": "Teste…",
+      "ok": "Es funktioniert! Termux antwortete: {{output}}",
+      "failed": "Test fehlgeschlagen: {{error}}",
+      "revisit": "Geh zurück zu Schritt {{n}} ({{name}}) und prüfe ihn.",
+      "generic": "Prüfe, ob Termux einmal geöffnet wurde (Schritt 2), die Zeile eingefügt wurde (Schritt 3) und die Berechtigung erteilt ist (Schritt 4)."
+    },
+    "finish": {
+      "title": "Nutzung durch den Agenten",
+      "body": "Der Agent kann Termux nutzen, wenn in den Einstellungen die Handy-Werkzeuge und der Termux-Schalter an sind und der Computer mit -PhoneTools eingerichtet wurde.",
+      "settings": "Zu den Einstellungen"
+    }
   }
 }

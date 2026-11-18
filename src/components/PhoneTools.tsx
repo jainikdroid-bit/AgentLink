@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import { View, Text, Switch, StyleSheet, TouchableOpacity } from "react-native"
 import * as Clipboard from "expo-clipboard"
 import { Ionicons } from "@expo/vector-icons"
+import { router } from "expo-router"
 import { useTranslation } from "react-i18next"
 import { cyber } from "../theme/cyber"
 import { PHONE_TOOLS } from "../lib/phone-tools"
@@ -31,6 +32,10 @@ function TermuxSetup() {
   return (
     <View style={s.termux} testID="termux-setup">
       <Text style={[s.hint, state === "ready" ? s.ok : s.warn]}>{t(`phone.termux.${state}`)}</Text>
+      <TouchableOpacity style={s.wizard} onPress={() => router.push("/termux-setup")} testID="termux-wizard-link">
+        <Ionicons name="construct-outline" size={16} color={cyber.bg} />
+        <Text style={s.wizardText}>{t("phone.termux.wizard")}</Text>
+      </TouchableOpacity>
       {state === "no-permission" ? (
         <TouchableOpacity onPress={() => void grant()} testID="termux-grant">
           <Text style={s.link}>{t("phone.termux.grant")}</Text>
@@ -102,6 +107,8 @@ const s = StyleSheet.create({
   termux: { marginLeft: 32, gap: 6, paddingBottom: 8 },
   ok: { color: cyber.green },
   warn: { color: cyber.amber },
+  wizard: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: cyber.cyan, borderRadius: 8, paddingHorizontal: 12, height: 38 },
+  wizardText: { color: cyber.bg, fontWeight: "700", fontSize: 13 },
   link: { color: cyber.cyan, fontSize: 13, fontWeight: "600" },
   code: { color: cyber.text, fontSize: 11, fontFamily: cyber.mono, backgroundColor: cyber.surface2, padding: 8, borderRadius: 6 },
 })

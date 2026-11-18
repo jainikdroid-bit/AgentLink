@@ -1,0 +1,3 @@
+v0.21.0 — Termux setup from the app, new look
+- Settings → Phone tools → Set up Termux: the app downloads and installs Termux, then walks you through allowing it and runs a test.
+- New icon, splash screen and small Cheri to match the 3D Cheri.

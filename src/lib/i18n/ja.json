@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "このビルドではTermuxを使えません。",
-      "not-installed": "Termuxがインストールされていません。F-Droidからインストールしてください。",
+      "not-installed": "Termux がインストールされていません。下の手順に沿ったセットアップを使ってください。",
       "no-permission": "AgentLinkはまだTermuxでコマンドを実行できません。",
       "ready": "Termuxの準備ができました。",
       "grant": "TermuxでAgentLinkを許可",
       "setupHint": "Termux側でも他のアプリからのコマンドを受け付ける必要があります。Termuxで一度実行してください：",
       "copy": "コピー",
-      "copied": "コピーしました"
+      "copied": "コピーしました",
+      "wizard": "Termux を手順に沿ってセットアップ"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "チェリー",
     "hide": "チェリーを隠す",
     "openSettings": "アバター設定"
+  },
+  "termuxSetup": {
+    "title": "Termux のセットアップ",
+    "intro": "Termux を使うと、AI エージェントがスマートフォン上でコマンドを実行できます。下の手順を進めてください。完了した手順は緑色になります。",
+    "unavailable": "このアプリのビルドでは Termux のセットアップを利用できません。",
+    "install": {
+      "title": "Termux をインストール",
+      "body": "公式の GitHub リリースから Termux をダウンロードしてインストールします。Android がインストールの確認を求めます。",
+      "done": "Termux はインストール済みです。",
+      "loadFailed": "Termux の最新バージョンを取得できませんでした: {{error}}",
+      "version": "最新バージョン {{version}} · {{size}}",
+      "download": "ダウンロードしてインストール",
+      "downloading": "ダウンロード中… {{percent}}%",
+      "cancel": "キャンセル",
+      "retry": "再試行",
+      "needPermission": "このアプリがアプリをインストールすることを Android が許可する必要があります。次の画面で許可してから、ここに戻ってください。",
+      "openSettings": "許可の画面を開く",
+      "checksum": "ダウンロードしたファイルが壊れています（チェックサム不一致）。もう一度お試しください。",
+      "failed": "ダウンロードに失敗しました: {{error}}",
+      "signatureNote": "以前に F-Droid や Google Play から Termux を入れた場合は、先に削除してください。提供元が違うバージョンは上書きインストールできません。",
+      "releasePage": "リリースページを開く"
+    },
+    "open": {
+      "title": "Termux を一度開く",
+      "body": "Termux を開き、初回セットアップが終わるまで待ちます（約 1 分、インターネットが必要）。終わったらここに戻ってください。",
+      "button": "Termux を開く",
+      "confirm": "完了、Termux が起動しました",
+      "done": "Termux を開きました。"
+    },
+    "allow": {
+      "title": "他のアプリからのコマンドを許可",
+      "body": "下の 1 行をコピーして Termux に貼り付け、Enter を押します。他のアプリが Termux でコマンドを実行できるようになります。",
+      "copy": "1 行をコピー",
+      "copied": "コピーしました",
+      "confirm": "完了、貼り付けました",
+      "done": "設定を適用しました。"
+    },
+    "permission": {
+      "title": "AgentLink に権限を与える",
+      "body": "このアプリが Termux でコマンドを実行してよいか Android が尋ねます。許可してください。",
+      "button": "Android で許可",
+      "done": "権限が付与されました。",
+      "denied": "権限が付与されませんでした。Android が再度尋ねない場合は、このアプリのシステム設定の「権限」を開き、「Termux 環境でコマンドを実行」を許可してください。"
+    },
+    "test": {
+      "title": "テスト",
+      "body": "Termux で無害なコマンドを実行し、応答を表示します。",
+      "button": "テストを実行",
+      "running": "テスト中…",
+      "ok": "成功です。Termux の応答: {{output}}",
+      "failed": "テストに失敗しました: {{error}}",
+      "revisit": "手順 {{n}}（{{name}}）に戻って確認してください。",
+      "generic": "Termux を一度開いたこと（手順 2）、1 行を貼り付けたこと（手順 3）、権限を付与したこと（手順 4）を確認してください。"
+    },
+    "finish": {
+      "title": "エージェントでの使い方",
+      "body": "設定の「スマホツール」と Termux のスイッチがオンで、パソコン側を -PhoneTools でセットアップしていれば、エージェントは Termux を使えます。",
+      "settings": "設定へ移動"
+    }
   }
 }

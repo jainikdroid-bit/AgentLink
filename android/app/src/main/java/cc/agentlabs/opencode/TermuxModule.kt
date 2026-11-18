@@ -146,6 +146,6 @@ class TermuxModule(private val ctx: ReactApplicationContext) : ReactContextBaseJ
 }
 
 class TermuxPackage : ReactPackage {
-  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> = listOf(TermuxModule(reactContext))
+  override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> = listOf(TermuxModule(reactContext), TermuxInstallerModule(reactContext))
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> = emptyList()
 }

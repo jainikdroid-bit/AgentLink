@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "此版本无法使用 Termux。",
-      "not-installed": "未安装 Termux。请从 F-Droid 安装。",
+      "not-installed": "未安装 Termux。请使用下方的分步设置。",
       "no-permission": "AgentLink 还不能在 Termux 中运行命令。",
       "ready": "Termux 已就绪。",
       "grant": "在 Termux 中允许 AgentLink",
       "setupHint": "Termux 还需要接受其他应用的命令。请在 Termux 中运行一次：",
       "copy": "复制",
-      "copied": "已复制"
+      "copied": "已复制",
+      "wizard": "分步设置 Termux"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "Cheri",
     "hide": "隐藏 Cheri",
     "openSettings": "头像设置"
+  },
+  "termuxSetup": {
+    "title": "设置 Termux",
+    "intro": "Termux 让 AI 智能体可以在手机上运行命令。请按下面的步骤操作，完成的步骤会变成绿色。",
+    "unavailable": "此应用版本不支持 Termux 设置。",
+    "install": {
+      "title": "安装 Termux",
+      "body": "从官方 GitHub 发布页下载 Termux 并安装。Android 会请你确认安装。",
+      "done": "Termux 已安装。",
+      "loadFailed": "无法获取 Termux 最新版本：{{error}}",
+      "version": "最新版本 {{version}} · {{size}}",
+      "download": "下载并安装",
+      "downloading": "正在下载… {{percent}}%",
+      "cancel": "取消",
+      "retry": "重试",
+      "needPermission": "Android 需要你允许此应用安装其他应用。请在下一个界面中允许，然后返回这里。",
+      "openSettings": "打开权限界面",
+      "checksum": "下载的文件已损坏（校验和不匹配）。请重试。",
+      "failed": "下载失败：{{error}}",
+      "signatureNote": "如果你之前从 F-Droid 或 Google Play 安装过 Termux，请先卸载：不同来源的版本不能互相覆盖安装。",
+      "releasePage": "打开发布页面"
+    },
+    "open": {
+      "title": "先打开一次 Termux",
+      "body": "打开 Termux，等待它完成首次初始化（约一分钟，需要联网）。然后返回这里。",
+      "button": "打开 Termux",
+      "confirm": "完成，Termux 已启动",
+      "done": "已打开过 Termux。"
+    },
+    "allow": {
+      "title": "允许其他应用运行命令",
+      "body": "复制下面这一行，粘贴到 Termux 中并按回车。它允许其他应用在 Termux 中运行命令。",
+      "copy": "复制这一行",
+      "copied": "已复制",
+      "confirm": "完成，我已粘贴",
+      "done": "设置已应用。"
+    },
+    "permission": {
+      "title": "授予 AgentLink 权限",
+      "body": "Android 会询问此应用是否可以在 Termux 中运行命令。请选择允许。",
+      "button": "在 Android 中允许",
+      "done": "权限已授予。",
+      "denied": "权限未授予。如果 Android 不再询问，请打开此应用的系统设置，进入“权限”，并允许“在 Termux 环境中运行命令”。"
+    },
+    "test": {
+      "title": "测试",
+      "body": "在 Termux 中运行一条无害的命令并显示结果。",
+      "button": "运行测试",
+      "running": "正在测试…",
+      "ok": "成功！Termux 返回：{{output}}",
+      "failed": "测试失败：{{error}}",
+      "revisit": "请返回第 {{n}} 步（{{name}}）并检查。",
+      "generic": "请检查：Termux 已打开过一次（第 2 步）、已粘贴那一行（第 3 步）、权限已授予（第 4 步）。"
+    },
+    "finish": {
+      "title": "与智能体配合使用",
+      "body": "当“设置”中的“手机工具”和 Termux 开关都已打开，且电脑端使用 -PhoneTools 完成设置后，智能体即可使用 Termux。",
+      "settings": "前往设置"
+    }
   }
 }

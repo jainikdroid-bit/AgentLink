@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/brand/rig.svg" width="140" alt="RIG, the AgentLink mascot" />
+  <img src="docs/brand/cheri.png" width="200" alt="Cheri, the AgentLink mascot" />
 </p>
 
 <h1 align="center">AgentLink</h1>

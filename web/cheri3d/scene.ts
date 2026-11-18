@@ -24,8 +24,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace
 
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(24, 1, 0.1, 20)
-camera.position.set(0, 1.26, 1.9)
-camera.lookAt(0, 1.17, 0)
+camera.position.set(0, 1.33, 1.95)
+camera.lookAt(0, 1.25, 0)
 scene.add(new THREE.AmbientLight(0xffffff, 1.6))
 const sun = new THREE.DirectionalLight(0xffffff, 1.8)
 sun.position.set(0.6, 1.6, 1.4)

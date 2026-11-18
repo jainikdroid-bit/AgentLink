@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "이 빌드에서는 Termux를 사용할 수 없습니다.",
-      "not-installed": "Termux가 설치되어 있지 않습니다. F-Droid에서 설치하세요.",
+      "not-installed": "Termux가 설치되어 있지 않습니다. 아래 단계별 설정을 이용하세요.",
       "no-permission": "AgentLink는 아직 Termux에서 명령을 실행할 수 없습니다.",
       "ready": "Termux가 준비되었습니다.",
       "grant": "Termux에서 AgentLink 허용",
       "setupHint": "Termux도 다른 앱의 명령을 받도록 해야 합니다. Termux에서 한 번 실행하세요:",
       "copy": "복사",
-      "copied": "복사됨"
+      "copied": "복사됨",
+      "wizard": "Termux 단계별 설정"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "체리",
     "hide": "체리 숨기기",
     "openSettings": "아바타 설정"
+  },
+  "termuxSetup": {
+    "title": "Termux 설정",
+    "intro": "Termux를 사용하면 AI 에이전트가 휴대폰에서 명령을 실행할 수 있습니다. 아래 단계를 따라 주세요. 완료된 단계는 초록색으로 바뀝니다.",
+    "unavailable": "이 앱 빌드에서는 Termux 설정을 사용할 수 없습니다.",
+    "install": {
+      "title": "Termux 설치",
+      "body": "공식 GitHub 릴리스에서 Termux를 내려받아 설치합니다. Android가 설치 확인을 요청합니다.",
+      "done": "Termux가 설치되었습니다.",
+      "loadFailed": "Termux 최신 버전을 가져오지 못했습니다: {{error}}",
+      "version": "최신 버전 {{version}} · {{size}}",
+      "download": "다운로드 후 설치",
+      "downloading": "다운로드 중… {{percent}}%",
+      "cancel": "취소",
+      "retry": "다시 시도",
+      "needPermission": "이 앱이 다른 앱을 설치하도록 Android에서 허용해야 합니다. 다음 화면에서 허용한 뒤 여기로 돌아오세요.",
+      "openSettings": "허용 화면 열기",
+      "checksum": "내려받은 파일이 손상되었습니다(체크섬 불일치). 다시 시도하세요.",
+      "failed": "다운로드 실패: {{error}}",
+      "signatureNote": "이전에 F-Droid나 Google Play에서 Termux를 설치했다면 먼저 삭제하세요. 출처가 다른 버전은 덮어 설치할 수 없습니다.",
+      "releasePage": "릴리스 페이지 열기"
+    },
+    "open": {
+      "title": "Termux를 한 번 열기",
+      "body": "Termux를 열고 첫 설정이 끝날 때까지 기다립니다(약 1분, 인터넷 필요). 그런 다음 여기로 돌아오세요.",
+      "button": "Termux 열기",
+      "confirm": "완료, Termux가 시작되었습니다",
+      "done": "Termux를 열었습니다."
+    },
+    "allow": {
+      "title": "다른 앱의 명령 허용",
+      "body": "아래 줄을 복사해 Termux에 붙여넣고 Enter를 누르세요. 다른 앱이 Termux에서 명령을 실행할 수 있게 됩니다.",
+      "copy": "줄 복사",
+      "copied": "복사됨",
+      "confirm": "완료, 붙여넣었습니다",
+      "done": "설정이 적용되었습니다."
+    },
+    "permission": {
+      "title": "AgentLink에 권한 주기",
+      "body": "이 앱이 Termux에서 명령을 실행해도 되는지 Android가 묻습니다. 허용하세요.",
+      "button": "Android에서 허용",
+      "done": "권한이 부여되었습니다.",
+      "denied": "권한이 부여되지 않았습니다. Android가 더 이상 묻지 않으면 이 앱의 시스템 설정에서 '권한'을 열고 'Termux 환경에서 명령 실행'을 허용하세요."
+    },
+    "test": {
+      "title": "테스트",
+      "body": "Termux에서 무해한 명령을 실행하고 응답을 보여줍니다.",
+      "button": "테스트 실행",
+      "running": "테스트 중…",
+      "ok": "작동합니다! Termux 응답: {{output}}",
+      "failed": "테스트 실패: {{error}}",
+      "revisit": "{{n}}단계({{name}})로 돌아가 확인하세요.",
+      "generic": "Termux를 한 번 열었는지(2단계), 줄을 붙여넣었는지(3단계), 권한이 부여되었는지(4단계) 확인하세요."
+    },
+    "finish": {
+      "title": "에이전트에서 사용하기",
+      "body": "설정의 '휴대폰 도구'와 Termux 스위치가 켜져 있고 컴퓨터가 -PhoneTools로 설정되어 있으면 에이전트가 Termux를 사용할 수 있습니다.",
+      "settings": "설정으로 이동"
+    }
   }
 }

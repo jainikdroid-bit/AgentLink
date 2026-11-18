@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "O Termux não está disponível nesta versão.",
-      "not-installed": "O Termux não está instalado. Instale pelo F-Droid.",
+      "not-installed": "O Termux não está instalado. Use a configuração passo a passo abaixo.",
       "no-permission": "O AgentLink ainda não pode executar comandos no Termux.",
       "ready": "O Termux está pronto.",
       "grant": "Permitir o AgentLink no Termux",
       "setupHint": "O Termux também precisa aceitar comandos de outros apps. Execute isto uma vez no Termux:",
       "copy": "Copiar",
-      "copied": "Copiado"
+      "copied": "Copiado",
+      "wizard": "Configurar o Termux passo a passo"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "Cheri",
     "hide": "Ocultar Cheri",
     "openSettings": "Ajustes do avatar"
+  },
+  "termuxSetup": {
+    "title": "Configurar o Termux",
+    "intro": "O Termux permite que o agente de IA execute comandos no seu celular. Siga os passos abaixo; cada um fica verde quando concluído.",
+    "unavailable": "A configuração do Termux não está disponível nesta versão do app.",
+    "install": {
+      "title": "Instalar o Termux",
+      "body": "Baixe o Termux na versão oficial do GitHub e instale. O Android vai pedir para confirmar a instalação.",
+      "done": "O Termux está instalado.",
+      "loadFailed": "Não foi possível obter a última versão do Termux: {{error}}",
+      "version": "Última versão {{version}} · {{size}}",
+      "download": "Baixar e instalar",
+      "downloading": "Baixando… {{percent}}%",
+      "cancel": "Cancelar",
+      "retry": "Tentar de novo",
+      "needPermission": "O Android precisa da sua permissão para que este app instale aplicativos. Permita na próxima tela e volte aqui.",
+      "openSettings": "Abrir a tela de permissão",
+      "checksum": "O arquivo baixado está danificado (a soma de verificação não confere). Tente de novo.",
+      "failed": "Falha no download: {{error}}",
+      "signatureNote": "Se você já instalou o Termux pelo F-Droid ou pela Google Play, remova-o primeiro: versões de fontes diferentes não podem ser instaladas uma sobre a outra.",
+      "releasePage": "Abrir a página da versão"
+    },
+    "open": {
+      "title": "Abra o Termux uma vez",
+      "body": "Abra o Termux e espere ele terminar a primeira configuração (cerca de um minuto, precisa de internet). Depois volte aqui.",
+      "button": "Abrir o Termux",
+      "confirm": "Pronto, o Termux iniciou",
+      "done": "O Termux já foi aberto."
+    },
+    "allow": {
+      "title": "Permita comandos de outros apps",
+      "body": "Copie a linha abaixo, cole no Termux e pressione Enter. Ela permite que outros apps executem comandos no Termux.",
+      "copy": "Copiar a linha",
+      "copied": "Copiado",
+      "confirm": "Pronto, colei",
+      "done": "Ajuste aplicado."
+    },
+    "permission": {
+      "title": "Dê permissão ao AgentLink",
+      "body": "O Android vai perguntar se este app pode executar comandos no Termux. Permita.",
+      "button": "Permitir no Android",
+      "done": "Permissão concedida.",
+      "denied": "A permissão não foi concedida. Se o Android não perguntar mais, abra as configurações do sistema deste app, «Permissões», e permita «Executar comandos no ambiente do Termux»."
+    },
+    "test": {
+      "title": "Teste",
+      "body": "Executa um comando inofensivo no Termux e mostra a resposta.",
+      "button": "Executar teste",
+      "running": "Testando…",
+      "ok": "Funciona! O Termux respondeu: {{output}}",
+      "failed": "O teste falhou: {{error}}",
+      "revisit": "Volte ao passo {{n}} ({{name}}) e confira.",
+      "generic": "Confira se o Termux foi aberto uma vez (passo 2), se a linha foi colada (passo 3) e se a permissão foi concedida (passo 4)."
+    },
+    "finish": {
+      "title": "Como o agente usa isso",
+      "body": "O agente pode usar o Termux quando Ajustes, Ferramentas do celular e a chave do Termux estão ativados e o computador foi configurado com -PhoneTools.",
+      "settings": "Ir para Ajustes"
+    }
   }
 }

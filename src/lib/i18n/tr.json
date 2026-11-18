@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "Bu sürümde Termux kullanılamıyor.",
-      "not-installed": "Termux kurulu değil. F-Droid'den kurun.",
+      "not-installed": "Termux kurulu değil. Aşağıdaki adım adım kurulumu kullanın.",
       "no-permission": "AgentLink henüz Termux'ta komut çalıştıramıyor.",
       "ready": "Termux hazır.",
       "grant": "AgentLink'e Termux'ta izin ver",
       "setupHint": "Termux'un diğer uygulamalardan gelen komutları da kabul etmesi gerekir. Bunu Termux'ta bir kez çalıştırın:",
       "copy": "Kopyala",
-      "copied": "Kopyalandı"
+      "copied": "Kopyalandı",
+      "wizard": "Termux'u adım adım kur"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "Cheri",
     "hide": "Cheri'yi gizle",
     "openSettings": "Avatar ayarları"
+  },
+  "termuxSetup": {
+    "title": "Termux kurulumu",
+    "intro": "Termux, yapay zekâ ajanının telefonunuzda komut çalıştırmasını sağlar. Aşağıdaki adımları izleyin; her adım tamamlanınca yeşile döner.",
+    "unavailable": "Termux kurulumu bu uygulama sürümünde kullanılamıyor.",
+    "install": {
+      "title": "Termux'u kur",
+      "body": "Termux'u resmî GitHub sürümünden indirip kurun. Android kurulumu onaylamanızı isteyecek.",
+      "done": "Termux kurulu.",
+      "loadFailed": "Termux'un son sürümü alınamadı: {{error}}",
+      "version": "Son sürüm {{version}} · {{size}}",
+      "download": "İndir ve kur",
+      "downloading": "İndiriliyor… %{{percent}}",
+      "cancel": "İptal",
+      "retry": "Tekrar dene",
+      "needPermission": "Android, bu uygulamanın uygulama kurmasına izin vermenizi istiyor. Sonraki ekranda izin verip buraya dönün.",
+      "openSettings": "İzin ekranını aç",
+      "checksum": "İndirilen dosya bozuk (sağlama toplamı uyuşmuyor). Tekrar deneyin.",
+      "failed": "İndirme başarısız: {{error}}",
+      "signatureNote": "Termux'u daha önce F-Droid veya Google Play'den kurduysanız önce kaldırın: farklı kaynaklardan gelen sürümler üst üste kurulamaz.",
+      "releasePage": "Sürüm sayfasını aç"
+    },
+    "open": {
+      "title": "Termux'u bir kez açın",
+      "body": "Termux'u açın ve ilk kurulumu bitirmesini bekleyin (yaklaşık bir dakika, internet gerekir). Sonra buraya dönün.",
+      "button": "Termux'u aç",
+      "confirm": "Tamam, Termux başladı",
+      "done": "Termux açıldı."
+    },
+    "allow": {
+      "title": "Diğer uygulamalardan gelen komutlara izin ver",
+      "body": "Aşağıdaki satırı kopyalayın, Termux'a yapıştırın ve Enter'a basın. Diğer uygulamaların Termux'ta komut çalıştırmasına izin verir.",
+      "copy": "Satırı kopyala",
+      "copied": "Kopyalandı",
+      "confirm": "Tamam, yapıştırdım",
+      "done": "Ayar uygulandı."
+    },
+    "permission": {
+      "title": "AgentLink'e izin verin",
+      "body": "Android, bu uygulamanın Termux'ta komut çalıştırıp çalıştıramayacağını soracak. İzin verin.",
+      "button": "Android'de izin ver",
+      "done": "İzin verildi.",
+      "denied": "İzin verilmedi. Android artık sormuyorsa bu uygulamanın sistem ayarlarında \"İzinler\" bölümünü açıp \"Termux ortamında komut çalıştır\" iznini verin."
+    },
+    "test": {
+      "title": "Test",
+      "body": "Termux'ta zararsız bir komut çalıştırır ve yanıtı gösterir.",
+      "button": "Testi çalıştır",
+      "running": "Test ediliyor…",
+      "ok": "Çalışıyor! Termux yanıtı: {{output}}",
+      "failed": "Test başarısız: {{error}}",
+      "revisit": "{{n}}. adıma ({{name}}) dönüp kontrol edin.",
+      "generic": "Termux'un bir kez açıldığını (2. adım), satırın yapıştırıldığını (3. adım) ve iznin verildiğini (4. adım) kontrol edin."
+    },
+    "finish": {
+      "title": "Ajanla kullanım",
+      "body": "Ayarlar'da Telefon araçları ve Termux anahtarı açıksa ve bilgisayar -PhoneTools ile kurulduysa ajan Termux'u kullanabilir.",
+      "settings": "Ayarlara git"
+    }
   }
 }

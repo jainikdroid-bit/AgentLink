@@ -641,13 +641,14 @@
     },
     "termux": {
       "unavailable": "Termux can't be used in this build.",
-      "not-installed": "Termux is not installed. Install it from F-Droid.",
+      "not-installed": "Termux is not installed. Use the step-by-step setup below.",
       "no-permission": "AgentLink is not allowed to run commands in Termux yet.",
       "ready": "Termux is ready.",
       "grant": "Allow AgentLink in Termux",
       "setupHint": "Termux must also accept commands from other apps. Run this once in Termux:",
       "copy": "Copy",
-      "copied": "Copied"
+      "copied": "Copied",
+      "wizard": "Set up Termux step by step"
     }
   },
   "permissionBanner": {
@@ -809,5 +810,64 @@
     "menuTitle": "Cheri",
     "hide": "Hide Cheri",
     "openSettings": "Avatar settings"
+  },
+  "termuxSetup": {
+    "title": "Set up Termux",
+    "intro": "Termux lets the AI agent run commands on your phone. Follow the steps below; each one turns green when it is done.",
+    "unavailable": "Termux setup is not available in this app build.",
+    "install": {
+      "title": "Install Termux",
+      "body": "Download Termux from its official GitHub release and install it. Android will ask you to confirm the installation.",
+      "done": "Termux is installed.",
+      "loadFailed": "Could not get the latest Termux version: {{error}}",
+      "version": "Latest version {{version}} · {{size}}",
+      "download": "Download and install",
+      "downloading": "Downloading… {{percent}}%",
+      "cancel": "Cancel",
+      "retry": "Try again",
+      "needPermission": "Android needs your permission to install apps from this app. Allow it on the next screen, then come back here.",
+      "openSettings": "Open the permission screen",
+      "checksum": "The downloaded file is damaged (checksum mismatch). Try again.",
+      "failed": "Download failed: {{error}}",
+      "signatureNote": "If you installed Termux from F-Droid or Google Play before, remove it first: versions from different sources cannot be installed over each other.",
+      "releasePage": "Open the release page"
+    },
+    "open": {
+      "title": "Open Termux once",
+      "body": "Open Termux and wait until it finishes its first-time setup (about a minute, internet needed). Then come back here.",
+      "button": "Open Termux",
+      "confirm": "Done, Termux has started",
+      "done": "Termux has been opened."
+    },
+    "allow": {
+      "title": "Allow commands from other apps",
+      "body": "Copy the line below, paste it in Termux and press Enter. It lets other apps run commands in Termux.",
+      "copy": "Copy the line",
+      "copied": "Copied",
+      "confirm": "Done, I pasted it",
+      "done": "Setting applied."
+    },
+    "permission": {
+      "title": "Give AgentLink permission",
+      "body": "Android asks whether this app may run commands in Termux. Allow it.",
+      "button": "Allow in Android",
+      "done": "Permission granted.",
+      "denied": "The permission was not granted. If Android no longer asks, open this app's system settings, Permissions, and allow \"Run commands in Termux environment\"."
+    },
+    "test": {
+      "title": "Test",
+      "body": "Runs a harmless command in Termux and shows the answer.",
+      "button": "Run test",
+      "running": "Testing…",
+      "ok": "Works! Termux answered: {{output}}",
+      "failed": "Test failed: {{error}}",
+      "revisit": "Go back to step {{n}} ({{name}}) and check it.",
+      "generic": "Check that Termux was opened once (step 2), the line was pasted (step 3) and the permission is granted (step 4)."
+    },
+    "finish": {
+      "title": "Using it with the agent",
+      "body": "The agent can use Termux when Settings, Phone tools is on, the Termux switch is on, and the computer was set up with -PhoneTools.",
+      "settings": "Go to Settings"
+    }
   }
 }
