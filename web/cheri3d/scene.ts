@@ -167,9 +167,10 @@ function plaidTexture(): THREE.CanvasTexture {
   return t
 }
 
+// Sporty look: pink top, white tennis skirt, no school bow.
 function restyleOutfit(model: VRM) {
   const pink = solidTexture("#f29abd")
-  const plaid = plaidTexture()
+  const plaid = solidTexture("#f7f6f9")
   model.scene.traverse((o) => {
     const mesh = o as THREE.Mesh
     if (!mesh.isMesh) return
@@ -178,10 +179,14 @@ function restyleOutfit(model: VRM) {
       const name = m.name || ""
       const top = /Tops/i.test(name)
       const skirt = /Bottoms/i.test(name)
+      if (/Accessory/i.test(name)) {
+        m.visible = false
+        continue
+      }
       if (!top && !skirt) continue
       m.map = top ? pink : plaid
       if (m.shadeMultiplyTexture !== undefined) m.shadeMultiplyTexture = top ? pink : plaid
-      if (m.shadeColorFactor) m.shadeColorFactor.set(top ? "#c8708f" : "#9a8aa8")
+      if (m.shadeColorFactor) m.shadeColorFactor.set(top ? "#c8708f" : "#c3c2d4")
       if (m.color) m.color.set("#ffffff")
       m.needsUpdate = true
     }

@@ -489,9 +489,9 @@ export function renderFrame(frame: Frame, mood: Mood): string {
     path("M45 124 L46 108 Q60 103 74 108 L75 124 Z", { fill: C.top }) +
     path("M19 124 Q21 108 35 104 L43 124 Z M101 124 Q99 108 85 104 L77 124 Z", { fill: C.jacket, stroke: C.jacketEdge, "stroke-width": 1.5 }) +
     el("rect", { x: 53.4, y: 72, width: 13.2, height: 24, fill: C.skin }) +
-    // blue bow like the 3D model; its knot is the status light
-    path("M60 85 L49.5 79.5 L49.5 90.5 Z M60 85 L70.5 79.5 L70.5 90.5 Z", { fill: "#29A9E0", stroke: "#1C7FB0", "stroke-width": 0.8, "stroke-linejoin": "round" }) +
-    el("circle", { cx: 60, cy: 85, r: 2.4, fill: led, stroke: "#1C7FB0", "stroke-width": 0.6 })
+    // polo collar like the 3D model; the button is the status light
+    path("M50 84 L60 92 L56 98 Z M70 84 L60 92 L64 98 Z", { fill: "#F7B5CF", stroke: "#D4537E", "stroke-width": 0.7, "stroke-linejoin": "round" }) +
+    el("circle", { cx: 60, cy: 95, r: 1.8, fill: led, stroke: "#D4537E", "stroke-width": 0.5 })
 
   const character =
     el("g", { transform: head }, path("M34 104 Q24 60 34 34 Q46 18 62 20 Q86 22 88 50 Q92 80 84 104 Z", { fill: C.hair })) +
