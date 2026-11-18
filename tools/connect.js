@@ -354,7 +354,7 @@ function run(opts, io) {
     const launcherJs = path.join(dir, 'launcher.js')
     const bundled = path.join(__dirname, 'launcher.js')
     if (path.resolve(bundled) !== path.resolve(launcherJs) && fs.existsSync(bundled)) fs.copyFileSync(bundled, launcherJs)
-    for (const extra of ['acp-bridge.js', ...(phoneTools ? ['phone-bridge.js', 'phone-mcp.js'] : []), ...(mode === 'tunnel' ? ['gateway.js', 'tunnel.js'] : [])]) {
+    for (const extra of ['acp-bridge.js', ...(phoneTools ? ['phone-bridge.js', 'phone-mcp.js', 'phone-tools.md'] : []), ...(mode === 'tunnel' ? ['gateway.js', 'tunnel.js'] : [])]) {
       const src = path.join(__dirname, extra)
       const dest = path.join(dir, extra)
       if (path.resolve(src) !== path.resolve(dest) && fs.existsSync(src)) fs.copyFileSync(src, dest)
@@ -404,7 +404,7 @@ function run(opts, io) {
         if (phoneTools) {
           for (let i = 0; i < 20 && !listening(bridgePort); i++) await sleep(250)
           if (mode === 'tailscale') sh(tsExe, ['serve', '--bg', '--tcp', String(bridgePort), `tcp://127.0.0.1:${bridgePort}`])
-          note('phone tools', listening(bridgePort) ? 'ok' : 'skip', listening(bridgePort) ? registerOpencodeMcp(path.join(dir, 'phone-mcp.js')) : 'bridge did not start')
+          note('phone tools', listening(bridgePort) ? 'ok' : 'skip', listening(bridgePort) ? registerOpencodeMcp(path.join(dir, 'phone-mcp.js'), path.join(dir, 'phone-tools.md')) : 'bridge did not start')
         }
       } else note('launcher', 'skip', 'did not start')
       if (autostartOn) {
@@ -452,7 +452,7 @@ function run(opts, io) {
 /** Adds the phone MCP server to the user's opencode config (merging, never overwriting other entries). */
 const opencodeConfigFile = () => path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'opencode', 'opencode.json')
 
-function registerOpencodeMcp(mcpPath) {
+function registerOpencodeMcp(mcpPath, instructionsPath) {
   const file = opencodeConfigFile()
   const entry = { type: 'local', command: ['node', mcpPath], enabled: true }
   let config = {}
@@ -462,19 +462,33 @@ function registerOpencodeMcp(mcpPath) {
     return `add this to ${file} yourself ("mcp": { "phone": ${JSON.stringify(entry)} }): the file could not be parsed`
   }
   const next = { ...config, mcp: { ...(config.mcp || {}), phone: entry } }
+  // Tell the agent it has a phone: the instruction file is listed once, next to the user's own entries.
+  if (instructionsPath && fs.existsSync(instructionsPath)) {
+    const current = Array.isArray(config.instructions) ? config.instructions : []
+    const same = (a, b) => path.resolve(String(a)) === path.resolve(b)
+    next.instructions = current.some((x) => same(x, instructionsPath)) ? current : [...current, instructionsPath]
+  }
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, JSON.stringify(next, null, 2))
   return `agent can use the phone (MCP "phone" added to ${file}); the phone app decides what is allowed`
 }
 
-/** Removes only the "phone" entry we added. Returns true if something was removed. */
+/** Removes only the "phone" entry and the phone-tools.md instruction we added. Returns true if something was removed. */
 function unregisterOpencodeMcp() {
   const file = opencodeConfigFile()
   try {
     const config = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^﻿/, ''))
-    if (!config.mcp || !config.mcp.phone) return false
-    const { phone, ...rest } = config.mcp
-    fs.writeFileSync(file, JSON.stringify({ ...config, mcp: rest }, null, 2))
+    const hadMcp = !!(config.mcp && config.mcp.phone)
+    const ours = (x) => typeof x === 'string' && path.basename(x) === 'phone-tools.md' && path.basename(path.dirname(x)) === 'opencode-connect'
+    const hadInstr = Array.isArray(config.instructions) && config.instructions.some(ours)
+    if (!hadMcp && !hadInstr) return false
+    const next = { ...config }
+    if (hadMcp) { const { phone, ...rest } = config.mcp; next.mcp = rest }
+    if (hadInstr) {
+      next.instructions = config.instructions.filter((x) => !ours(x))
+      if (!next.instructions.length) delete next.instructions
+    }
+    fs.writeFileSync(file, JSON.stringify(next, null, 2))
     return true
   } catch { return false }
 }

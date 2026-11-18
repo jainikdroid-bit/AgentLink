@@ -52,7 +52,7 @@ export function usePhoneBridge() {
         return answer(job.id, { ok: false, error: checked.error })
       }
       if (decision === "ask") {
-        const allowed = await confirm(t("phone.confirmTitle"), t(`phone.confirm.${tool}`), t("phone.allow"), t("phone.decline"))
+        const allowed = await confirm(t("phone.confirmTitle"), t(`phone.confirm.${tool}`, checked.args), t("phone.allow"), t("phone.decline"))
         if (!allowed) {
           record({ time: Date.now(), tool, outcome: "declined" })
           return answer(job.id, { ok: false, error: "the user declined on the phone" })

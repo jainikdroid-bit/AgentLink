@@ -11,8 +11,9 @@
 const http = require('node:http')
 const crypto = require('node:crypto')
 const { passwordMatches, parseBasic } = require('./launcher.js')
+const { extraWaitMs } = require('./phone-mcp.js')
 
-const TOOLS = ['phone_info', 'phone_clipboard_read', 'phone_clipboard_write', 'phone_notify', 'phone_speak', 'phone_location', 'phone_photo']
+const TOOLS = ['phone_info', 'phone_clipboard_read', 'phone_clipboard_write', 'phone_notify', 'phone_speak', 'phone_location', 'phone_photo', 'phone_termux_run']
 const MAX_QUEUE = 20
 const MAX_BODY = 12 * 1024 * 1024 // a photo comes back as base64
 const CALL_TIMEOUT_MS = 120_000
@@ -67,7 +68,7 @@ function createBridge(deps) {
         const i = pending.findIndex((p) => p.id === id)
         if (i >= 0) pending.splice(i, 1)
         resolve({ ok: false, error: 'the phone did not answer in time (the user may have declined or looked away)' })
-      }, deps.callTimeoutMs || CALL_TIMEOUT_MS)
+      }, (deps.callTimeoutMs || CALL_TIMEOUT_MS) + extraWaitMs(tool, args))
       waiting.set(id, { resolve, timer })
       pending.push({ id, tool, args: args && typeof args === 'object' ? args : {} })
       deliver()

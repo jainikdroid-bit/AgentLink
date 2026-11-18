@@ -622,19 +622,31 @@
       "phone_clipboard_write": "クリップボードに書き込み",
       "phone_clipboard_read": "クリップボードを読み取り",
       "phone_location": "位置情報",
-      "phone_photo": "写真を撮影"
+      "phone_photo": "写真を撮影",
+      "phone_termux_run": "Termuxでコマンドを実行"
     },
     "confirm": {
       "phone_clipboard_write": "テキストをクリップボードに置きますか？",
       "phone_clipboard_read": "クリップボードの内容を読み取らせますか？",
       "phone_location": "現在の位置情報を共有しますか？",
-      "phone_photo": "カメラを開き、撮影した写真を送りますか？"
+      "phone_photo": "カメラを開き、撮影した写真を送りますか？",
+      "phone_termux_run": "スマホのTermuxでこのコマンドを実行しますか？\n\n{{command}}"
     },
     "outcome": {
       "done": "完了",
       "declined": "拒否",
       "off": "ブロック",
       "error": "失敗"
+    },
+    "termux": {
+      "unavailable": "このビルドではTermuxを使えません。",
+      "not-installed": "Termuxがインストールされていません。F-Droidからインストールしてください。",
+      "no-permission": "AgentLinkはまだTermuxでコマンドを実行できません。",
+      "ready": "Termuxの準備ができました。",
+      "grant": "TermuxでAgentLinkを許可",
+      "setupHint": "Termux側でも他のアプリからのコマンドを受け付ける必要があります。Termuxで一度実行してください：",
+      "copy": "コピー",
+      "copied": "コピーしました"
     }
   },
   "permissionBanner": {

@@ -138,7 +138,11 @@ exit codes, exact commands, safety rules. You only click **Yes** on a Windows pr
 
 ## Agent phone tools
 
-These run on the desktop side and plug into opencode as MCP servers.
+Built in: run the installer with `-PhoneTools` and switch the tools on in the app. The agent gets `phone_*` tools,
+including `phone_termux_run` (a bash command in Termux on the phone, approved on the phone each time), and is told about
+them (`phone-tools.md` for opencode; ACP agents get the phone MCP server on `session/new`).
+
+Other options run on the desktop side and plug into opencode as MCP servers.
 
 | Tool | What it gives the agent |
 |---|---|

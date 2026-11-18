@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Write to clipboard",
       "phone_clipboard_read": "Read clipboard",
       "phone_location": "Location",
-      "phone_photo": "Take a photo"
+      "phone_photo": "Take a photo",
+      "phone_termux_run": "Run commands in Termux"
     },
     "confirm": {
       "phone_clipboard_write": "Put text on your clipboard?",
       "phone_clipboard_read": "Let it read what is on your clipboard?",
       "phone_location": "Share your current location with it?",
-      "phone_photo": "Open the camera and send it the photo you take?"
+      "phone_photo": "Open the camera and send it the photo you take?",
+      "phone_termux_run": "Run this command in Termux on your phone?\n\n{{command}}"
     },
     "outcome": {
       "done": "done",
       "declined": "declined",
       "off": "blocked",
       "error": "failed"
+    },
+    "termux": {
+      "unavailable": "Termux can't be used in this build.",
+      "not-installed": "Termux is not installed. Install it from F-Droid.",
+      "no-permission": "AgentLink is not allowed to run commands in Termux yet.",
+      "ready": "Termux is ready.",
+      "grant": "Allow AgentLink in Termux",
+      "setupHint": "Termux must also accept commands from other apps. Run this once in Termux:",
+      "copy": "Copy",
+      "copied": "Copied"
     }
   },
   "permissionBanner": {

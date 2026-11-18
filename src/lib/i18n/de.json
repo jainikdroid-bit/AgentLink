@@ -622,19 +622,31 @@
       "phone_clipboard_write": "In Zwischenablage schreiben",
       "phone_clipboard_read": "Zwischenablage lesen",
       "phone_location": "Standort",
-      "phone_photo": "Foto aufnehmen"
+      "phone_photo": "Foto aufnehmen",
+      "phone_termux_run": "Befehle in Termux ausführen"
     },
     "confirm": {
       "phone_clipboard_write": "Text in die Zwischenablage legen?",
       "phone_clipboard_read": "Lesen lassen, was in der Zwischenablage ist?",
       "phone_location": "Ihren aktuellen Standort damit teilen?",
-      "phone_photo": "Kamera öffnen und das Foto damit senden?"
+      "phone_photo": "Kamera öffnen und das Foto damit senden?",
+      "phone_termux_run": "Diesen Befehl in Termux auf deinem Handy ausführen?\n\n{{command}}"
     },
     "outcome": {
       "done": "erledigt",
       "declined": "abgelehnt",
       "off": "blockiert",
       "error": "fehlgeschlagen"
+    },
+    "termux": {
+      "unavailable": "Termux ist in diesem Build nicht verfügbar.",
+      "not-installed": "Termux ist nicht installiert. Installiere es aus F-Droid.",
+      "no-permission": "AgentLink darf noch keine Befehle in Termux ausführen.",
+      "ready": "Termux ist bereit.",
+      "grant": "AgentLink in Termux erlauben",
+      "setupHint": "Termux muss auch Befehle anderer Apps annehmen. Führe dies einmal in Termux aus:",
+      "copy": "Kopieren",
+      "copied": "Kopiert"
     }
   },
   "permissionBanner": {

@@ -6,7 +6,7 @@ const http = require('node:http')
 const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
-const { createAcpBridge, AGENTS } = require('./acp-bridge.js')
+const { createAcpBridge, AGENTS, withPhoneMcp } = require('./acp-bridge.js')
 
 const FAKE_AGENT = `
 const rl = require('node:readline').createInterface({ input: process.stdin })
@@ -14,7 +14,7 @@ const out = (m) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...m })
 rl.on('line', (line) => {
   const m = JSON.parse(line)
   if (m.method === 'initialize') return out({ id: m.id, result: { protocolVersion: 1, agentCapabilities: {}, authMethods: [] } })
-  if (m.method === 'session/new') return out({ id: m.id, result: { sessionId: 's1' } })
+  if (m.method === 'session/new') return out({ id: m.id, result: { sessionId: 's1', mcpServers: m.params.mcpServers } })
   if (m.method === 'session/prompt') {
     process.stdout.write('banner that is not JSON\\n')
     out({ method: 'session/update', params: { sessionId: 's1', update: { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'Hello' } } } })
@@ -27,13 +27,14 @@ rl.on('line', (line) => {
 })
 `
 
-function setup() {
+function setup(extra = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'acp-test-'))
   const script = path.join(dir, 'agent.js')
   fs.writeFileSync(script, FAKE_AGENT)
   const bridge = createAcpBridge({
     agents: [{ id: 'fake', name: 'Fake agent', bin: 'fake', cmd: process.execPath, args: [script], direct: true }, { id: 'absent', name: 'Absent', bin: 'absent', cmd: 'absent', args: [] }],
     detect: (agent) => agent.id === 'fake',
+    ...extra,
   })
   const server = http.createServer((req, res) => { bridge.handle(req, res, (req.url || '/').split('?')[0]) })
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => {
@@ -162,4 +163,40 @@ test('the known-agents table covers the popular ACP agents, each once, with fixe
     assert.ok(agent.name && agent.bin && agent.cmd && Array.isArray(agent.args), agent.id)
     assert.ok(!/[\s;&|<>`$]/.test(agent.cmd), `${agent.id}: command must be a bare program name`)
   }
+})
+
+test('the phone MCP server is handed to the agent on session/new, once, and only when phone tools are on', async () => {
+  const phone = { script: path.join(os.tmpdir(), 'phone-mcp.js'), dir: os.tmpdir() }
+  const on = await setup({ phoneMcp: () => phone })
+  try {
+    const { json } = await on.call('POST', '/acp/start', { agent: 'fake', cwd: os.tmpdir() })
+    await on.call('POST', `/acp/${json.id}/send`, rpc(1, 'session/new', { cwd: os.tmpdir(), mcpServers: [{ name: 'other', command: 'x', args: [], env: [] }] }))
+    const events = await on.stream(`/acp/${json.id}/events`, (e) => e.some((x) => x.data && x.data.id === 1 && x.data.result))
+    const reply = events.find((x) => x.data && x.data.id === 1 && x.data.result).data.result
+    assert.deepEqual(reply.mcpServers.map((m) => m.name), ['other', 'phone'])
+    assert.equal(reply.mcpServers[1].command, process.execPath)
+    assert.deepEqual(reply.mcpServers[1].args, [phone.script])
+    const echoed = events.find((x) => x.event === 'sent' && x.data.method === 'session/new').data
+    assert.equal(echoed.params.mcpServers.length, 1, 'the replay log keeps what the phone sent')
+  } finally { on.close() }
+  const off = await setup({ phoneMcp: () => null })
+  try {
+    const { json } = await off.call('POST', '/acp/start', { agent: 'fake', cwd: os.tmpdir() })
+    await off.call('POST', `/acp/${json.id}/send`, rpc(1, 'session/new', { cwd: os.tmpdir(), mcpServers: [] }))
+    const events = await off.stream(`/acp/${json.id}/events`, (e) => e.some((x) => x.data && x.data.id === 1 && x.data.result))
+    assert.deepEqual(events.find((x) => x.data && x.data.id === 1 && x.data.result).data.result.mcpServers, [])
+  } finally { off.close() }
+})
+
+test('withPhoneMcp covers session/load, adds missing mcpServers, never duplicates and leaves other methods alone', () => {
+  const phone = { script: '/p/phone-mcp.js', dir: '/p' }
+  const load = withPhoneMcp(rpc(2, 'session/load', { sessionId: 's', cwd: '/', mcpServers: [] }), phone)
+  assert.deepEqual(load.params.mcpServers.map((m) => m.name), ['phone'])
+  assert.deepEqual(withPhoneMcp(rpc(3, 'session/new', { cwd: '/' }), phone).params.mcpServers.map((m) => m.name), ['phone'])
+  const twice = withPhoneMcp(withPhoneMcp(rpc(4, 'session/new', { cwd: '/', mcpServers: [] }), phone), phone)
+  assert.equal(twice.params.mcpServers.length, 1)
+  const prompt = rpc(5, 'session/prompt', { sessionId: 's', prompt: [] })
+  assert.equal(withPhoneMcp(prompt, phone), prompt)
+  const unchanged = rpc(6, 'session/new', { cwd: '/', mcpServers: [] })
+  assert.equal(withPhoneMcp(unchanged, null), unchanged)
 })

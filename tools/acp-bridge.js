@@ -79,9 +79,38 @@ const keyOf = (id) => JSON.stringify(id)
  * deps (all optional, for tests): agents (table), detect(agent) -> boolean, now() -> ms.
  * Entries with `direct: true` run `cmd` as it is (no cmd.exe wrapper).
  */
+/** Same place connect.js and phone-mcp.js keep the state (password, state.json). */
+function connectStateDir(env = process.env) {
+  if (env.OPENCODE_CONNECT_DIR) return env.OPENCODE_CONNECT_DIR
+  if (process.platform === 'win32') return path.join(env.LOCALAPPDATA || os.homedir(), 'opencode-connect')
+  return path.join(env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'opencode-connect')
+}
+
+/** The phone MCP server to hand to agents: only when the installer was run with phone tools and phone-mcp.js is next to us. */
+function detectPhoneMcp() {
+  try {
+    const script = path.join(__dirname, 'phone-mcp.js')
+    if (!fs.existsSync(script)) return null
+    const dir = connectStateDir()
+    const state = JSON.parse(fs.readFileSync(path.join(dir, 'state.json'), 'utf8').replace(/^﻿/, ''))
+    return state && state.phoneTools ? { script, dir } : null
+  } catch { return null }
+}
+
+/** Adds the phone MCP server to a session/new or session/load request (once); anything else passes through unchanged. */
+function withPhoneMcp(message, phone) {
+  if (!phone || !message || (message.method !== 'session/new' && message.method !== 'session/load')) return message
+  const params = message.params && typeof message.params === 'object' && !Array.isArray(message.params) ? message.params : {}
+  const servers = Array.isArray(params.mcpServers) ? params.mcpServers : []
+  if (servers.some((x) => x && x.name === 'phone')) return message
+  const entry = { name: 'phone', command: process.execPath, args: [phone.script], env: phone.dir ? [{ name: 'OPENCODE_CONNECT_DIR', value: phone.dir }] : [] }
+  return { ...message, params: { ...params, mcpServers: [...servers, entry] } }
+}
+
 function createAcpBridge(deps = {}) {
   const agents = deps.agents || AGENTS
   const now = deps.now || (() => Date.now())
+  const phoneMcp = deps.phoneMcp || detectPhoneMcp
   const sessions = new Map()
   let detected = { at: 0, ids: new Set() }
 
@@ -228,7 +257,8 @@ function createAcpBridge(deps = {}) {
     if (!isRequest && !isResponse) return send(res, 400, { ok: false, error: 'not a JSON-RPC message' })
     if (isResponse) session.answered.add(keyOf(message.id))
     const text = JSON.stringify(message)
-    session.child.stdin.write(text + '\n')
+    // The agent gets the phone's MCP server on session/new|load; the replay log keeps what the phone sent.
+    session.child.stdin.write(JSON.stringify(withPhoneMcp(message, phoneMcp())) + '\n')
     add(session, 'sent', text)
     send(res, 200, { ok: true, seq: session.nextSeq - 1 })
   }
@@ -269,4 +299,4 @@ function createAcpBridge(deps = {}) {
   }
 }
 
-module.exports = { createAcpBridge, AGENTS, onPath }
+module.exports = { createAcpBridge, AGENTS, onPath, withPhoneMcp }

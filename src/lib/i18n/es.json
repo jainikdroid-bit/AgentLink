@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Escribir en portapapeles",
       "phone_clipboard_read": "Leer portapapeles",
       "phone_location": "Ubicación",
-      "phone_photo": "Tomar una foto"
+      "phone_photo": "Tomar una foto",
+      "phone_termux_run": "Ejecutar comandos en Termux"
     },
     "confirm": {
       "phone_clipboard_write": "¿Poner texto en tu portapapeles?",
       "phone_clipboard_read": "¿Dejar que lea lo que hay en tu portapapeles?",
       "phone_location": "¿Compartir tu ubicación actual con él?",
-      "phone_photo": "¿Abrir la cámara y enviarle la foto que tomes?"
+      "phone_photo": "¿Abrir la cámara y enviarle la foto que tomes?",
+      "phone_termux_run": "¿Ejecutar este comando en Termux en tu teléfono?\n\n{{command}}"
     },
     "outcome": {
       "done": "hecho",
       "declined": "rechazado",
       "off": "bloqueado",
       "error": "fallido"
+    },
+    "termux": {
+      "unavailable": "Termux no está disponible en esta compilación.",
+      "not-installed": "Termux no está instalado. Instálalo desde F-Droid.",
+      "no-permission": "AgentLink todavía no puede ejecutar comandos en Termux.",
+      "ready": "Termux está listo.",
+      "grant": "Permitir AgentLink en Termux",
+      "setupHint": "Termux también debe aceptar comandos de otras apps. Ejecuta esto una vez en Termux:",
+      "copy": "Copiar",
+      "copied": "Copiado"
     }
   },
   "permissionBanner": {

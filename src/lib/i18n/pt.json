@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Escrever na área de transferência",
       "phone_clipboard_read": "Ler área de transferência",
       "phone_location": "Localização",
-      "phone_photo": "Tirar uma foto"
+      "phone_photo": "Tirar uma foto",
+      "phone_termux_run": "Executar comandos no Termux"
     },
     "confirm": {
       "phone_clipboard_write": "Colocar texto na sua área de transferência?",
       "phone_clipboard_read": "Deixar ler o que está na sua área de transferência?",
       "phone_location": "Compartilhar sua localização atual com ele?",
-      "phone_photo": "Abrir a câmera e enviar a foto que você tirar?"
+      "phone_photo": "Abrir a câmera e enviar a foto que você tirar?",
+      "phone_termux_run": "Executar este comando no Termux do seu celular?\n\n{{command}}"
     },
     "outcome": {
       "done": "concluído",
       "declined": "recusado",
       "off": "bloqueado",
       "error": "falhou"
+    },
+    "termux": {
+      "unavailable": "O Termux não está disponível nesta versão.",
+      "not-installed": "O Termux não está instalado. Instale pelo F-Droid.",
+      "no-permission": "O AgentLink ainda não pode executar comandos no Termux.",
+      "ready": "O Termux está pronto.",
+      "grant": "Permitir o AgentLink no Termux",
+      "setupHint": "O Termux também precisa aceitar comandos de outros apps. Execute isto uma vez no Termux:",
+      "copy": "Copiar",
+      "copied": "Copiado"
     }
   },
   "permissionBanner": {

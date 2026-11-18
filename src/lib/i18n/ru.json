@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Писать в буфер обмена",
       "phone_clipboard_read": "Читать буфер обмена",
       "phone_location": "Местоположение",
-      "phone_photo": "Делать фото"
+      "phone_photo": "Делать фото",
+      "phone_termux_run": "Выполнять команды в Termux"
     },
     "confirm": {
       "phone_clipboard_write": "Положить текст в буфер обмена?",
       "phone_clipboard_read": "Разрешить прочитать буфер обмена?",
       "phone_location": "Передать ему ваше местоположение?",
-      "phone_photo": "Открыть камеру и отправить ему снятое фото?"
+      "phone_photo": "Открыть камеру и отправить ему снятое фото?",
+      "phone_termux_run": "Выполнить эту команду в Termux на телефоне?\n\n{{command}}"
     },
     "outcome": {
       "done": "выполнено",
       "declined": "отклонено",
       "off": "заблокировано",
       "error": "ошибка"
+    },
+    "termux": {
+      "unavailable": "В этой сборке Termux недоступен.",
+      "not-installed": "Termux не установлен. Установите его из F-Droid.",
+      "no-permission": "AgentLink пока не может выполнять команды в Termux.",
+      "ready": "Termux готов.",
+      "grant": "Разрешить AgentLink в Termux",
+      "setupHint": "Termux должен также принимать команды от других приложений. Выполните один раз в Termux:",
+      "copy": "Копировать",
+      "copied": "Скопировано"
     }
   },
   "permissionBanner": {

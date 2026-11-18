@@ -622,19 +622,31 @@
       "phone_clipboard_write": "写入剪贴板",
       "phone_clipboard_read": "读取剪贴板",
       "phone_location": "位置",
-      "phone_photo": "拍照"
+      "phone_photo": "拍照",
+      "phone_termux_run": "在 Termux 中运行命令"
     },
     "confirm": {
       "phone_clipboard_write": "把文字放到剪贴板？",
       "phone_clipboard_read": "允许读取剪贴板？",
       "phone_location": "分享你当前的位置？",
-      "phone_photo": "打开相机并把拍的照片发给它？"
+      "phone_photo": "打开相机并把拍的照片发给它？",
+      "phone_termux_run": "要在手机的 Termux 中运行此命令吗？\n\n{{command}}"
     },
     "outcome": {
       "done": "完成",
       "declined": "已拒绝",
       "off": "已拦截",
       "error": "失败"
+    },
+    "termux": {
+      "unavailable": "此版本无法使用 Termux。",
+      "not-installed": "未安装 Termux。请从 F-Droid 安装。",
+      "no-permission": "AgentLink 还不能在 Termux 中运行命令。",
+      "ready": "Termux 已就绪。",
+      "grant": "在 Termux 中允许 AgentLink",
+      "setupHint": "Termux 还需要接受其他应用的命令。请在 Termux 中运行一次：",
+      "copy": "复制",
+      "copied": "已复制"
     }
   },
   "permissionBanner": {

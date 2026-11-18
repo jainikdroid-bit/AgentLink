@@ -88,6 +88,34 @@ test('phone MCP entry is merged into the opencode config and removed again witho
   }
 })
 
+test('the phone-tools instruction file is added to opencode instructions once, keeps user entries, and is removed again', () => {
+  const fs = require('node:fs')
+  const os = require('node:os')
+  const path = require('node:path')
+  const { registerOpencodeMcp, unregisterOpencodeMcp } = require('./connect.js')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oc-instr-'))
+  const previous = process.env.XDG_CONFIG_HOME
+  process.env.XDG_CONFIG_HOME = dir
+  try {
+    const file = path.join(dir, 'opencode', 'opencode.json')
+    const doc = path.join(dir, 'opencode-connect', 'phone-tools.md')
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.mkdirSync(path.dirname(doc), { recursive: true })
+    fs.writeFileSync(doc, '# Phone tools\n')
+    fs.writeFileSync(file, JSON.stringify({ instructions: ['AGENTS.md'] }))
+    registerOpencodeMcp('/tmp/phone-mcp.js', doc)
+    registerOpencodeMcp('/tmp/phone-mcp.js', doc)
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).instructions, ['AGENTS.md', doc])
+    assert.equal(unregisterOpencodeMcp(), true)
+    const cfg = JSON.parse(fs.readFileSync(file, 'utf8'))
+    assert.deepEqual(cfg.instructions, ['AGENTS.md'])
+    assert.ok(!cfg.mcp || !cfg.mcp.phone)
+  } finally {
+    if (previous === undefined) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = previous
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('the free cloud model is merged in, keeps the user default, and is removed again', () => {
   const fs = require('node:fs')
   const os = require('node:os')

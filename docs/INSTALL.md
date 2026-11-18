@@ -98,7 +98,11 @@ stays the recommended default.
 - **Search and pin sessions:** the search box on the Sessions screen; long-press a session to pin it.
 - **Phone tools for the agent (optional, off by default):** run the installer with `-PhoneTools` (`--phone-tools`), then turn
   on *Settings → Phone tools for the AI agent*. The agent can show notifications, speak, use the clipboard, get your
-  location or ask you to take a photo. Sensitive actions ask every time and it works only while the app is open.
+  location, ask you to take a photo, or **run commands in Termux on the phone** (`phone_termux_run`). Sensitive actions ask
+  every time and it works only while the app is open. The agent is told about these tools automatically (opencode reads
+  `phone-tools.md`; ACP agents such as Claude Code get the phone MCP server when they start). For Termux: install it from
+  F-Droid, run `echo "allow-external-apps=true" >> ~/.termux/termux.properties && termux-reload-settings` once in Termux,
+  then switch on *Run commands in Termux* in the app and tap *Allow AgentLink in Termux*.
 
 ## Let an AI agent do it
 

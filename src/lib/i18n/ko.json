@@ -622,19 +622,31 @@
       "phone_clipboard_write": "클립보드에 쓰기",
       "phone_clipboard_read": "클립보드 읽기",
       "phone_location": "위치",
-      "phone_photo": "사진 촬영"
+      "phone_photo": "사진 촬영",
+      "phone_termux_run": "Termux에서 명령 실행"
     },
     "confirm": {
       "phone_clipboard_write": "클립보드에 텍스트를 넣으시겠습니까?",
       "phone_clipboard_read": "클립보드 내용을 읽게 하시겠습니까?",
       "phone_location": "현재 위치를 공유하시겠습니까?",
-      "phone_photo": "카메라를 열고 촬영한 사진을 보내시겠습니까?"
+      "phone_photo": "카메라를 열고 촬영한 사진을 보내시겠습니까?",
+      "phone_termux_run": "휴대폰의 Termux에서 이 명령을 실행할까요?\n\n{{command}}"
     },
     "outcome": {
       "done": "완료",
       "declined": "거부됨",
       "off": "차단됨",
       "error": "실패"
+    },
+    "termux": {
+      "unavailable": "이 빌드에서는 Termux를 사용할 수 없습니다.",
+      "not-installed": "Termux가 설치되어 있지 않습니다. F-Droid에서 설치하세요.",
+      "no-permission": "AgentLink는 아직 Termux에서 명령을 실행할 수 없습니다.",
+      "ready": "Termux가 준비되었습니다.",
+      "grant": "Termux에서 AgentLink 허용",
+      "setupHint": "Termux도 다른 앱의 명령을 받도록 해야 합니다. Termux에서 한 번 실행하세요:",
+      "copy": "복사",
+      "copied": "복사됨"
     }
   },
   "permissionBanner": {

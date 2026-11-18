@@ -18,7 +18,22 @@ const TOOL_DEFS = [
   { name: 'phone_speak', description: 'Speak a short text aloud on the phone.', inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
   { name: 'phone_location', description: 'Current phone location (latitude, longitude, accuracy). The user must approve each request on the phone.', inputSchema: { type: 'object', properties: {} } },
   { name: 'phone_photo', description: 'Ask the user to take a photo with the phone camera; returns the image. The user must approve and press the shutter.', inputSchema: { type: 'object', properties: {} } },
+  {
+    name: 'phone_termux_run',
+    description: 'Run a bash command inside Termux on the Android phone of the owner and return stdout, stderr and the exit code. The owner approves every call on the phone, and the OpenCode/AgentLink app must be open. Use it for phone-side tasks: files on the phone, termux-api commands, pkg installs. Output is truncated to about 16 KB per stream. Needs Termux with allow-external-apps=true.',
+    inputSchema: { type: 'object', properties: { command: { type: 'string', description: 'bash command line, run as bash -lc' }, cwd: { type: 'string', description: 'working directory inside Termux (default: its home)' }, timeoutSec: { type: 'integer', minimum: 1, maximum: 300, description: 'give up after this many seconds (default 60, max 300)' } }, required: ['command'] },
+  },
 ]
+
+const TERMUX_DEFAULT_SEC = 60
+const TERMUX_MAX_SEC = 300
+
+/** Extra waiting time a call needs on top of the approval window: a Termux command may run for minutes. */
+function extraWaitMs(tool, args) {
+  if (tool !== 'phone_termux_run') return 0
+  const sec = Number(args && args.timeoutSec)
+  return (Number.isFinite(sec) && sec > 0 ? Math.min(sec, TERMUX_MAX_SEC) : TERMUX_DEFAULT_SEC) * 1000 + 15_000
+}
 
 function stateDir(env = process.env) {
   if (env.OPENCODE_CONNECT_DIR) return env.OPENCODE_CONNECT_DIR
@@ -40,7 +55,7 @@ function callBridge(dir, tool, args) {
     if (!password) return resolve({ ok: false, error: 'OpenCode Connect is not set up on this computer' })
     const body = JSON.stringify({ tool, args })
     const req = http.request({
-      host: '127.0.0.1', port: bridgePort(state), path: '/call', method: 'POST', timeout: 130_000,
+      host: '127.0.0.1', port: bridgePort(state), path: '/call', method: 'POST', timeout: 130_000 + extraWaitMs(tool, args),
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), Authorization: 'Basic ' + Buffer.from('opencode:' + password).toString('base64') },
     }, (res) => {
       let text = ''
@@ -90,5 +105,5 @@ function main() {
   })
 }
 
-module.exports = { TOOL_DEFS, handleMessage, toMcpResult, bridgePort }
+module.exports = { TOOL_DEFS, extraWaitMs, handleMessage, toMcpResult, bridgePort }
 if (require.main === module) main()

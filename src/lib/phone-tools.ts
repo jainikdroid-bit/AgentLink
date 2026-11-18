@@ -9,6 +9,7 @@ export type PhoneToolName =
   | "phone_speak"
   | "phone_location"
   | "phone_photo"
+  | "phone_termux_run"
 
 export interface PhoneToolMeta {
   name: PhoneToolName
@@ -25,6 +26,7 @@ export const PHONE_TOOLS: PhoneToolMeta[] = [
   { name: "phone_clipboard_read", icon: "copy-outline", confirmEachTime: true },
   { name: "phone_location", icon: "location-outline", confirmEachTime: true },
   { name: "phone_photo", icon: "camera-outline", confirmEachTime: true },
+  { name: "phone_termux_run", icon: "terminal-outline", confirmEachTime: true },
 ]
 
 export interface PhoneToolSettings {
@@ -50,7 +52,9 @@ export const MAX_TEXT = 4000
 export function checkArgs(tool: PhoneToolName, args: unknown): { ok: true; args: Record<string, string> } | { ok: false; error: string } {
   const a = (args && typeof args === "object" ? args : {}) as Record<string, unknown>
   const str = (key: string, required: boolean): string | null => {
-    const v = a[key]
+    const raw = a[key]
+    // timeoutSec is the one numeric argument (phone_termux_run); everything else must be text.
+    const v = key === "timeoutSec" && typeof raw === "number" && Number.isFinite(raw) ? String(raw) : raw
     if (v === undefined || v === null || v === "") return required ? `missing "${key}"` : ""
     if (typeof v !== "string") return `"${key}" must be text`
     return null
@@ -63,12 +67,14 @@ export function checkArgs(tool: PhoneToolName, args: unknown): { ok: true; args:
     phone_speak: [["text", true]],
     phone_location: [],
     phone_photo: [],
+    phone_termux_run: [["command", true], ["cwd", false], ["timeoutSec", false]],
   }
   const out: Record<string, string> = {}
   for (const [key, required] of fields[tool]) {
     const problem = str(key, required)
     if (problem) return { ok: false, error: problem }
-    out[key] = String(a[key] ?? "").slice(0, MAX_TEXT)
+    const value = a[key]
+    out[key] = String(typeof value === "number" ? value : value ?? "").slice(0, MAX_TEXT)
   }
   return { ok: true, args: out }
 }

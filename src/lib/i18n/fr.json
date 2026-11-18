@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Écrire dans le presse-papiers",
       "phone_clipboard_read": "Lire le presse-papiers",
       "phone_location": "Position",
-      "phone_photo": "Prendre une photo"
+      "phone_photo": "Prendre une photo",
+      "phone_termux_run": "Exécuter des commandes dans Termux"
     },
     "confirm": {
       "phone_clipboard_write": "Mettre du texte dans votre presse-papiers ?",
       "phone_clipboard_read": "Laisser lire ce qui est dans votre presse-papiers ?",
       "phone_location": "Partager votre position actuelle avec lui ?",
-      "phone_photo": "Ouvrir la caméra et lui envoyer la photo que vous prenez ?"
+      "phone_photo": "Ouvrir la caméra et lui envoyer la photo que vous prenez ?",
+      "phone_termux_run": "Exécuter cette commande dans Termux sur votre téléphone ?\n\n{{command}}"
     },
     "outcome": {
       "done": "terminé",
       "declined": "refusé",
       "off": "bloqué",
       "error": "échoué"
+    },
+    "termux": {
+      "unavailable": "Termux n’est pas disponible dans cette version.",
+      "not-installed": "Termux n’est pas installé. Installez-le depuis F-Droid.",
+      "no-permission": "AgentLink ne peut pas encore exécuter de commandes dans Termux.",
+      "ready": "Termux est prêt.",
+      "grant": "Autoriser AgentLink dans Termux",
+      "setupHint": "Termux doit aussi accepter les commandes des autres applis. Exécutez ceci une fois dans Termux :",
+      "copy": "Copier",
+      "copied": "Copié"
     }
   },
   "permissionBanner": {

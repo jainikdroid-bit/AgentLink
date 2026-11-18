@@ -1,10 +1,53 @@
-import { View, Text, Switch, StyleSheet } from "react-native"
+import { useCallback, useEffect, useState } from "react"
+import { View, Text, Switch, StyleSheet, TouchableOpacity } from "react-native"
+import * as Clipboard from "expo-clipboard"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { cyber } from "../theme/cyber"
 import { PHONE_TOOLS } from "../lib/phone-tools"
 import { usePhoneTools } from "../stores/phoneTools"
 import { useConnections } from "../stores/connections"
+import { requestTermuxPermission, termuxState, type TermuxState } from "../lib/termux"
+import { ALLOW_EXTERNAL_APPS } from "../lib/termux-pure"
+
+/** Under the Termux switch: is Termux there, may we use it, and the one setting Termux itself needs. */
+function TermuxSetup() {
+  const { t } = useTranslation()
+  const [state, setState] = useState<TermuxState | null>(null)
+  const [copied, setCopied] = useState(false)
+  const refresh = useCallback(() => {
+    termuxState().then(setState).catch(() => setState("unavailable"))
+  }, [])
+  useEffect(refresh, [refresh])
+  const grant = async () => {
+    await requestTermuxPermission().catch(() => false)
+    refresh()
+  }
+  const copy = async () => {
+    await Clipboard.setStringAsync(ALLOW_EXTERNAL_APPS)
+    setCopied(true)
+  }
+  if (!state) return null
+  return (
+    <View style={s.termux} testID="termux-setup">
+      <Text style={[s.hint, state === "ready" ? s.ok : s.warn]}>{t(`phone.termux.${state}`)}</Text>
+      {state === "no-permission" ? (
+        <TouchableOpacity onPress={() => void grant()} testID="termux-grant">
+          <Text style={s.link}>{t("phone.termux.grant")}</Text>
+        </TouchableOpacity>
+      ) : null}
+      {state === "ready" || state === "no-permission" ? (
+        <>
+          <Text style={s.hint}>{t("phone.termux.setupHint")}</Text>
+          <Text style={s.code} selectable>{ALLOW_EXTERNAL_APPS}</Text>
+          <TouchableOpacity onPress={() => void copy()} testID="termux-copy">
+            <Text style={s.link}>{copied ? t("phone.termux.copied") : t("phone.termux.copy")}</Text>
+          </TouchableOpacity>
+        </>
+      ) : null}
+    </View>
+  )
+}
 
 // Settings block: let the AI agent on the computer use a few phone functions. Everything starts off.
 export function PhoneTools() {
@@ -32,7 +75,7 @@ export function PhoneTools() {
               </View>
               <Switch value={!!allowed[tool.name]} onValueChange={(v) => void setAllowed(tool.name, v)} />
             </View>
-          ))
+          )).concat(allowed.phone_termux_run ? [<TermuxSetup key="termux-setup" />] : [])
         : null}
       {enabled && log.length > 0 ? (
         <View style={s.log}>
@@ -56,4 +99,9 @@ const s = StyleSheet.create({
   hint: { color: cyber.muted, fontSize: 12 },
   log: { marginTop: 8, gap: 2 },
   logLine: { color: cyber.muted, fontSize: 11, fontFamily: cyber.mono },
+  termux: { marginLeft: 32, gap: 6, paddingBottom: 8 },
+  ok: { color: cyber.green },
+  warn: { color: cyber.amber },
+  link: { color: cyber.cyan, fontSize: 13, fontWeight: "600" },
+  code: { color: cyber.text, fontSize: 11, fontFamily: cyber.mono, backgroundColor: cyber.surface2, padding: 8, borderRadius: 6 },
 })

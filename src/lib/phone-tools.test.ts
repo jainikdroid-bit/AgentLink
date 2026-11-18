@@ -22,6 +22,9 @@ test("arguments are validated and trimmed", () => {
   const long = checkArgs("phone_clipboard_write", { text: "x".repeat(MAX_TEXT + 50) })
   assert.ok(long.ok && long.args.text.length === MAX_TEXT)
   assert.deepEqual(checkArgs("phone_location", null), { ok: true, args: {} })
+  assert.deepEqual(checkArgs("phone_termux_run", { command: "ls ~", timeoutSec: 30 }), { ok: true, args: { command: "ls ~", cwd: "", timeoutSec: "30" } })
+  assert.equal(checkArgs("phone_termux_run", {}).ok, false)
+  assert.equal(checkArgs("phone_termux_run", { command: "ls", cwd: 5 }).ok, false)
 })
 test("bridge url sits one port below the launcher on the same host", () => {
   assert.equal(bridgeUrl("http://100.1.2.3:4096", 4095), "http://100.1.2.3:4094")

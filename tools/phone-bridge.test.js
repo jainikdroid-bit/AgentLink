@@ -2,8 +2,8 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const http = require('node:http')
-const { createBridge } = require('./phone-bridge.js')
-const { handleMessage, toMcpResult, TOOL_DEFS } = require('./phone-mcp.js')
+const { createBridge, TOOLS } = require('./phone-bridge.js')
+const { handleMessage, toMcpResult, TOOL_DEFS, extraWaitMs } = require('./phone-mcp.js')
 
 const PASSWORD = 'correct-horse-battery-1234'
 const AUTH = 'Basic ' + Buffer.from('opencode:' + PASSWORD).toString('base64')
@@ -92,4 +92,20 @@ test('MCP shim lists tools, forwards calls, and returns photos as images', async
   assert.equal(toMcpResult('phone_info', { ok: false, error: 'no' }).isError, true)
   assert.ok((await handleMessage({ id: 4, method: 'tools/call', params: { name: 'bad' } }, async () => ({}))).error)
   assert.equal(await handleMessage({ method: 'notifications/initialized' }, async () => ({})), null)
+})
+
+test('the MCP tool list and the bridge tool list stay in sync, and Termux is one of them', () => {
+  assert.deepEqual(TOOL_DEFS.map((t) => t.name).sort(), [...TOOLS].sort())
+  const termux = TOOL_DEFS.find((t) => t.name === 'phone_termux_run')
+  assert.ok(termux)
+  assert.deepEqual(termux.inputSchema.required, ['command'])
+  assert.equal(termux.inputSchema.properties.timeoutSec.maximum, 300)
+})
+
+test('a Termux call may take longer than the approval window, up to the 300 s cap', () => {
+  assert.equal(extraWaitMs('phone_info', {}), 0)
+  assert.equal(extraWaitMs('phone_termux_run', {}), 75_000)
+  assert.equal(extraWaitMs('phone_termux_run', { timeoutSec: 10 }), 25_000)
+  assert.equal(extraWaitMs('phone_termux_run', { timeoutSec: 9999 }), 315_000)
+  assert.equal(extraWaitMs('phone_termux_run', { timeoutSec: 'x' }), 75_000)
 })

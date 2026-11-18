@@ -1,0 +1,4 @@
+v0.19.0 — the agent can use Termux on your phone
+- New phone tool: the agent can run commands in Termux on your phone. You approve each command, and see it before it runs.
+- The agent is told it has your phone: opencode and other agents (Claude Code, Codex...) get the phone tools automatically.
+- Setup: Settings → Phone tools → Run commands in Termux; re-run the setup command on the computer with -PhoneTools.

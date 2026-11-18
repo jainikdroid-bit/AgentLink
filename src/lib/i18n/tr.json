@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Panoya yaz",
       "phone_clipboard_read": "Panodan oku",
       "phone_location": "Konum",
-      "phone_photo": "Fotoğraf çek"
+      "phone_photo": "Fotoğraf çek",
+      "phone_termux_run": "Termux'ta komut çalıştır"
     },
     "confirm": {
       "phone_clipboard_write": "Metni panoya yerleştirsin mi?",
       "phone_clipboard_read": "Panodakini okumasına izin verilsin mi?",
       "phone_location": "Mevcut konumunuzu onunla paylaşsın mı?",
-      "phone_photo": "Kamerayı açıp çektiğiniz fotoğrafı göndermesin mi?"
+      "phone_photo": "Kamerayı açıp çektiğiniz fotoğrafı göndermesin mi?",
+      "phone_termux_run": "Bu komut telefonundaki Termux'ta çalıştırılsın mı?\n\n{{command}}"
     },
     "outcome": {
       "done": "yapıldı",
       "declined": "reddedildi",
       "off": "engellendi",
       "error": "başarısız"
+    },
+    "termux": {
+      "unavailable": "Bu sürümde Termux kullanılamıyor.",
+      "not-installed": "Termux kurulu değil. F-Droid'den kurun.",
+      "no-permission": "AgentLink henüz Termux'ta komut çalıştıramıyor.",
+      "ready": "Termux hazır.",
+      "grant": "AgentLink'e Termux'ta izin ver",
+      "setupHint": "Termux'un diğer uygulamalardan gelen komutları da kabul etmesi gerekir. Bunu Termux'ta bir kez çalıştırın:",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı"
     }
   },
   "permissionBanner": {

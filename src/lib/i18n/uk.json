@@ -622,19 +622,31 @@
       "phone_clipboard_write": "Записати в буфер",
       "phone_clipboard_read": "Зчитати буфер",
       "phone_location": "Місцезнаходження",
-      "phone_photo": "Зробити фото"
+      "phone_photo": "Зробити фото",
+      "phone_termux_run": "Виконувати команди в Termux"
     },
     "confirm": {
       "phone_clipboard_write": "Покласти текст у буфер обміну?",
       "phone_clipboard_read": "Дозволити зчитати те, що в буфері?",
       "phone_location": "Поділитися поточним місцезнаходженням?",
-      "phone_photo": "Відкрити камеру і надіслати зроблене фото?"
+      "phone_photo": "Відкрити камеру і надіслати зроблене фото?",
+      "phone_termux_run": "Виконати цю команду в Termux на телефоні?\n\n{{command}}"
     },
     "outcome": {
       "done": "виконано",
       "declined": "відхилено",
       "off": "заблоковано",
       "error": "помилка"
+    },
+    "termux": {
+      "unavailable": "У цій збірці Termux недоступний.",
+      "not-installed": "Termux не встановлено. Встановіть його з F-Droid.",
+      "no-permission": "AgentLink поки не може виконувати команди в Termux.",
+      "ready": "Termux готовий.",
+      "grant": "Дозволити AgentLink у Termux",
+      "setupHint": "Termux має також приймати команди від інших застосунків. Виконайте один раз у Termux:",
+      "copy": "Копіювати",
+      "copied": "Скопійовано"
     }
   },
   "permissionBanner": {

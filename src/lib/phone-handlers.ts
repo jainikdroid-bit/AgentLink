@@ -9,6 +9,7 @@ import * as Notifications from "expo-notifications"
 import * as ImagePicker from "expo-image-picker"
 import * as ImageManipulator from "expo-image-manipulator"
 import type { PhoneToolName } from "./phone-tools"
+import { runInTermux } from "./termux"
 
 const PHOTO_MAX = 1280
 
@@ -73,5 +74,7 @@ export async function runPhoneTool(tool: PhoneToolName, args: Record<string, str
     }
     case "phone_photo":
       return await takePhoto()
+    case "phone_termux_run":
+      return await runInTermux(args.command, args.cwd, args.timeoutSec)
   }
 }
