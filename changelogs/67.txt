@@ -1,0 +1,4 @@
+v0.20.0 — 3D Cheri
+- Cheri is now a 3D girl floating over the app: she types while the agent works, holds her chin under a light bulb while it thinks, celebrates when it is done and sleeps when the computer is off.
+- Drag her anywhere; hold her for a menu to hide her, change transparency or size.
+- Settings → Avatar has the same options.

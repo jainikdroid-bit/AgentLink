@@ -26,6 +26,7 @@ import type { Category } from "../../src/lib/notifications"
 import { PRIVACY_POLICY_URL } from "../../src/lib/links"
 import { CURRENT_VERSION, checkForUpdate, type AvailableUpdate } from "../../src/lib/update-check"
 import { MascotOf } from "../../src/components/Mascot"
+import { AvatarControls } from "../../src/components/FloatingCheri"
 import { MASCOT_KINDS, type MascotKind } from "../../src/lib/mascot-choice"
 import { LOCALE_NAMES, SUPPORTED_LOCALES, type LocalePreference } from "../../src/lib/i18n/locale-resolve"
 import { McpConnectors } from "../../src/components/McpConnectors"
@@ -84,7 +85,7 @@ export default function SettingsScreen() {
   const { settings, hasBiometrics, updateSettings, lock } = useAuth()
   const {
     notifications, setNotification, locale, setLocale, mascot, setMascot,
-    showThinking, setShowThinking, showActions, setShowActions, replyInMyLanguage, setReplyInMyLanguage,
+    showThinking, setShowThinking, showActions, setShowActions, replyInMyLanguage, setReplyInMyLanguage, avatar, setAvatar,
   } = useSettings()
   const [osGranted, setOsGranted] = useState<boolean | null>(null)
 
@@ -208,6 +209,24 @@ export default function SettingsScreen() {
             right={<Ionicons name="chevron-forward" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />}
           />
         )}
+      </SettingSection>
+
+      <SettingSection title={t("settings.sections.avatar")} isDark={isDark}>
+        <SettingRow
+          icon="happy-outline"
+          label={t("avatar.show")}
+          description={t("avatar.showHint")}
+          isDark={isDark}
+          right={<Switch value={avatar.enabled} onValueChange={(value) => void setAvatar({ enabled: value })} trackColor={{ false: "#767577", true: "#34f5a5" }} testID="avatar-enabled" />}
+        />
+        {avatar.enabled ? (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+            <AvatarControls />
+            <TouchableOpacity onPress={() => void setAvatar({ pos: null })} style={{ paddingTop: 10 }}>
+              <Text style={{ color: "#22d3ee", fontSize: 14 }}>{t("avatar.reset")}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </SettingSection>
 
       <SettingSection title={t("settings.sections.chat")} isDark={isDark}>

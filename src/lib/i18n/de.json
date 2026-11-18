@@ -16,7 +16,8 @@
       "privacy": "Datenschutz",
       "about": "Über",
       "mcp": "Connectors (MCP)",
-      "chat": "Chat"
+      "chat": "Chat",
+      "avatar": "Avatar"
     },
     "security": {
       "biometricOpen": {
@@ -793,5 +794,20 @@
       "server-error": "Nachricht nicht gesendet: Der Server meldete einen Fehler.",
       "unknown": "Nachricht nicht gesendet: {{detail}}"
     }
+  },
+  "avatar": {
+    "show": "3D-Cheri anzeigen",
+    "showHint": "Sie schwebt über der App und reagiert auf den Agenten. Zieh sie herum; lange drücken öffnet dieses Menü.",
+    "opacity": "Transparenz",
+    "size": "Größe",
+    "sizes": {
+      "s": "Klein",
+      "m": "Mittel",
+      "l": "Groß"
+    },
+    "reset": "Zurück in die Ecke",
+    "menuTitle": "Cheri",
+    "hide": "Cheri ausblenden",
+    "openSettings": "Avatar-Einstellungen"
   }
 }

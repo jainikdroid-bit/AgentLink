@@ -16,7 +16,8 @@
       "privacy": "개인정보",
       "about": "앱 정보",
       "mcp": "연결자 (MCP)",
-      "chat": "채팅"
+      "chat": "채팅",
+      "avatar": "아바타"
     },
     "security": {
       "biometricOpen": {
@@ -793,5 +794,20 @@
       "server-error": "메시지 전송 실패: 서버에서 오류가 발생했습니다.",
       "unknown": "메시지 전송 실패: {{detail}}"
     }
+  },
+  "avatar": {
+    "show": "3D 체리 표시",
+    "showHint": "앱 위에 떠서 에이전트에 반응합니다. 끌어서 옮기고, 길게 누르면 이 메뉴가 열립니다.",
+    "opacity": "투명도",
+    "size": "크기",
+    "sizes": {
+      "s": "작게",
+      "m": "중간",
+      "l": "크게"
+    },
+    "reset": "구석으로 되돌리기",
+    "menuTitle": "체리",
+    "hide": "체리 숨기기",
+    "openSettings": "아바타 설정"
   }
 }

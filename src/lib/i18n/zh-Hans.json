@@ -16,7 +16,8 @@
       "privacy": "隐私",
       "about": "关于",
       "mcp": "连接器 (MCP)",
-      "chat": "聊天"
+      "chat": "聊天",
+      "avatar": "头像"
     },
     "security": {
       "biometricOpen": {
@@ -793,5 +794,20 @@
       "server-error": "消息发送失败：服务器报错。",
       "unknown": "消息发送失败：{{detail}}"
     }
+  },
+  "avatar": {
+    "show": "显示 3D Cheri",
+    "showHint": "她漂浮在应用上方，会对智能体作出反应。可以拖动；长按打开此菜单。",
+    "opacity": "透明度",
+    "size": "大小",
+    "sizes": {
+      "s": "小",
+      "m": "中",
+      "l": "大"
+    },
+    "reset": "放回角落",
+    "menuTitle": "Cheri",
+    "hide": "隐藏 Cheri",
+    "openSettings": "头像设置"
   }
 }

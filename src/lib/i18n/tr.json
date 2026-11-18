@@ -16,7 +16,8 @@
       "privacy": "Gizlilik",
       "about": "Hakkında",
       "mcp": "Bağlantı Noktaları (MCP)",
-      "chat": "Sohbet"
+      "chat": "Sohbet",
+      "avatar": "Avatar"
     },
     "security": {
       "biometricOpen": {
@@ -793,5 +794,20 @@
       "server-error": "Mesaj gönderilemedi: Sunucu bir hata bildirdi.",
       "unknown": "Mesaj gönderilemedi: {{detail}}"
     }
+  },
+  "avatar": {
+    "show": "3D Cheri'yi göster",
+    "showHint": "Uygulamanın üzerinde süzülür ve ajana tepki verir. Sürükleyebilirsin; uzun basınca bu menü açılır.",
+    "opacity": "Saydamlık",
+    "size": "Boyut",
+    "sizes": {
+      "s": "Küçük",
+      "m": "Orta",
+      "l": "Büyük"
+    },
+    "reset": "Köşeye geri koy",
+    "menuTitle": "Cheri",
+    "hide": "Cheri'yi gizle",
+    "openSettings": "Avatar ayarları"
   }
 }

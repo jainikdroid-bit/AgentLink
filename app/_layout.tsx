@@ -23,6 +23,7 @@ import { useTunnelDiscovery } from "../src/lib/useTunnelDiscovery"
 import { usePhoneBridge } from "../src/lib/usePhoneBridge"
 import { useTailnetLifecycle } from "../src/lib/useTailnetLifecycle"
 import { useConnectionHealth } from "../src/lib/useConnectionHealth"
+import { FloatingCheri } from "../src/components/FloatingCheri"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 
 // The app is dark-only: a minimal blue-black look with neon accents.
@@ -212,6 +213,7 @@ function RootLayout() {
               />
             </Stack>
               <PermissionBanner />
+              <FloatingCheri />
               <StatusBar style={isDark ? "light" : "dark"} />
             </AuthGate>
           </QueryClientProvider>

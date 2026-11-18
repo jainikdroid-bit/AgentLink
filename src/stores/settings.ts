@@ -4,6 +4,7 @@ import { type Category, defaultPreferences } from "../lib/notifications"
 import { clampPageSize, mergeStoredSettings } from "../lib/settings-merge"
 import { setAppLocale } from "../lib/i18n/config"
 import type { LocalePreference } from "../lib/i18n/locale-resolve"
+import type { AvatarSize } from "../lib/avatar-mood"
 import { DEFAULT_MASCOT, type MascotKind, resolveMascot } from "../lib/mascot-choice"
 
 const SETTINGS_KEY = "opencode_settings"
@@ -19,6 +20,16 @@ interface Settings {
   showActions: boolean
   /** Ask the agent to think and reply in the app's language. */
   replyInMyLanguage: boolean
+  /** The floating 3D Cheri. */
+  avatar: AvatarSettings
+}
+
+export interface AvatarSettings {
+  enabled: boolean
+  opacity: number
+  size: AvatarSize
+  /** Where the user dragged her (top-left, dp); null = bottom-right corner. */
+  pos: { x: number; y: number } | null
 }
 
 const DEFAULTS: Settings = {
@@ -29,6 +40,7 @@ const DEFAULTS: Settings = {
   showThinking: true,
   showActions: false,
   replyInMyLanguage: true,
+  avatar: { enabled: true, opacity: 0.75, size: "m", pos: null },
 }
 
 interface SettingsState extends Settings {
@@ -41,11 +53,12 @@ interface SettingsState extends Settings {
   setShowThinking: (value: boolean) => Promise<void>
   setShowActions: (value: boolean) => Promise<void>
   setReplyInMyLanguage: (value: boolean) => Promise<void>
+  setAvatar: (patch: Partial<AvatarSettings>) => Promise<void>
 }
 
 function snapshot(get: () => SettingsState): Settings {
-  const { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage } = get()
-  return { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage }
+  const { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage, avatar } = get()
+  return { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage, avatar }
 }
 
 async function persist(settings: Settings) {
@@ -61,7 +74,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>
       // Merge stored settings with defaults so new fields/categories get their default
-      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot) }
+      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
       set({ ...merged, loaded: true })
       setAppLocale(merged.locale)
       return
@@ -100,6 +113,12 @@ export const useSettings = create<SettingsState>((set, get) => ({
   setShowActions: async (showActions) => {
     set({ showActions })
     await persist({ ...snapshot(get), showActions })
+  },
+
+  setAvatar: async (patch) => {
+    const avatar = { ...get().avatar, ...patch }
+    set({ avatar })
+    await persist({ ...snapshot(get), avatar })
   },
 
   setReplyInMyLanguage: async (replyInMyLanguage) => {
