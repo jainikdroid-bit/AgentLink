@@ -881,5 +881,16 @@
       "body": "L’agent peut utiliser Termux quand Réglages, Outils du téléphone et l’interrupteur Termux sont activés, et que l’ordinateur a été configuré avec -PhoneTools.",
       "settings": "Aller aux réglages"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "En mémoire",
+      "unloaded": "Non chargé",
+      "loading": "Chargement…",
+      "unknown": "Inconnu"
+    },
+    "load": "Charger",
+    "unload": "Décharger",
+    "failed": "Impossible de modifier le modèle"
   }
 }

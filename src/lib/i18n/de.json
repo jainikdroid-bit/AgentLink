@@ -881,5 +881,16 @@
       "body": "Der Agent kann Termux nutzen, wenn in den Einstellungen die Handy-Werkzeuge und der Termux-Schalter an sind und der Computer mit -PhoneTools eingerichtet wurde.",
       "settings": "Zu den Einstellungen"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "Im Speicher",
+      "unloaded": "Nicht geladen",
+      "loading": "Wird geladen…",
+      "unknown": "Unbekannt"
+    },
+    "load": "Laden",
+    "unload": "Entladen",
+    "failed": "Modell konnte nicht geändert werden"
   }
 }

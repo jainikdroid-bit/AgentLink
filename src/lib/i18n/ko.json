@@ -881,5 +881,16 @@
       "body": "설정의 '휴대폰 도구'와 Termux 스위치가 켜져 있고 컴퓨터가 -PhoneTools로 설정되어 있으면 에이전트가 Termux를 사용할 수 있습니다.",
       "settings": "설정으로 이동"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "메모리에 있음",
+      "unloaded": "로드 안 됨",
+      "loading": "로드 중…",
+      "unknown": "알 수 없음"
+    },
+    "load": "로드",
+    "unload": "언로드",
+    "failed": "모델을 변경하지 못했습니다"
   }
 }

@@ -39,6 +39,7 @@ import { buildMergePrompt } from "../../src/lib/session-merge"
 import { encodeReplyHex } from "../../src/lib/reply-link"
 import { StartServerBar } from "../../src/components/StartServerBar"
 import { ConnectionStatusChip } from "../../src/components/ConnectionStatus"
+import { LocalModelBar } from "../../src/components/LocalModelBar"
 import { canStartFromPhone } from "../../src/lib/launcher"
 import AsyncStorage from "@react-native-async-storage/async-storage"
 import { GUIDE_DONE_KEY, shouldAutoShowGuide } from "../../src/lib/guide"
@@ -721,6 +722,7 @@ export default function SessionsScreen() {
       ) : null}
 
       <UpdateBanner isDark={isDark} />
+      <LocalModelBar />
 
       {selection.active ? (
         <View style={[styles.selectionBar, isDark && { borderBottomColor: "#1c2333", backgroundColor: "#0d1018" }]} testID="selection-bar">

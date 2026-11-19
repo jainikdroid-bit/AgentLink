@@ -3,6 +3,7 @@
 import { buildRequestHeaders } from "./headers"
 import { interpretLauncherStatus, interpretStart, launcherUrl, type LauncherProbe, type StartOutcome } from "./launcher"
 import { routeUrl } from "./tailnet"
+import { parseLocalModels } from "./local-model"
 
 export interface LauncherTarget {
   serverUrl: string
@@ -66,4 +67,47 @@ export async function probeLauncher(target: LauncherTarget): Promise<LauncherPro
   } finally {
     clearTimeout(timer)
   }
+}
+
+const LLM_STATUS_TIMEOUT_MS = 5_000
+const LLM_ACTION_TIMEOUT_MS = 130_000 // loading a big model from disk can take a minute or two
+
+async function launcherJson(target: LauncherTarget, route: string, init: { method: "GET" | "POST"; body?: unknown }, timeoutMs: number): Promise<{ status: number; body: unknown }> {
+  const base = launcherUrl(target.serverUrl, target.launcherPort, target.tunnel)
+  if (!base) return { status: 0, body: null }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const response = await fetch(await routeUrl(`${base}${route}`), {
+      method: init.method,
+      headers: { ...buildRequestHeaders({ auth: target.auth }), ...(init.body ? { "Content-Type": "application/json" } : {}) },
+      body: init.body ? JSON.stringify(init.body) : undefined,
+      signal: controller.signal,
+    })
+    const text = await response.text()
+    let body: unknown = null
+    try {
+      body = text ? JSON.parse(text) : null
+    } catch {
+      /* keep null */
+    }
+    return { status: response.status, body }
+  } catch {
+    return { status: 0, body: null }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** Models of the local model server on the computer, or null (no model server / older launcher / unreachable). */
+export async function getLocalModels(target: LauncherTarget) {
+  const { status, body } = await launcherJson(target, "/llm", { method: "GET" }, LLM_STATUS_TIMEOUT_MS)
+  return parseLocalModels(status, body)
+}
+
+/** Loads a model into, or unloads it from, the computer's memory. */
+export async function setLocalModel(target: LauncherTarget, action: "load" | "unload", model: string): Promise<{ ok: boolean; error?: string }> {
+  const { status, body } = await launcherJson(target, `/llm/${action}`, { method: "POST", body: { model } }, LLM_ACTION_TIMEOUT_MS)
+  const b = (body ?? {}) as { ok?: boolean; error?: string }
+  return status === 200 && b.ok ? { ok: true } : { ok: false, error: b.error || (status ? `HTTP ${status}` : "unreachable") }
 }

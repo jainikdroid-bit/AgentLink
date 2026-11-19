@@ -881,5 +881,16 @@
       "body": "Ayarlar'da Telefon araçları ve Termux anahtarı açıksa ve bilgisayar -PhoneTools ile kurulduysa ajan Termux'u kullanabilir.",
       "settings": "Ayarlara git"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "Bellekte",
+      "unloaded": "Yüklenmedi",
+      "loading": "Yükleniyor…",
+      "unknown": "Bilinmiyor"
+    },
+    "load": "Yükle",
+    "unload": "Bellekten çıkar",
+    "failed": "Model değiştirilemedi"
   }
 }

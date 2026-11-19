@@ -1,0 +1,3 @@
+v0.23.0 — load or unload the local model
+- The sessions screen shows the local model on your computer (llama.cpp): whether it is in memory, with a button to load it or free the memory.
+- Re-run the setup command on the computer to update the launcher.

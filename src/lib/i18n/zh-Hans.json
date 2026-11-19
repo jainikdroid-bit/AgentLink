@@ -881,5 +881,16 @@
       "body": "当“设置”中的“手机工具”和 Termux 开关都已打开，且电脑端使用 -PhoneTools 完成设置后，智能体即可使用 Termux。",
       "settings": "前往设置"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "已在内存中",
+      "unloaded": "未加载",
+      "loading": "加载中…",
+      "unknown": "未知"
+    },
+    "load": "加载",
+    "unload": "卸载",
+    "failed": "无法更改模型"
   }
 }

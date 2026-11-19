@@ -881,5 +881,16 @@
       "body": "El agente puede usar Termux cuando están activados Ajustes, Herramientas del teléfono y el interruptor de Termux, y el ordenador se configuró con -PhoneTools.",
       "settings": "Ir a Ajustes"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "En memoria",
+      "unloaded": "No cargado",
+      "loading": "Cargando…",
+      "unknown": "Desconocido"
+    },
+    "load": "Cargar",
+    "unload": "Descargar",
+    "failed": "No se pudo cambiar el modelo"
   }
 }

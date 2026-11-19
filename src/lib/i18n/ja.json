@@ -881,5 +881,16 @@
       "body": "設定の「スマホツール」と Termux のスイッチがオンで、パソコン側を -PhoneTools でセットアップしていれば、エージェントは Termux を使えます。",
       "settings": "設定へ移動"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "メモリ上",
+      "unloaded": "未読み込み",
+      "loading": "読み込み中…",
+      "unknown": "不明"
+    },
+    "load": "読み込む",
+    "unload": "解放する",
+    "failed": "モデルを変更できませんでした"
   }
 }

@@ -27,7 +27,9 @@ const path = require('node:path')
 const crypto = require('node:crypto')
 const { spawn, execFileSync } = require('node:child_process')
 
-const VERSION = 4 // 4: /acp/ (other agents through the Agent Client Protocol)
+/** The local-model control module; absent in older installs. */
+const llm = () => require('./llm-control.js')
+const VERSION = 5 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -189,6 +191,15 @@ function createLauncher(deps) {
     if (route.startsWith('/acp/') && deps.acp) { await deps.acp.handle(req, res, route); return }
     try {
       if (route === '/status' && req.method === 'GET') return send(res, 200, { ok: true, launcher: VERSION, acp: !!deps.acp, server: await status(), ...addresses(deps.readState() || {}) })
+      // Local model (llama.cpp router): state, and load/unload it from the computer's memory.
+      if (route === '/llm' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.llm || llm()).llmStatus()) })
+      const llmMatch = /^\/llm\/(load|unload)$/.exec(route)
+      if (llmMatch) {
+        if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'use POST' })
+        const body = await readBody(req).catch(() => null)
+        const result = await (deps.llm || llm()).llmAction(llmMatch[1], body && typeof body.model === 'string' ? body.model : '')
+        return send(res, result.ok ? 200 : 400, result)
+      }
       const name = route.slice(1)
       if (actions[name]) {
         if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'use POST' })

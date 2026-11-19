@@ -881,5 +881,16 @@
       "body": "The agent can use Termux when Settings, Phone tools is on, the Termux switch is on, and the computer was set up with -PhoneTools.",
       "settings": "Go to Settings"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "In memory",
+      "unloaded": "Not loaded",
+      "loading": "Loading…",
+      "unknown": "Unknown"
+    },
+    "load": "Load",
+    "unload": "Unload",
+    "failed": "Could not change the model"
   }
 }

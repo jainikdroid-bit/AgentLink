@@ -881,5 +881,16 @@
       "body": "O agente pode usar o Termux quando Ajustes, Ferramentas do celular e a chave do Termux estão ativados e o computador foi configurado com -PhoneTools.",
       "settings": "Ir para Ajustes"
     }
+  },
+  "localModel": {
+    "state": {
+      "loaded": "Na memória",
+      "unloaded": "Não carregado",
+      "loading": "Carregando…",
+      "unknown": "Desconhecido"
+    },
+    "load": "Carregar",
+    "unload": "Descarregar",
+    "failed": "Não foi possível alterar o modelo"
   }
 }
