@@ -1,0 +1,3 @@
+v0.21.3 — resize Cheri with two fingers
+- Pinch the 3D Cheri to make her bigger or smaller; drag to move her anywhere.
+- No second small picture next to the status line while the 3D Cheri is on.

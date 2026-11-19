@@ -426,7 +426,23 @@ window.cheri = {
 // touches: tap, long press (pet) and drag (moves the floating window in the app)
 let down: { x: number; y: number; t: number; moved: boolean } | null = null
 let holdTimer: ReturnType<typeof setTimeout> | null = null
+// two fingers: pinch to resize the floating window (the app applies the size)
+const touches = new Map<number, { x: number; y: number }>()
+let pinch: { d0: number; scale: number } | null = null
+const spread = () => {
+  const [a, b] = [...touches.values()]
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
 canvas.addEventListener("pointerdown", (e) => {
+  touches.set(e.pointerId, { x: e.screenX, y: e.screenY })
+  if (touches.size === 2) {
+    if (holdTimer) clearTimeout(holdTimer)
+    holdTimer = null
+    down = null
+    pinch = { d0: Math.max(1, spread()), scale: 1 }
+    post({ type: "pinchStart" })
+    return
+  }
   down = { x: e.screenX, y: e.screenY, t: performance.now(), moved: false }
   holdTimer = setTimeout(() => {
     holdTimer = null
@@ -438,6 +454,12 @@ canvas.addEventListener("pointerdown", (e) => {
   }, 550)
 })
 canvas.addEventListener("pointermove", (e) => {
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.screenX, y: e.screenY })
+  if (pinch && touches.size === 2) {
+    pinch.scale = spread() / pinch.d0
+    post({ type: "pinch", scale: pinch.scale })
+    return
+  }
   if (!down) return
   const dx = e.screenX - down.x
   const dy = e.screenY - down.y
@@ -449,7 +471,19 @@ canvas.addEventListener("pointermove", (e) => {
   down.x = e.screenX
   down.y = e.screenY
 })
-canvas.addEventListener("pointerup", () => {
+const endTouch = (e: PointerEvent) => {
+  touches.delete(e.pointerId)
+  if (pinch && touches.size < 2) {
+    post({ type: "pinchEnd", scale: pinch.scale })
+    pinch = null
+    down = null
+    return true
+  }
+  return false
+}
+canvas.addEventListener("pointercancel", (e) => void endTouch(e))
+canvas.addEventListener("pointerup", (e) => {
+  if (endTouch(e)) return
   if (holdTimer) {
     clearTimeout(holdTimer)
     holdTimer = null

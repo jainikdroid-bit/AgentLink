@@ -7,6 +7,7 @@ import { useSessions } from "../../stores/sessions"
 import { agentPhase, formatElapsed, type AgentPhase } from "../../lib/agent-phase"
 import { Mascot, type MascotState } from "../Mascot"
 import { useAvatar } from "../../stores/avatar"
+import { useSettings } from "../../stores/settings"
 
 interface Props {
   sessionID: string
@@ -160,6 +161,8 @@ export function StatusIndicator({ sessionID, isDark }: Props) {
   }, [busy, appear])
 
   // Tell the floating 3D Cheri what the agent is doing (thinking -> bulb and hand on chin, tools -> typing...).
+  // The floating 3D Cheri already shows what the agent does; no second picture next to the label then.
+  const show2d = !useSettings((st) => st.avatar.enabled)
   const activityKind = busy ? (status?.type === "retry" ? "working" : latest === "waiting" ? "thinking" : agentPhase(latest).kind) : null
   useEffect(() => {
     useAvatar.getState().setActivity(activityKind ? MASCOT_STATE[activityKind] : null)
@@ -189,7 +192,7 @@ export function StatusIndicator({ sessionID, isDark }: Props) {
       accessibilityLabel={label}
       testID="status-indicator"
     >
-      <Mascot state={MASCOT_STATE[phase.kind]} size={44} />
+      {show2d ? <Mascot state={MASCOT_STATE[phase.kind]} size={44} /> : null}
       <Text style={[s.text, isDark && s.textDark]} numberOfLines={1}>
         {label}
       </Text>

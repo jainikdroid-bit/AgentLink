@@ -798,7 +798,7 @@
   },
   "avatar": {
     "show": "Show 3D Cheri",
-    "showHint": "She floats over the app and reacts to the agent. Drag her; hold her for this menu.",
+    "showHint": "She floats over the app and reacts to the agent. Drag her with one finger, pinch with two to resize, hold for this menu.",
     "opacity": "Transparency",
     "size": "Size",
     "sizes": {

@@ -18,6 +18,14 @@ export function avatarMood(status: OverallStatus, activity: AvatarMood | null, c
 export const AVATAR_SIZES = { s: 120, m: 160, l: 210 } as const
 export type AvatarSize = keyof typeof AVATAR_SIZES
 export const AVATAR_OPACITIES = [1, 0.75, 0.5] as const
+export const AVATAR_MIN_WIDTH = 90
+export const AVATAR_MAX_WIDTH = 360
+
+/** Width after a pinch: the starting width times the finger spread, kept within limits. */
+export function pinchWidth(start: number, scale: number): number {
+  const w = Number.isFinite(scale) && scale > 0 ? start * scale : start
+  return Math.round(Math.min(AVATAR_MAX_WIDTH, Math.max(AVATAR_MIN_WIDTH, w)))
+}
 
 /** Keeps the floating window on screen. */
 export function clampPosition(x: number, y: number, w: number, h: number, screenW: number, screenH: number, margin = 4): { x: number; y: number } {

@@ -28,6 +28,8 @@ export interface AvatarSettings {
   enabled: boolean
   opacity: number
   size: AvatarSize
+  /** Width in dp after a pinch; null = the size preset. */
+  width: number | null
   /** Where the user dragged her (top-left, dp); null = bottom-right corner. */
   pos: { x: number; y: number } | null
 }
@@ -40,7 +42,7 @@ const DEFAULTS: Settings = {
   showThinking: true,
   showActions: false,
   replyInMyLanguage: true,
-  avatar: { enabled: true, opacity: 0.75, size: "m", pos: null },
+  avatar: { enabled: true, opacity: 0.75, size: "m", width: null, pos: null },
 }
 
 interface SettingsState extends Settings {

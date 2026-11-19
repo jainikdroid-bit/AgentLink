@@ -7,7 +7,7 @@ import { cyber } from "../theme/cyber"
 import { useSettings } from "../stores/settings"
 import { useAvatar } from "../stores/avatar"
 import { useOverallStatus } from "../lib/useOverallStatus"
-import { AVATAR_OPACITIES, AVATAR_SIZES, avatarMood, clampPosition, type AvatarSize } from "../lib/avatar-mood"
+import { AVATAR_OPACITIES, AVATAR_SIZES, avatarMood, clampPosition, pinchWidth, type AvatarSize } from "../lib/avatar-mood"
 
 const SOURCE = { uri: "file:///android_asset/cheri3d/index.html" }
 const CELEBRATE_MS = 6000
@@ -20,7 +20,9 @@ export function FloatingCheri() {
   const activity = useAvatar((s) => s.activity)
   const { info } = useOverallStatus()
   const { width: sw, height: sh } = useWindowDimensions()
-  const w = AVATAR_SIZES[avatar.size]
+  const [liveWidth, setLiveWidth] = useState<number | null>(null)
+  const pinchStart = useRef(0)
+  const w = liveWidth ?? avatar.width ?? AVATAR_SIZES[avatar.size]
   const h = Math.round((w * 4) / 3)
 
   const [celebrating, setCelebrating] = useState(false)
@@ -54,7 +56,7 @@ export function FloatingCheri() {
 
   const [menu, setMenu] = useState(false)
   const onMessage = (e: WebViewMessageEvent) => {
-    let msg: { type?: string; dx?: number; dy?: number; message?: string }
+    let msg: { type?: string; dx?: number; dy?: number; message?: string; scale?: number }
     try {
       msg = JSON.parse(e.nativeEvent.data)
     } catch {
@@ -67,6 +69,13 @@ export function FloatingCheri() {
       pos.setValue(current.current)
     } else if (msg.type === "dragEnd") void setAvatar({ pos: current.current })
     else if (msg.type === "menu") setMenu(true)
+    else if (msg.type === "pinchStart") pinchStart.current = w
+    else if (msg.type === "pinch") setLiveWidth(pinchWidth(pinchStart.current || w, msg.scale ?? 1))
+    else if (msg.type === "pinchEnd") {
+      const next = pinchWidth(pinchStart.current || w, msg.scale ?? 1)
+      setLiveWidth(null)
+      void setAvatar({ width: next })
+    }
   }
 
   if (Platform.OS !== "android" || !avatar.enabled) return null
@@ -155,8 +164,8 @@ export function AvatarControls() {
       <Text style={s.label}>{t("avatar.size")}</Text>
       <View style={s.chips}>
         {sizes.map((size) => (
-          <TouchableOpacity key={size} style={[s.chip, avatar.size === size && s.chipOn]} onPress={() => void setAvatar({ size })}>
-            <Text style={[s.chipText, avatar.size === size && s.chipTextOn]}>{t(`avatar.sizes.${size}`)}</Text>
+          <TouchableOpacity key={size} style={[s.chip, !avatar.width && avatar.size === size && s.chipOn]} onPress={() => void setAvatar({ size, width: null })}>
+            <Text style={[s.chipText, !avatar.width && avatar.size === size && s.chipTextOn]}>{t(`avatar.sizes.${size}`)}</Text>
           </TouchableOpacity>
         ))}
       </View>

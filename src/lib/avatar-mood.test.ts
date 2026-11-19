@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { avatarMood, clampPosition } from "./avatar-mood.ts"
+import { avatarMood, clampPosition, pinchWidth } from "./avatar-mood.ts"
 
 test("connection problems win over everything", () => {
   assert.equal(avatarMood("computer-unreachable", "thinking", false), "offline")
@@ -19,4 +19,11 @@ test("the agent's activity drives her while online", () => {
 test("the floating window stays on screen", () => {
   assert.deepEqual(clampPosition(-50, 9999, 100, 120, 400, 800), { x: 4, y: 676 })
   assert.deepEqual(clampPosition(100, 100, 100, 120, 400, 800), { x: 100, y: 100 })
+})
+
+test("pinching scales her within limits", () => {
+  assert.equal(pinchWidth(160, 1.5), 240)
+  assert.equal(pinchWidth(160, 10), 360)
+  assert.equal(pinchWidth(160, 0.1), 90)
+  assert.equal(pinchWidth(160, Number.NaN), 160)
 })
