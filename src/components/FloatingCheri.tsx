@@ -42,7 +42,8 @@ export function FloatingCheri() {
     if (ready) web.current?.injectJavaScript(`window.cheri && cheri.setMood(${JSON.stringify(mood)}); true;`)
   }, [mood, ready])
 
-  const home = () => clampPosition(avatar.pos?.x ?? sw - w - 8, avatar.pos?.y ?? sh - h - 120, w, h, sw, sh)
+  // Default: bottom-left, above the tab bar, clear of the "+" button on the right.
+  const home = () => clampPosition(avatar.pos?.x ?? 4, avatar.pos?.y ?? sh - h - 150, w, h, sw, sh)
   const current = useRef(home())
   const pos = useRef(new Animated.ValueXY(current.current)).current
   useEffect(() => {
