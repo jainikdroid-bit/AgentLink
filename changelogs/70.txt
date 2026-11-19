@@ -1,0 +1,2 @@
+v0.21.2 — 3D Cheri shows up
+- Fix: the floating 3D Cheri now loads inside the app (the model is read in a way Android WebView allows).

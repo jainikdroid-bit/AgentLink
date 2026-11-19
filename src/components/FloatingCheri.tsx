@@ -53,13 +53,14 @@ export function FloatingCheri() {
 
   const [menu, setMenu] = useState(false)
   const onMessage = (e: WebViewMessageEvent) => {
-    let msg: { type?: string; dx?: number; dy?: number }
+    let msg: { type?: string; dx?: number; dy?: number; message?: string }
     try {
       msg = JSON.parse(e.nativeEvent.data)
     } catch {
       return
     }
     if (msg.type === "ready") setReady(true)
+    else if (msg.type === "error") console.warn("[cheri3d]", msg.message)
     else if (msg.type === "drag") {
       current.current = clampPosition(current.current.x + (msg.dx ?? 0), current.current.y + (msg.dy ?? 0), w, h, sw, sh)
       pos.setValue(current.current)

@@ -108,10 +108,22 @@ let vrm: VRM | null = null
 const FINGERS = ["Thumb", "Index", "Middle", "Ring", "Little"] as const
 const SEGMENTS = ["Proximal", "Intermediate", "Distal"] as const
 
+/** XHR, not fetch: Android WebView refuses fetch() for file:///android_asset URLs but allows XHR. */
+function readBuffer(url: string): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("GET", url)
+    xhr.responseType = "arraybuffer"
+    xhr.onload = () => (xhr.status === 200 || (xhr.status === 0 && xhr.response) ? resolve(xhr.response as ArrayBuffer) : reject(new Error(`model: HTTP ${xhr.status}`)))
+    xhr.onerror = () => reject(new Error("model: could not read the file"))
+    xhr.send()
+  })
+}
+
 async function load(url: string) {
   const loader = new GLTFLoader()
   loader.register((parser) => new VRMLoaderPlugin(parser))
-  const gltf = await loader.loadAsync(url)
+  const gltf = await loader.parseAsync(await readBuffer(url), "")
   const model = gltf.userData.vrm as VRM
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
   VRMUtils.combineSkeletons(gltf.scene)
