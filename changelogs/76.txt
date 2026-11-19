@@ -1,0 +1,2 @@
+v0.24.1 — Cheri walks for real
+- 3D Cheri now walks, stands, squats and jumps with motion-captured animations (Quaternius Universal Animation Library, CC0) instead of hand-set poses.

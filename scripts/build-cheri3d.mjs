@@ -1,7 +1,7 @@
 // Bundles the Cheri 3D scene (web/cheri3d) with three.js + three-vrm into one offline HTML page.
 //   node scripts/build-cheri3d.mjs [outDir] [--lab]
 // Default outDir: android/app/src/main/assets/cheri3d (loaded by the app's WebView). The model
-// web/cheri3d/model/cheri.vrm is copied next to it. --lab adds mood/scene buttons for the desktop.
+// web/cheri3d/model/cheri.vrm and the motion clips web/cheri3d/anim/cheri-anim.json are copied next to it. --lab adds mood/scene buttons for the desktop.
 // esbuild is run as its native binary through the ASCII path alias, because its npm launcher
 // breaks on the Cyrillic project path on this machine.
 import { execFileSync } from "node:child_process"
@@ -35,4 +35,5 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewp
 
 writeFileSync(join(outDir, "index.html"), html)
 copyFileSync(join(root, "web/cheri3d/model/cheri.vrm"), join(outDir, "cheri.vrm"))
-console.log(`wrote ${join(outDir, "index.html")} (${Math.round(html.length / 1024)} KB) and cheri.vrm`)
+copyFileSync(join(root, "web/cheri3d/anim/cheri-anim.json"), join(outDir, "cheri-anim.json"))
+console.log(`wrote ${join(outDir, "index.html")} (${Math.round(html.length / 1024)} KB), cheri.vrm and cheri-anim.json`)

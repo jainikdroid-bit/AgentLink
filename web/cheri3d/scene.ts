@@ -4,7 +4,7 @@
 import * as THREE from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm"
-import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, TAP_ORDER, WALK, activeProps, sample, type Bone, type Pose, type PropKind, type Scene } from "./poses"
+import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, TAP_ORDER, WALK, activeProps, sample, type Bone, type BonePose, type Pose, type PropKind, type Scene } from "./poses"
 
 declare global {
   interface Window {
@@ -137,6 +137,13 @@ async function load(url: string) {
   scene.add(model.scene)
   vrm = model
   post({ type: "ready" })
+  // Motion-capture clips are optional: without the file the hand-made poses in poses.ts still work.
+  try {
+    const data = JSON.parse(new TextDecoder().decode(await readBuffer(url.replace(/[^/]*$/, "") + "cheri-anim.json"))) as AnimData
+    motion = buildMotion(model, data)
+  } catch (e) {
+    post({ type: "warn", message: `animation: ${String(e)}` })
+  }
 }
 
 // ---------- outfit: pink top, plaid skirt ----------
@@ -204,6 +211,162 @@ function restyleOutfit(model: VRM) {
       m.needsUpdate = true
     }
   })
+}
+
+// ---------- motion capture (Quaternius Universal Animation Library, CC0), retargeted to the VRM ----------
+
+interface AnimData {
+  hipsRestUp: number
+  bones: Record<string, { rest: number[]; parent: number[] }>
+  clips: Record<string, { times: number[]; tracks: Record<string, number[]>; up: number[]; loop: boolean; air?: number[] }>
+}
+type Group = "hips" | "trunk" | "legs"
+const GROUP: Record<string, Group> = {
+  hips: "hips",
+  spine: "trunk",
+  chest: "trunk",
+  upperChest: "trunk",
+  leftUpperLeg: "legs",
+  leftLowerLeg: "legs",
+  leftFoot: "legs",
+  leftToes: "legs",
+  rightUpperLeg: "legs",
+  rightLowerLeg: "legs",
+  rightFoot: "legs",
+  rightToes: "legs",
+}
+/** How strongly each clip drives each body part (the rest keeps coming from the hand-made poses). */
+const INFLUENCE: Record<string, Record<Group, number>> = {
+  idle: { hips: 1, trunk: 0, legs: 1 },
+  walk: { hips: 1, trunk: 1, legs: 1 },
+  crouch: { hips: 1, trunk: 0.25, legs: 1 },
+  jump: { hips: 1, trunk: 1, legs: 1 },
+}
+/** Clips that also own the body height (so the pose's `lift` is dropped). */
+const OWNS_LIFT: Record<string, boolean> = { walk: true, crouch: true, jump: true }
+/** The jump clip has no root motion, so the runtime adds the arc (metres) between its take-off and landing marks. */
+const JUMP_HEIGHT = 0.2
+/** Skits that are really a motion clip. */
+const SKIT_CLIP: Record<string, string> = { squat: "crouch", joyJump: "jump", victory: "jump" }
+/** Bones a motion clip can drive: they return to rest whenever a pose does not name them. */
+const ZERO_BONES = Object.fromEntries(Object.keys(GROUP).map((b) => [b, [0, 0, 0]])) as Record<string, [number, number, number]>
+
+interface MotionClip {
+  clip: THREE.AnimationClip
+  quats: { bone: string; node: THREE.Object3D; interp: THREE.Interpolant }[]
+  hips: { interp: THREE.Interpolant; restY: number } | null
+  duration: number
+  loop: boolean
+  air: number[] | null
+}
+interface Motion {
+  clips: Record<string, MotionClip>
+  hipsNode: THREE.Object3D | null
+  cur: string
+  prev: string
+  curT: number
+  prevT: number
+  mix: number
+  fade: number
+}
+let motion: Motion | null = null
+const mqA = new THREE.Quaternion()
+const mqB = new THREE.Quaternion()
+
+/**
+ * Same idea as three-vrm's loadMixamoAnimation. The normalized VRM rig has an identity rest pose, so a source local
+ * rotation q (bone rest world rotation R, parent rest world rotation P) becomes P * q * R^-1. No axis flip is needed for these clips (see below).
+ * Only the vertical hip motion is kept (scaled by hip height); forward and sideways root motion is dropped.
+ */
+function buildMotion(model: VRM, data: AnimData): Motion {
+  const h = model.humanoid
+  // Unlike Mixamo, the Quaternius clips already face the same way as our VRM after rotateVRM0: no x/z flip
+  // (verified in the lab: with the flip she walked in a deep crouch, leaning back).
+  const flip = false
+  void model
+  const hipsNode = h.getNormalizedBoneNode("hips")
+  model.scene.updateMatrixWorld(true)
+  const hipsHeight = hipsNode ? hipsNode.getWorldPosition(new THREE.Vector3()).y - model.scene.position.y : data.hipsRestUp
+  const scale = hipsHeight / data.hipsRestUp
+  const clips: Record<string, MotionClip> = {}
+  for (const [name, src] of Object.entries(data.clips)) {
+    const tracks: THREE.KeyframeTrack[] = []
+    const quats: MotionClip["quats"] = []
+    for (const [bone, flat] of Object.entries(src.tracks)) {
+      const node = h.getNormalizedBoneNode(bone as never)
+      const rest = data.bones[bone]
+      if (!node || !rest) continue
+      const parentRest = new THREE.Quaternion().fromArray(rest.parent)
+      const restInv = new THREE.Quaternion().fromArray(rest.rest).invert()
+      const values = new Float32Array(flat.length)
+      for (let i = 0; i < flat.length; i += 4) {
+        mqA.fromArray(flat, i).premultiply(parentRest).multiply(restInv)
+        if (flip) values.set([-mqA.x, mqA.y, -mqA.z, mqA.w], i)
+        else mqA.toArray(values, i)
+      }
+      const track = new THREE.QuaternionKeyframeTrack(`${node.name}.quaternion`, src.times, values)
+      tracks.push(track)
+      quats.push({ bone, node, interp: track.createInterpolant() })
+    }
+    let hips: MotionClip["hips"] = null
+    if (hipsNode) {
+      const restY = hipsNode.position.y
+      const values = new Float32Array(src.up.length * 3)
+      src.up.forEach((up, i) => values.set([hipsNode.position.x, restY + (up - data.hipsRestUp) * scale, hipsNode.position.z], i * 3))
+      const track = new THREE.VectorKeyframeTrack(`${hipsNode.name}.position`, src.times, values)
+      tracks.push(track)
+      hips = { interp: track.createInterpolant(), restY }
+    }
+    const duration = src.times[src.times.length - 1]
+    clips[name] = { clip: new THREE.AnimationClip(name, duration, tracks), quats, hips, duration, loop: src.loop, air: src.air ?? null }
+  }
+  return { clips, hipsNode, cur: "idle", prev: "idle", curT: 0, prevT: 0, mix: 1, fade: 0.3 }
+}
+
+function selectClip(m: Motion, name: string, fade: number) {
+  if (!m.clips[name] || m.cur === name) return
+  m.prev = m.cur
+  m.prevT = m.curT
+  m.cur = name
+  m.curT = 0
+  m.mix = 0
+  m.fade = fade
+}
+
+const smooth = (x: number) => x * x * (3 - 2 * x)
+
+/** Layers the active clips over the bones the hand-made pose just set; returns how much of the body height the clips own and the jump arc. */
+function applyMotion(m: Motion, dt: number): { liftOwned: number; arc: number } {
+  const advance = (name: string, t: number) => {
+    const c = m.clips[name]
+    return c.loop ? (t + dt) % c.duration : Math.min(t + dt, c.duration)
+  }
+  m.curT = advance(m.cur, m.curT)
+  m.prevT = advance(m.prev, m.prevT)
+  m.mix = Math.min(1, m.mix + dt / m.fade)
+  const s = smooth(m.mix)
+  const layers = m.mix >= 1 ? [{ name: m.cur, t: m.curT, w: 1 }] : [{ name: m.prev, t: m.prevT, w: 1 - s }, { name: m.cur, t: m.curT, w: s }]
+  let liftOwned = 0
+  let arc = 0
+  let dy = 0
+  for (const { name, t, w } of layers) {
+    const c = m.clips[name]
+    if (OWNS_LIFT[name]) liftOwned += w
+    if (c.air && t >= c.air[0] && t <= c.air[1]) {
+      const u = (t - c.air[0]) / (c.air[1] - c.air[0])
+      arc += w * JUMP_HEIGHT * 4 * u * (1 - u)
+    }
+    if (c.hips) dy += w * INFLUENCE[name].hips * (c.hips.interp.evaluate(t)[1] - c.hips.restY)
+    for (const { bone, node, interp } of c.quats) {
+      const k = w * INFLUENCE[name][GROUP[bone]]
+      if (k <= 0) continue
+      mqB.fromArray(interp.evaluate(t) as unknown as number[])
+      node.quaternion.slerp(mqB, k)
+    }
+  }
+  const rest = m.clips[m.cur].hips
+  if (m.hipsNode && rest) m.hipsNode.position.y = rest.restY + dy
+  return { liftOwned, arc }
 }
 
 const tmpEuler = new THREE.Euler()
@@ -303,7 +466,7 @@ function applyArms(pose: Pose, k: number) {
 function applyBones(pose: Pose, k: number) {
   if (!vrm) return
   const h = vrm.humanoid
-  const bones = { ...REST.bones, ...pose.bones }
+  const bones = { ...ZERO_BONES, ...REST.bones, ...pose.bones }
   for (const [name, deg] of Object.entries(bones) as [Bone, [number, number, number]][]) {
     const node = h.getNormalizedBoneNode(name)
     if (!node) continue
@@ -391,14 +554,17 @@ let mood = "idle"
 let walking = 0
 let baseTurn = 0
 let skit: { scene: Scene; start: number } | null = null
-let nextSkitAt = performance.now() + 4000
+/** performance.now() plus the time the lab skipped ahead with debug.step. */
+let skew = 0
+const nowMs = () => performance.now() + skew
+let nextSkitAt = nowMs() + 4000
 let last: string | null = null
 const taps = { count: 0, at: 0 }
 
 function play(id: string) {
   const s = SKITS[id]
   if (!s) return
-  skit = { scene: s, start: performance.now() }
+  skit = { scene: s, start: nowMs() }
   last = id
 }
 
@@ -408,11 +574,11 @@ function setMood(m: string) {
   mood = m
   skit = null
   if (enter) play(enter)
-  nextSkitAt = performance.now() + 5000 + Math.random() * 5000
+  nextSkitAt = nowMs() + 5000 + Math.random() * 5000
 }
 
 function tap() {
-  const now = performance.now()
+  const now = nowMs()
   taps.count = now - taps.at < 1800 ? taps.count + 1 : 1
   taps.at = now
   play(TAP_ORDER[Math.min(TAP_ORDER.length - 1, taps.count - 1)])
@@ -428,7 +594,15 @@ window.cheri = {
     if (walking) skit = null
   },
   // Lab only: grab the current frame (render + read back in the same task, no preserveDrawingBuffer needed).
-  debug: { snap: () => (renderer.render(scene, camera), canvas.toDataURL("image/png")) },
+  debug: {
+    // Lab only: advance the animation by n steps of dt seconds without waiting for (throttled) frames.
+    step: (n: number, dt = 1 / 30) => {
+      for (let i = 0; i < n; i++) {
+        skew += dt * 1000
+        step(dt)
+      }
+    },
+    snap: () => (renderer.render(scene, camera), canvas.toDataURL("image/png")) },
 }
 
 // touches: tap, long press (pet) and drag (moves the floating window in the app)
@@ -504,8 +678,11 @@ canvas.addEventListener("pointerup", (e) => {
 const clock = new THREE.Clock()
 function frame() {
   requestAnimationFrame(frame)
-  const dt = Math.min(0.05, clock.getDelta())
-  const now = performance.now()
+  step(Math.min(0.05, clock.getDelta()))
+}
+
+function step(dt: number) {
+  const now = nowMs()
   if (skit && now - skit.start >= skit.scene.ms) {
     skit = null
     nextSkitAt = now + 6000 + Math.random() * 7000
@@ -518,13 +695,30 @@ function frame() {
   const base = walking ? { ...sample(WALK, now, REST), turn: walking * 75 } : sample(BASE[mood], now, REST)
   const pose = skit && !walking ? sample(skit.scene, now - skit.start, base) : base
   const breathe = Math.sin(now / 800) * 1.2
-  const posed: Pose = { ...pose, bones: { ...pose.bones, chest: [(pose.bones.chest?.[0] ?? 0) + breathe, pose.bones.chest?.[1] ?? 0, pose.bones.chest?.[2] ?? 0] } }
+  const bones: BonePose = { ...pose.bones, chest: [(pose.bones.chest?.[0] ?? 0) + breathe, pose.bones.chest?.[1] ?? 0, pose.bones.chest?.[2] ?? 0] }
+  let lift = pose.lift
+  if (motion) {
+    // Pick the motion clip: walking, a clip skit (squat / jump), else the idle clip. The hand-made leg, hip and (while a
+    // clip drives the trunk) spine poses are dropped so they do not fight it; arms, head and face stay hand-made.
+    const clipSkit = skit && !walking ? SKIT_CLIP[skit.scene.id] : undefined
+    const skitT = skit ? now - skit.start : 0
+    const target = clipSkit ? motion.clips[clipSkit] : undefined
+    const running = !!target && !!skit && (target.loop ? skitT < skit.scene.ms - 350 : motion.cur !== clipSkit || motion.curT < target.duration)
+    const want = walking ? "walk" : running ? clipSkit : "idle"
+    selectClip(motion, want, want === "jump" ? 0.15 : want === "idle" ? 0.35 : 0.4)
+    for (const name of Object.keys(GROUP)) if (GROUP[name] !== "trunk" || motion.cur !== "idle") delete bones[name as Bone]
+  }
+  const posed: Pose = { ...pose, bones }
   applyBones(posed, 1 - Math.exp(-dt * 14))
+  if (motion) {
+    const m = applyMotion(motion, dt)
+    lift = pose.lift * (1 - m.liftOwned) + m.arc
+  }
   applyArms(posed, 1 - Math.exp(-dt * 10))
   applyFace(posed, now)
   applyLook(posed)
   if (vrm) {
-    vrm.scene.position.y = posed.lift
+    vrm.scene.position.y = lift
     vrm.scene.rotation.y = baseTurn + posed.turn * DEG
     vrm.update(dt)
   }
