@@ -25,11 +25,13 @@
 </p>
 
 <p align="center">
-  <img src="../screens/thinking.png" width="19%" alt="" />
-  <img src="../screens/models.png" width="19%" alt="" />
-  <img src="../screens/connect.png" width="19%" alt="" />
-  <img src="../screens/terminal.png" width="19%" alt="" />
-  <img src="../screens/files.png" width="19%" alt="" />
+  <img src="../screens/chat.png" width="13%" alt="" />
+  <img src="../screens/settings.png" width="13%" alt="" />
+  <img src="../screens/termux.png" width="13%" alt="" />
+  <img src="../screens/models.png" width="13%" alt="" />
+  <img src="../screens/connect.png" width="13%" alt="" />
+  <img src="../screens/terminal.png" width="13%" alt="" />
+  <img src="../screens/files.png" width="13%" alt="" />
 </p>
 
 Нативний клієнт Android для агента [opencode](https://github.com/sst/opencode). Він спілкується лише із сервером, який запускаєте **ви**, у вашій власній мережі. Жодних ретрансляторів чи хмарних сервісів.

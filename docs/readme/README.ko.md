@@ -25,11 +25,13 @@
 </p>
 
 <p align="center">
-  <img src="../screens/thinking.png" width="19%" alt="" />
-  <img src="../screens/models.png" width="19%" alt="" />
-  <img src="../screens/connect.png" width="19%" alt="" />
-  <img src="../screens/terminal.png" width="19%" alt="" />
-  <img src="../screens/files.png" width="19%" alt="" />
+  <img src="../screens/chat.png" width="13%" alt="" />
+  <img src="../screens/settings.png" width="13%" alt="" />
+  <img src="../screens/termux.png" width="13%" alt="" />
+  <img src="../screens/models.png" width="13%" alt="" />
+  <img src="../screens/connect.png" width="13%" alt="" />
+  <img src="../screens/terminal.png" width="13%" alt="" />
+  <img src="../screens/files.png" width="13%" alt="" />
 </p>
 
 [opencode](https://github.com/sst/opencode) 에이전트를 위한 네이티브 Android 클라이언트입니다. **내가** 실행하는 서버와만, 내 네트워크로 통신합니다. 중계 서버나 호스팅 서비스를 거치지 않습니다.

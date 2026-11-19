@@ -25,11 +25,13 @@
 </p>
 
 <p align="center">
-  <img src="../screens/thinking.png" width="19%" alt="" />
-  <img src="../screens/models.png" width="19%" alt="" />
-  <img src="../screens/connect.png" width="19%" alt="" />
-  <img src="../screens/terminal.png" width="19%" alt="" />
-  <img src="../screens/files.png" width="19%" alt="" />
+  <img src="../screens/chat.png" width="13%" alt="" />
+  <img src="../screens/settings.png" width="13%" alt="" />
+  <img src="../screens/termux.png" width="13%" alt="" />
+  <img src="../screens/models.png" width="13%" alt="" />
+  <img src="../screens/connect.png" width="13%" alt="" />
+  <img src="../screens/terminal.png" width="13%" alt="" />
+  <img src="../screens/files.png" width="13%" alt="" />
 </p>
 
 Um cliente Android nativo para o agente [opencode](https://github.com/sst/opencode). Ele só fala com o servidor que **você** executa, pela sua própria rede. Nada passa por um relay ou serviço hospedado.

@@ -32,11 +32,13 @@
 </p>
 
 <p align="center">
-  <img src="docs/screens/thinking.png" width="19%" alt="RIG writing a reply: animated activity bar with a timer" />
-  <img src="docs/screens/models.png" width="19%" alt="Model picker with All / Local / Cloud filter" />
-  <img src="docs/screens/connect.png" width="19%" alt="One-scan pairing with your computer" />
-  <img src="docs/screens/terminal.png" width="19%" alt="A real shell on your computer" />
-  <img src="docs/screens/files.png" width="19%" alt="Project files on your computer" />
+  <img src="docs/screens/chat.png" width="13%" alt="Chat: the agent's thinking shown open, its actions folded into one line, 3D Cheri floating over the app" />
+  <img src="docs/screens/settings.png" width="13%" alt="Settings: the 3D avatar (transparency, size) and chat options" />
+  <img src="docs/screens/termux.png" width="13%" alt="Set up Termux from the app, step by step" />
+  <img src="docs/screens/models.png" width="13%" alt="Model picker with All / Local / Cloud filter" />
+  <img src="docs/screens/connect.png" width="13%" alt="One-scan pairing with your computer" />
+  <img src="docs/screens/terminal.png" width="13%" alt="A real shell on your computer" />
+  <img src="docs/screens/files.png" width="13%" alt="Project files on your computer" />
 </p>
 
 <p align="center"><sub>Screenshots are from earlier versions, when the mascot was still the robot RIG.</sub></p>

@@ -25,11 +25,13 @@
 </p>
 
 <p align="center">
-  <img src="../screens/thinking.png" width="19%" alt="" />
-  <img src="../screens/models.png" width="19%" alt="" />
-  <img src="../screens/connect.png" width="19%" alt="" />
-  <img src="../screens/terminal.png" width="19%" alt="" />
-  <img src="../screens/files.png" width="19%" alt="" />
+  <img src="../screens/chat.png" width="13%" alt="" />
+  <img src="../screens/settings.png" width="13%" alt="" />
+  <img src="../screens/termux.png" width="13%" alt="" />
+  <img src="../screens/models.png" width="13%" alt="" />
+  <img src="../screens/connect.png" width="13%" alt="" />
+  <img src="../screens/terminal.png" width="13%" alt="" />
+  <img src="../screens/files.png" width="13%" alt="" />
 </p>
 
 [opencode](https://github.com/sst/opencode) エージェント用のネイティブ Android クライアントです。通信するのは**あなた**が動かすサーバーだけで、あなた自身のネットワーク経由です。中継サーバーやホスト型サービスは使いません。
