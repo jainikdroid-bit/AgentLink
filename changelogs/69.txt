@@ -1,0 +1,2 @@
+v0.21.1 — reply from the notification
+- A reply typed in a Termux notification opens its session and is sent to the agent (opencode://session/<id>?replyHex=...).

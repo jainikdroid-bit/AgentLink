@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native"
+import { decodeReplyHex } from "../../src/lib/reply-link"
 import { useLocalSearchParams, Stack, useRouter, useFocusEffect, useNavigation } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -83,7 +84,7 @@ function getShortDir(dir?: string): string | null {
 }
 
 export default function SessionScreen() {
-  const { id, directory } = useLocalSearchParams<{ id: string; directory?: string }>()
+  const { id, directory, replyHex } = useLocalSearchParams<{ id: string; directory?: string; replyHex?: string }>()
   const router = useRouter()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
@@ -530,6 +531,19 @@ export default function SessionScreen() {
   const removeAttachment = useCallback((index: number) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index))
   }, [])
+
+  // A reply typed in the notification shade (Termux direct reply) arrives as ?replyHex=...: send it once,
+  // as soon as this screen is bound to its session, then drop the parameter.
+  const sentReply = useRef<string | null>(null)
+  useEffect(() => {
+    const text = decodeReplyHex(replyHex)
+    if (!text || !replyHex || sentReply.current === replyHex || currentSession?.id !== id) return
+    sentReply.current = replyHex
+    scrollToBottom(true)
+    sendMessage(text, model || undefined, agent || undefined, [], variant || undefined).catch((err) => console.error("Notification reply failed:", err))
+    router.setParams({ replyHex: undefined })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [replyHex, currentSession?.id, id])
 
   // --- Send ---
   sendVoiceRef.current = (text: string) => {
