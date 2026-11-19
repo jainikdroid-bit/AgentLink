@@ -2,6 +2,7 @@ package cc.agentlabs.opencode
 
 import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -31,6 +32,13 @@ class MainActivity : ReactActivity() {
       }
       ViewCompat.requestApplyInsets(root)
     }
+  }
+
+  /** Taps go through the floating 3D Cheri; a hold picks her up (see CheriTouch). */
+  override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+    val decor = window.decorView
+    if (CheriTouch.handle(decor, ev) { super.dispatchTouchEvent(it) }) return true
+    return super.dispatchTouchEvent(ev)
   }
 
   /**

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { Animated, Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Animated, Modal, NativeEventEmitter, NativeModules, PixelRatio, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native"
 import { WebView, type WebViewMessageEvent } from "react-native-webview"
 import { router } from "expo-router"
 import { useTranslation } from "react-i18next"
@@ -55,19 +55,31 @@ export function FloatingCheri() {
   }, [w, h, sw, sh, avatar.pos])
 
   const [menu, setMenu] = useState(false)
-  const onMessage = (e: WebViewMessageEvent) => {
-    let msg: { type?: string; dx?: number; dy?: number; message?: string; scale?: number }
-    try {
-      msg = JSON.parse(e.nativeEvent.data)
-    } catch {
-      return
-    }
+  const box = useRef<View>(null)
+  // Tell Android where she is: taps there pass through, a hold picks her up (CheriTouch.kt).
+  const publishRect = useCallback(() => {
+    const native = NativeModules.CheriTouch as { setRect?: (x: number, y: number, w: number, h: number, on: boolean) => void } | undefined
+    if (!native?.setRect) return
+    const r = PixelRatio.get()
+    box.current?.measureInWindow((x, y, ww, hh) => native.setRect?.(x * r, y * r, ww * r, hh * r, true))
+  }, [])
+  useEffect(() => {
+    const timer = setTimeout(publishRect, 50)
+    return () => clearTimeout(timer)
+  }, [publishRect, w, h, sw, sh, avatar.pos, avatar.enabled])
+  useEffect(() => () => (NativeModules.CheriTouch as { setRect?: (...a: unknown[]) => void } | undefined)?.setRect?.(0, 0, 0, 0, false), [])
+
+  type Msg = { type?: string; dx?: number; dy?: number; message?: string; scale?: number }
+  const handle = (msg: Msg) => {
     if (msg.type === "ready") setReady(true)
     else if (msg.type === "error") console.warn("[cheri3d]", msg.message)
     else if (msg.type === "drag") {
       current.current = clampPosition(current.current.x + (msg.dx ?? 0), current.current.y + (msg.dy ?? 0), w, h, sw, sh)
       pos.setValue(current.current)
-    } else if (msg.type === "dragEnd") void setAvatar({ pos: current.current })
+    } else if (msg.type === "dragEnd" || msg.type === "drop") {
+      void setAvatar({ pos: current.current })
+      publishRect()
+    } else if (msg.type === "pickUp") web.current?.injectJavaScript("window.cheri && cheri.play('giggle'); true;")
     else if (msg.type === "menu") setMenu(true)
     else if (msg.type === "pinchStart") pinchStart.current = w
     else if (msg.type === "pinch") setLiveWidth(pinchWidth(pinchStart.current || w, msg.scale ?? 1))
@@ -77,11 +89,25 @@ export function FloatingCheri() {
       void setAvatar({ width: next })
     }
   }
+  const handleRef = useRef(handle)
+  handleRef.current = handle
+  const onMessage = (e: WebViewMessageEvent) => {
+    try {
+      handleRef.current(JSON.parse(e.nativeEvent.data) as Msg)
+    } catch {
+      // not ours
+    }
+  }
+  useEffect(() => {
+    if (!NativeModules.CheriTouch) return
+    const sub = new NativeEventEmitter(NativeModules.CheriTouch).addListener("CheriTouch", (m: Msg) => handleRef.current(m))
+    return () => sub.remove()
+  }, [])
 
   if (Platform.OS !== "android" || !avatar.enabled) return null
   return (
     <>
-      <Animated.View style={[s.window, { width: w, height: h, opacity: avatar.opacity, transform: pos.getTranslateTransform() }]} testID="floating-cheri">
+      <Animated.View ref={box} pointerEvents="none" onLayout={publishRect} style={[s.window, { width: w, height: h, opacity: avatar.opacity, transform: pos.getTranslateTransform() }]} testID="floating-cheri">
         <WebView
           ref={web}
           source={SOURCE}
