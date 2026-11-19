@@ -4,11 +4,11 @@
 import * as THREE from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm"
-import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, TAP_ORDER, activeProps, sample, type Bone, type Pose, type PropKind, type Scene } from "./poses"
+import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, TAP_ORDER, WALK, activeProps, sample, type Bone, type Pose, type PropKind, type Scene } from "./poses"
 
 declare global {
   interface Window {
-    cheri: { setMood(m: string): void; play(id: string): void; tap(): void; pet(): void; debug: Record<string, unknown> }
+    cheri: { setMood(m: string): void; play(id: string): void; tap(): void; pet(): void; walk(dir: number): void; debug: Record<string, unknown> }
     ReactNativeWebView?: { postMessage(s: string): void }
   }
 }
@@ -24,8 +24,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace
 
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera(24, 1, 0.1, 20)
-camera.position.set(0, 1.33, 1.95)
-camera.lookAt(0, 1.25, 0)
+camera.position.set(0, 0.9, 4.2)
+camera.lookAt(0, 0.85, 0)
 scene.add(new THREE.AmbientLight(0xffffff, 1.6))
 const sun = new THREE.DirectionalLight(0xffffff, 1.8)
 sun.position.set(0.6, 1.6, 1.4)
@@ -128,6 +128,7 @@ async function load(url: string) {
   VRMUtils.removeUnnecessaryVertices(gltf.scene)
   VRMUtils.combineSkeletons(gltf.scene)
   VRMUtils.rotateVRM0(model)
+  baseTurn = model.scene.rotation.y
   model.scene.traverse((o) => {
     o.frustumCulled = false
   })
@@ -386,6 +387,9 @@ function placeProps(cues: PropKind[], now: number) {
 // ---------- director ----------
 
 let mood = "idle"
+/** -1 walking to the left of the screen, 1 to the right, 0 standing (set by the app while it moves her window). */
+let walking = 0
+let baseTurn = 0
 let skit: { scene: Scene; start: number } | null = null
 let nextSkitAt = performance.now() + 4000
 let last: string | null = null
@@ -419,6 +423,10 @@ window.cheri = {
   play,
   tap,
   pet: () => play("pet"),
+  walk: (dir: number) => {
+    walking = dir > 0 ? 1 : dir < 0 ? -1 : 0
+    if (walking) skit = null
+  },
   // Lab only: grab the current frame (render + read back in the same task, no preserveDrawingBuffer needed).
   debug: { snap: () => (renderer.render(scene, camera), canvas.toDataURL("image/png")) },
 }
@@ -502,13 +510,13 @@ function frame() {
     skit = null
     nextSkitAt = now + 6000 + Math.random() * 7000
   }
-  if (!skit && now >= nextSkitAt) {
+  if (!skit && !walking && now >= nextSkitAt) {
     const pool = (MOOD_SKITS[mood] ?? []).filter((id) => id !== last)
     if (pool.length) play(pool[Math.floor(Math.random() * pool.length)])
     else nextSkitAt = now + 8000
   }
-  const base = sample(BASE[mood], now, REST)
-  const pose = skit ? sample(skit.scene, now - skit.start, base) : base
+  const base = walking ? { ...sample(WALK, now, REST), turn: walking * 75 } : sample(BASE[mood], now, REST)
+  const pose = skit && !walking ? sample(skit.scene, now - skit.start, base) : base
   const breathe = Math.sin(now / 800) * 1.2
   const posed: Pose = { ...pose, bones: { ...pose.bones, chest: [(pose.bones.chest?.[0] ?? 0) + breathe, pose.bones.chest?.[1] ?? 0, pose.bones.chest?.[2] ?? 0] } }
   applyBones(posed, 1 - Math.exp(-dt * 14))
@@ -517,6 +525,7 @@ function frame() {
   applyLook(posed)
   if (vrm) {
     vrm.scene.position.y = posed.lift
+    vrm.scene.rotation.y = baseTurn + posed.turn * DEG
     vrm.update(dt)
   }
   const cues = new Set<PropKind>([...activeProps(BASE[mood], now).map((p) => p.kind), ...(skit ? activeProps(skit.scene, now - skit.start).map((p) => p.kind) : [])])

@@ -16,6 +16,12 @@ export type Bone =
   | "rightLowerArm"
   | "leftHand"
   | "rightHand"
+  | "leftUpperLeg"
+  | "rightUpperLeg"
+  | "leftLowerLeg"
+  | "rightLowerLeg"
+  | "leftFoot"
+  | "rightFoot"
 
 /** Euler degrees [x, y, z] per bone. Missing bones stay at rest. */
 export type BonePose = Partial<Record<Bone, [number, number, number]>>
@@ -42,6 +48,8 @@ export interface Pose {
   /** Eye/head look target offset (-1..1). */
   lookX: number
   lookY: number
+  /** Body turn in degrees (walking sideways); 0 = facing you. */
+  turn: number
   /** Hand targets for arm IK (metres, relative to the head or chest bone; +x = her left, +y up, +z forward). */
   l: Target
   r: Target
@@ -69,6 +77,7 @@ export const REST: Pose = {
   lift: 0,
   lookX: 0,
   lookY: 0,
+  turn: 0,
 }
 
 // Hand placements for the IK (tuned in the lab). Left = the character's left (+x).
@@ -192,8 +201,51 @@ export const BASE: Record<string, Scene> = {
   },
 }
 
+// Legs (degrees on the normalized bones; -x swings a thigh forward, +x bends a knee back).
+const STEP_A: BonePose = { leftUpperLeg: [-24, 0, 0], leftLowerLeg: [12, 0, 0], rightUpperLeg: [18, 0, 0], rightLowerLeg: [34, 0, 0], rightFoot: [-14, 0, 0] }
+const STEP_B: BonePose = { rightUpperLeg: [-24, 0, 0], rightLowerLeg: [12, 0, 0], leftUpperLeg: [18, 0, 0], leftLowerLeg: [34, 0, 0], leftFoot: [-14, 0, 0] }
+const SQUAT: BonePose = { hips: [8, 0, 0], spine: [18, 0, 0], leftUpperLeg: [-112, 0, -10], rightUpperLeg: [-112, 0, 10], leftLowerLeg: [140, 0, 0], rightLowerLeg: [140, 0, 0], leftFoot: [-30, 0, 0], rightFoot: [-30, 0, 0] }
+const TUCK: BonePose = { leftUpperLeg: [-40, 0, 0], rightUpperLeg: [-40, 0, 0], leftLowerLeg: [80, 0, 0], rightLowerLeg: [80, 0, 0] }
+
+/** Walking (looped while the app moves her window); `turn` is set by the runtime. */
+export const WALK: Scene = {
+  id: "walk",
+  ms: 900,
+  loop: true,
+  keys: [
+    k(0, { ...arms({ l: T(0.2, -0.38, 0.1, "chest"), r: T(-0.2, -0.38, -0.08, "chest") }, STEP_A), lift: 0, face: "happy", faceWeight: 0.5 }),
+    k(225, { lift: 0.025 }),
+    k(450, { ...arms({ l: T(0.2, -0.38, -0.08, "chest"), r: T(-0.2, -0.38, 0.1, "chest") }, STEP_B), lift: 0 }),
+    k(675, { lift: 0.025 }),
+    k(900, { ...arms({ l: T(0.2, -0.38, 0.1, "chest"), r: T(-0.2, -0.38, -0.08, "chest") }, STEP_A), lift: 0 }),
+  ],
+}
+
 /** Short skits that interrupt the base activity now and then. */
 export const SKITS: Record<string, Scene> = {
+  squat: {
+    id: "squat",
+    ms: 6000,
+    keys: [
+      k(500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, SQUAT), lift: -0.36, lookY: -0.2 }),
+      k(2200, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, { ...SQUAT, head: [0, 25, 6] }), lookX: -0.8 }),
+      k(3600, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, { ...SQUAT, head: [0, -25, -6] }), lookX: 0.8, face: "happy", faceWeight: 0.6 }),
+      k(5000, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, SQUAT), lookX: 0 }),
+    ],
+    props: [{ kind: "note", from: 3000, to: 4800 }],
+  },
+  joyJump: {
+    id: "joyJump",
+    ms: 2400,
+    keys: [
+      k(150, { ...arms(ARMS.rest, { leftUpperLeg: [-20, 0, 0], rightUpperLeg: [-20, 0, 0], leftLowerLeg: [40, 0, 0], rightLowerLeg: [40, 0, 0] }), lift: -0.05 }),
+      k(400, { ...arms(ARMS.cheer, TUCK), lift: 0.22, face: "happy", faceWeight: 1, mouth: 0.8, curlL: 1, curlR: 1 }),
+      k(700, { ...arms(ARMS.cheer), lift: 0 }),
+      k(950, { ...arms(ARMS.cheer, TUCK), lift: 0.2 }),
+      k(1250, { ...arms(ARMS.cheer), lift: 0 }),
+    ],
+    props: [{ kind: "sparkle" }, { kind: "heart", from: 400, to: 2200 }],
+  },
   wave: {
     id: "wave",
     ms: 2400,
@@ -266,7 +318,7 @@ export const SKITS: Record<string, Scene> = {
   victory: {
     id: "victory",
     ms: 2600,
-    keys: [k(150, { lift: -0.02, ...arms(ARMS.rest, { spine: [8, 0, 0] }) }), k(450, { lift: 0.12, ...arms(ARMS.cheer), curlL: 1, curlR: 1, face: "happy", faceWeight: 1, mouth: 0.8 }), k(800, { lift: 0 }), k(2000, { ...arms(ARMS.cheer) })],
+    keys: [k(150, { lift: -0.02, ...arms(ARMS.rest, { spine: [8, 0, 0] }) }), k(450, { lift: 0.22, ...arms(ARMS.cheer, TUCK), curlL: 1, curlR: 1, face: "happy", faceWeight: 1, mouth: 0.8 }), k(800, { lift: 0 }), k(2000, { ...arms(ARMS.cheer) })],
     props: [{ kind: "confetti" }],
   },
   thumbsUp: {
@@ -332,17 +384,17 @@ export const SKITS: Record<string, Scene> = {
 }
 
 export const MOOD_SKITS: Record<string, string[]> = {
-  idle: ["wave", "peace", "kawaii", "nya", "stretch", "coffee", "lookAround", "heartHands"],
+  idle: ["wave", "peace", "kawaii", "nya", "stretch", "coffee", "lookAround", "heartHands", "squat", "squat"],
   thinking: ["idea", "lookAround"],
   working: ["coffeeChug", "sweatTyping"],
   writing: ["coffeeChug", "sweatTyping"],
   loading: ["lookAround", "nya"],
-  success: ["victory", "thumbsUp", "peace", "kawaii"],
+  success: ["joyJump", "victory", "thumbsUp", "peace"],
   error: ["cry", "shrug"],
   offline: ["searchWifi", "wakeUp"],
 }
 
-export const ENTER_SKIT: Record<string, string> = { success: "victory", error: "shrug" }
+export const ENTER_SKIT: Record<string, string> = { success: "joyJump", error: "shrug" }
 export const TAP_ORDER = ["giggle", "shy", "heartHands", "pout", "pout", "dizzy"]
 
 // ---------- sampling ----------
@@ -373,6 +425,7 @@ export function blend(a: Pose, b: Pose, t: number): Pose {
     lift: lerp(a.lift, b.lift, t),
     lookX: lerp(a.lookX, b.lookX, t),
     lookY: lerp(a.lookY, b.lookY, t),
+    turn: lerp(a.turn, b.turn, t),
     l: lerpTarget(a.l, b.l, t),
     r: lerpTarget(a.r, b.r, t),
   }

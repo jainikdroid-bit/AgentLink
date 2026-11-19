@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Animated, Modal, NativeEventEmitter, NativeModules, PixelRatio, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native"
+import { Animated, Easing, Modal, NativeEventEmitter, NativeModules, PixelRatio, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native"
 import { WebView, type WebViewMessageEvent } from "react-native-webview"
 import { router } from "expo-router"
 import { useTranslation } from "react-i18next"
@@ -7,7 +7,7 @@ import { cyber } from "../theme/cyber"
 import { useSettings } from "../stores/settings"
 import { useAvatar } from "../stores/avatar"
 import { useOverallStatus } from "../lib/useOverallStatus"
-import { AVATAR_OPACITIES, AVATAR_SIZES, avatarMood, clampPosition, pinchWidth, type AvatarSize } from "../lib/avatar-mood"
+import { AVATAR_ASPECT, AVATAR_OPACITIES, AVATAR_SIZES, avatarMood, clampPosition, pinchWidth, type AvatarSize } from "../lib/avatar-mood"
 
 const SOURCE = { uri: "file:///android_asset/cheri3d/index.html" }
 const CELEBRATE_MS = 6000
@@ -23,7 +23,7 @@ export function FloatingCheri() {
   const [liveWidth, setLiveWidth] = useState<number | null>(null)
   const pinchStart = useRef(0)
   const w = liveWidth ?? avatar.width ?? AVATAR_SIZES[avatar.size]
-  const h = Math.round((w * 4) / 3)
+  const h = Math.round(w * AVATAR_ASPECT)
 
   const [celebrating, setCelebrating] = useState(false)
   const wasBusy = useRef(false)
@@ -79,7 +79,10 @@ export function FloatingCheri() {
     } else if (msg.type === "dragEnd" || msg.type === "drop") {
       void setAvatar({ pos: current.current })
       publishRect()
-    } else if (msg.type === "pickUp") web.current?.injectJavaScript("window.cheri && cheri.play('giggle'); true;")
+    } else if (msg.type === "pickUp") {
+      stopWalk()
+      web.current?.injectJavaScript("window.cheri && cheri.play('giggle'); true;")
+    }
     else if (msg.type === "menu") setMenu(true)
     else if (msg.type === "pinchStart") pinchStart.current = w
     else if (msg.type === "pinch") setLiveWidth(pinchWidth(pinchStart.current || w, msg.scale ?? 1))
@@ -89,6 +92,49 @@ export function FloatingCheri() {
       void setAvatar({ width: next })
     }
   }
+  // ---- wandering: when the agent is idle she takes a stroll along the bottom of the screen ----
+  const walkAnim = useRef<Animated.CompositeAnimation | null>(null)
+  const lastTouch = useRef(Date.now())
+  const stopWalk = () => {
+    lastTouch.current = Date.now()
+    if (!walkAnim.current) return
+    walkAnim.current.stop()
+    walkAnim.current = null
+    pos.stopAnimation((v) => {
+      current.current = { x: v.x, y: v.y }
+    })
+    web.current?.injectJavaScript("window.cheri && cheri.walk(0); true;")
+  }
+  useEffect(() => {
+    if (!ready || mood !== "idle" || menu) return
+    const timer = setTimeout(() => {
+      if (walkAnim.current || Date.now() - lastTouch.current < 20_000) return
+      const from = current.current
+      const span = Math.max(0, sw - w - 8)
+      let x = 4 + Math.random() * span
+      if (Math.abs(x - from.x) < 60) x = from.x > span / 2 ? 4 + Math.random() * (span / 3) : span - Math.random() * (span / 3)
+      const dir = x > from.x ? 1 : -1
+      const ms = (Math.abs(x - from.x) / 45) * 1000
+      web.current?.injectJavaScript(`window.cheri && cheri.walk(${dir}); true;`)
+      const anim = Animated.timing(pos, { toValue: { x, y: from.y }, duration: ms, easing: Easing.linear, useNativeDriver: false })
+      walkAnim.current = anim
+      anim.start(({ finished }) => {
+        if (!finished) return
+        walkAnim.current = null
+        current.current = { x, y: from.y }
+        web.current?.injectJavaScript("window.cheri && cheri.walk(0); true;")
+        void setAvatar({ pos: current.current })
+        publishRect()
+      })
+    }, 25_000 + Math.random() * 25_000)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, mood, menu, sw, w, avatar.pos])
+  useEffect(() => {
+    if (mood !== "idle") stopWalk()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mood])
+
   const handleRef = useRef(handle)
   handleRef.current = handle
   const onMessage = (e: WebViewMessageEvent) => {

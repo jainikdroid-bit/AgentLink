@@ -22,8 +22,8 @@ test("the floating window stays on screen", () => {
 })
 
 test("pinching scales her within limits", () => {
-  assert.equal(pinchWidth(160, 1.5), 240)
-  assert.equal(pinchWidth(160, 10), 360)
-  assert.equal(pinchWidth(160, 0.1), 90)
+  assert.equal(pinchWidth(100, 1.5), 150)
+  assert.equal(pinchWidth(160, 10), 200)
+  assert.equal(pinchWidth(160, 0.1), 50)
   assert.equal(pinchWidth(160, Number.NaN), 160)
 })

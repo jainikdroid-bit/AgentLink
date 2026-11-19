@@ -15,11 +15,13 @@ export function avatarMood(status: OverallStatus, activity: AvatarMood | null, c
 }
 
 /** Size presets of the floating window (width; height is 4/3 of it). */
-export const AVATAR_SIZES = { s: 120, m: 160, l: 210 } as const
+/** Full-body window widths; the height is AVATAR_ASPECT times the width. */
+export const AVATAR_SIZES = { s: 64, m: 84, l: 112 } as const
+export const AVATAR_ASPECT = 2.1
 export type AvatarSize = keyof typeof AVATAR_SIZES
 export const AVATAR_OPACITIES = [1, 0.75, 0.5] as const
-export const AVATAR_MIN_WIDTH = 90
-export const AVATAR_MAX_WIDTH = 360
+export const AVATAR_MIN_WIDTH = 50
+export const AVATAR_MAX_WIDTH = 200
 
 /** Width after a pinch: the starting width times the finger spread, kept within limits. */
 export function pinchWidth(start: number, scale: number): number {

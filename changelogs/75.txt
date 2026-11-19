@@ -1,0 +1,2 @@
+v0.24.0 — Cheri gets legs
+- 3D Cheri is smaller and shown full height. When the agent is idle she strolls along the bottom of the screen, squats down to look around, and jumps for joy when a task is done.
