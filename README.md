@@ -39,10 +39,25 @@
   <img src="docs/screens/files.png" width="19%" alt="Project files on your computer" />
 </p>
 
-A native Android client for the [opencode](https://github.com/sst/opencode) agent. It talks only to the
-server **you** run, over your own network. Nothing goes through a relay or a hosted service.
+<p align="center"><sub>Screenshots are from earlier versions, when the mascot was still the robot RIG.</sub></p>
 
-> Independent community client; not affiliated with the opencode team.
+A native Android client for coding agents that run on **your own computer**: [opencode](https://github.com/sst/opencode)
+out of the box, and through the open [Agent Client Protocol](https://agentclientprotocol.com) also Claude Code, Codex,
+Gemini CLI and more (table below). It talks only to the computer **you** run, over your own network. Nothing goes
+through a relay or a hosted service.
+
+> Independent community client; not affiliated with the opencode team or any agent vendor. Android package id: `cc.agentlabs.opencode`.
+
+## Supported agents
+
+| Agent | How |
+|---|---|
+| opencode | Native: sessions, models, MCP connectors, terminal, files |
+| Claude Code, Codex, Gemini CLI, Cursor, Kimi Code, Mistral Vibe, Augment (Auggie), Factory Droid, Kiro, Goose, Qwen Code, GitHub Copilot CLI | Through ACP: **Sessions → Other agents**. The agent runs on the computer with its own login and tools; the phone shows its answers, plan, tool calls and file changes and asks before it acts |
+
+The *Other agents* screen also lists supported agents that are not installed on the computer yet. Up to four agents run
+at once, and a running agent keeps working when you close the screen. Some features (model picker, server-side session
+list) are still opencode-only.
 
 ## Highlights
 
@@ -50,8 +65,16 @@ server **you** run, over your own network. Nothing goes through a relay or a hos
 *Writing the answer*), pulses while it works and keeps a timer. While a reasoning model thinks, its block
 breathes, previews the last lines of the thought and collapses to *Thought for 0:12* when done.
 
+**Clear chat.** The agent's thinking is shown open by default and its commands and edits fold into one *Actions* line;
+both are switches in *Settings → Chat*. *Agent speaks my language* asks the agent to think and reply in the app's language.
+
+**Know what is wrong.** A status chip walks the chain phone → computer → server → agent, says which link is down,
+explains why and offers the fix. Error messages say what happened.
+
 **Pair with your computer in one scan.** Run one script on the computer, point the phone camera at the QR
-code, confirm, done. The server stays on `127.0.0.1` and is published only inside your Tailscale network.
+code, confirm, done (no camera? type the 6-digit code). The server stays on `127.0.0.1` and is published only inside
+your Tailscale network. At home the app connects straight over the home network, no VPN needed, and the phone has
+a built-in Tailscale client, so the Tailscale app is optional.
 
 **Pick the brain, local or cloud.** The model picker has *All / Local / Cloud* chips with counts. Models
 served from your own machine (llama.cpp, Ollama, LM Studio, anything on localhost, LAN or Tailscale) are
@@ -82,23 +105,25 @@ credentials in the Android Keystore, dark mode.
 **Terminal and files.** Open a real shell on the computer (xterm in a WebView, with Esc / Tab / Ctrl and
 arrow keys) or browse the project and read files, straight from the session header.
 
-## Design
+## Meet Cheri
 
-Dark only, blue-black with neon cyan and magenta accents, monospace in the chrome. The mascot, **RIG**, is a
-cyberpunk site technician: hard hat, glowing visor, antenna. It acts out what the agent is doing.
+<p align="center"><img src="docs/brand/cheri.png" width="160" alt="Cheri" /></p>
 
-| State | RIG does |
-|---|---|
-| thinking | visor eye scans, thought dots rise |
-| working | a gear spins beside the head |
-| writing | the visor shows typing bars |
-| loading | eye scans inside a spinning ring |
-| success / error | green smile / red cross |
-| offline | flat-line visor, a "?" and a sparking unplugged cable |
+**Cheri** is the AgentLink mascot. Her ear lights and face show what the agent is doing (thinking, working, writing,
+done, offline). She waves, winks, yawns, naps and plays little skits, and reacts when you tap her.
 
-No connection? Tap the unplugged RIG to play **RIG RUN**, an endless runner: jump over server racks and live cables; your best score is kept on the phone.
+- **3D Cheri** floats over the whole app. She types while the agent works, holds her chin under a light bulb while it
+  thinks, celebrates when it is done and sleeps when the computer is off. Drag her anywhere, pinch to resize, a quick tap
+  goes through her to the button underneath, hold to pick her up and hold a little longer for her menu (hide, transparency, size).
+- Turn her on or off in **Settings → Avatar**. Without the 3D model you get the animated 2D Cheri.
+- The earlier robot mascot **RIG** is still selectable in Settings (including the offline runner game, **RIG RUN**).
 
-Tokens live in [`src/theme/cyber.ts`](src/theme/cyber.ts); the logo is [`docs/brand/rig.svg`](docs/brand/rig.svg).
+Design: dark only, blue-black with neon cyan and magenta accents, monospace in the chrome. Tokens live in
+[`src/theme/cyber.ts`](src/theme/cyber.ts).
+
+**Credit.** The 3D model is "Sendagaya Shino" by the VRoid project (pixiv), an official VRoid Studio sample model. Its
+license allows redistribution, modification and commercial use; see
+[`web/cheri3d/model/LICENSE.md`](web/cheri3d/model/LICENSE.md).
 
 ## Install in three steps (about two minutes)
 
@@ -142,6 +167,9 @@ Built in: run the installer with `-PhoneTools` and switch the tools on in the ap
 including `phone_termux_run` (a bash command in Termux on the phone, approved on the phone each time), and is told about
 them (`phone-tools.md` for opencode; ACP agents get the phone MCP server on `session/new`).
 
+Termux needs no manual setup: **Settings → Phone tools → Set up Termux** downloads Termux from its official GitHub
+release, checks its SHA-256, installs it and walks you through allowing external apps, the permission and a test command.
+
 Other options run on the desktop side and plug into opencode as MCP servers.
 
 | Tool | What it gives the agent |
@@ -157,8 +185,9 @@ Keep them behind a dedicated agent and approval, for example:
 "agent": { "phone": { "mode": "primary", "tools": { "phone_*": true, "mobile_*": true } } }
 ```
 
-An opencode plugin can also ping the phone (`termux-notification` over SSH) when a long run finishes or
-needs approval, with no cloud service involved.
+**Notifications.** The app itself notifies about approval requests (with Allow / Deny buttons) while it holds
+its connection; Android may put it to sleep after a few minutes. A notification you build yourself can open a session and
+send a reply to it with a link such as `opencode://session/<id>?replyHex=<hex-encoded text>`.
 
 ## Build
 
@@ -167,6 +196,7 @@ Requirements: Node 22+, JDK 17, Android SDK.
 ```bash
 npm ci
 npm run typecheck && npm test      # unit tests
+node scripts/build-cheri3d.mjs     # bundles the 3D Cheri (three, three-vrm, esbuild are devDependencies)
 cd android && ./gradlew assembleRelease
 ```
 

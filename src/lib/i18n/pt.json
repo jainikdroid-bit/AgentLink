@@ -345,7 +345,19 @@
     },
     "search": "Buscar sessões",
     "pinned": "Fixadas",
-    "noMatches": "Nenhuma sessão corresponde à sua busca."
+    "noMatches": "Nenhuma sessão corresponde à sua busca.",
+    "selection": {
+      "count": "{{count}} selecionadas",
+      "deleteTitle": "Excluir sessões?",
+      "deleteMessage": "Excluir {{count}} sessões? Não é possível desfazer.",
+      "deletePartial": "Não foi possível excluir {{count}} sessões.",
+      "merge": "Mesclar",
+      "merging": "Reunindo o contexto das sessões…",
+      "mergeFailed": "Não foi possível mesclar as sessões.",
+      "pin": "Fixar",
+      "rename": "Renomear",
+      "select": "Selecionar"
+    }
   },
   "notifications": {
     "categories": {

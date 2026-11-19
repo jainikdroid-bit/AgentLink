@@ -1,0 +1,4 @@
+v0.22.0 — pick several sessions
+- Hold a session to select several: delete them at once, or merge their context into a new session the agent picks up from.
+- Pin and rename moved to the selection bar.
+- Updated README, install guides and site texts for AgentLink.

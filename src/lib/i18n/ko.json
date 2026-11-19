@@ -345,7 +345,19 @@
     },
     "search": "세션 검색",
     "pinned": "고정됨",
-    "noMatches": "검색 결과와 일치하는 세션이 없습니다."
+    "noMatches": "검색 결과와 일치하는 세션이 없습니다.",
+    "selection": {
+      "count": "{{count}}개 선택됨",
+      "deleteTitle": "세션을 삭제할까요?",
+      "deleteMessage": "세션 {{count}}개를 삭제할까요? 되돌릴 수 없습니다.",
+      "deletePartial": "세션 {{count}}개를 삭제하지 못했습니다.",
+      "merge": "합치기",
+      "merging": "세션 맥락을 모으는 중…",
+      "mergeFailed": "세션을 합치지 못했습니다.",
+      "pin": "고정",
+      "rename": "이름 바꾸기",
+      "select": "선택"
+    }
   },
   "notifications": {
     "categories": {

@@ -345,7 +345,19 @@
     },
     "search": "Sitzungen durchsuchen",
     "pinned": "Angeheftet",
-    "noMatches": "Keine Sitzungen entsprechen Ihrer Suche."
+    "noMatches": "Keine Sitzungen entsprechen Ihrer Suche.",
+    "selection": {
+      "count": "{{count}} ausgewählt",
+      "deleteTitle": "Sitzungen löschen?",
+      "deleteMessage": "{{count}} Sitzungen löschen? Das kann nicht rückgängig gemacht werden.",
+      "deletePartial": "{{count}} Sitzungen konnten nicht gelöscht werden.",
+      "merge": "Zusammenführen",
+      "merging": "Kontext der Sitzungen wird gesammelt…",
+      "mergeFailed": "Die Sitzungen konnten nicht zusammengeführt werden.",
+      "pin": "Anheften",
+      "rename": "Umbenennen",
+      "select": "Auswählen"
+    }
   },
   "notifications": {
     "categories": {

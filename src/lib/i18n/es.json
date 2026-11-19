@@ -345,7 +345,19 @@
     },
     "search": "Buscar sesiones",
     "pinned": "Fijadas",
-    "noMatches": "No hay sesiones que coincidan con tu búsqueda."
+    "noMatches": "No hay sesiones que coincidan con tu búsqueda.",
+    "selection": {
+      "count": "{{count}} seleccionadas",
+      "deleteTitle": "¿Eliminar sesiones?",
+      "deleteMessage": "¿Eliminar {{count}} sesiones? No se puede deshacer.",
+      "deletePartial": "No se pudieron eliminar {{count}} sesiones.",
+      "merge": "Combinar",
+      "merging": "Reuniendo el contexto de las sesiones…",
+      "mergeFailed": "No se pudieron combinar las sesiones.",
+      "pin": "Fijar",
+      "rename": "Renombrar",
+      "select": "Seleccionar"
+    }
   },
   "notifications": {
     "categories": {

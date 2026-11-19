@@ -1,7 +1,7 @@
 # AI setup runbook: AgentLink + opencode on the user's computer
 
 Audience: an AI agent (Claude Code, opencode, Codex, ...) asked to set this up for a person.
-Goal: the person's phone controls the opencode agent on their computer, with the fewest human actions.
+Goal: the person's phone controls the opencode agent on their computer (and, through ACP, other agents installed there: Claude Code, Codex, Gemini CLI, Cursor, Kimi Code, Mistral Vibe, Augment, Factory Droid, Kiro, Goose, Qwen Code, GitHub Copilot CLI), with the fewest human actions.
 
 ## What only the human can do (never more than these)
 
@@ -107,7 +107,7 @@ model configured, the model picker will be empty: run `opencode auth login` (or 
 
 ## Optional: phone tools for the agent
 
-`-PhoneTools` / `--phone-tools` starts a mailbox (`tools/phone-bridge.js`, port = server port - 2, tailnet only, same password) and adds an MCP server named `phone` to `~/.config/opencode/opencode.json` (merged, other entries untouched; `-Uninstall` removes only that entry). Ask the person first: it changes their opencode config and lets the agent request phone functions. The phone app still decides: every tool is off until the person switches it on in *Settings*, location/photo/clipboard ask every time, and nothing works while the app is closed. Do not try to bypass those switches.
+`-PhoneTools` / `--phone-tools` starts a mailbox (`tools/phone-bridge.js`, port = server port - 2, tailnet only, same password) and adds an MCP server named `phone` to `~/.config/opencode/opencode.json` (merged, other entries untouched; `-Uninstall` removes only that entry). Ask the person first: it changes their opencode config and lets the agent request phone functions. Termux itself is set up inside the app (*Settings → Phone tools → Set up Termux*), not by you. The phone app still decides: every tool is off until the person switches it on in *Settings*, location/photo/clipboard ask every time, and nothing works while the app is closed. Do not try to bypass those switches.
 
 ## Undo
 

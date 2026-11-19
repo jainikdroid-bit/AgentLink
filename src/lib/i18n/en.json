@@ -345,7 +345,19 @@
     },
     "search": "Search sessions",
     "pinned": "Pinned",
-    "noMatches": "No sessions match your search."
+    "noMatches": "No sessions match your search.",
+    "selection": {
+      "count": "{{count}} selected",
+      "deleteTitle": "Delete sessions?",
+      "deleteMessage": "Delete {{count}} sessions? This cannot be undone.",
+      "deletePartial": "{{count}} sessions could not be deleted.",
+      "merge": "Merge",
+      "merging": "Collecting the sessions' context…",
+      "mergeFailed": "Could not merge the sessions.",
+      "pin": "Pin",
+      "rename": "Rename",
+      "select": "Select"
+    }
   },
   "notifications": {
     "categories": {

@@ -345,7 +345,19 @@
     },
     "search": "Rechercher des sessions",
     "pinned": "Épinglées",
-    "noMatches": "Aucune session ne correspond à votre recherche."
+    "noMatches": "Aucune session ne correspond à votre recherche.",
+    "selection": {
+      "count": "{{count}} sélectionnées",
+      "deleteTitle": "Supprimer les sessions ?",
+      "deleteMessage": "Supprimer {{count}} sessions ? Action irréversible.",
+      "deletePartial": "{{count}} sessions n’ont pas pu être supprimées.",
+      "merge": "Fusionner",
+      "merging": "Collecte du contexte des sessions…",
+      "mergeFailed": "Impossible de fusionner les sessions.",
+      "pin": "Épingler",
+      "rename": "Renommer",
+      "select": "Sélectionner"
+    }
   },
   "notifications": {
     "categories": {

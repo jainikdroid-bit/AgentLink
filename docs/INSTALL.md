@@ -38,7 +38,7 @@ It is safe to run the command again at any time: it repairs instead of duplicati
 ## Step 2. On the phone: install the app
 
 1. Scan the **first** QR code, or open the [Releases page](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest),
-   download `OpenCode-Mobile-<version>.apk` and open it. Android asks once to allow installs from your browser: allow it.
+   download `OpenCode-Mobile-<version>.apk` (the file name still starts with the old app name) and open it. Android asks once to allow installs from your browser: allow it.
 2. Install **Tailscale** from Google Play and sign in with the **same account** as on the computer.
 
 ## Step 3. On the phone: connect
@@ -52,7 +52,7 @@ the computer by itself, you type the digits. The code works once, for 10 minutes
 directly whenever the phone is on the same Wi-Fi (it first checks that it is really your computer). Away from home it uses
 Tailscale as before. If Windows asks whether Node.js may use the network, allow private networks. Turn it off: `--no-lan`.
 
-**Other coding agents.** Besides OpenCode, the app can chat with Claude Code, Codex, Gemini CLI, Cursor, Kimi Code, Mistral Vibe,
+**Other coding agents.** Besides opencode, the app can chat with Claude Code, Codex, Gemini CLI, Cursor, Kimi Code, Mistral Vibe,
 Augment (Auggie), Factory Droid, Kiro, Goose, Qwen Code and
 GitHub Copilot CLI that are installed on the computer, through the open Agent Client Protocol. On the Sessions tab tap
 **Other agents**, pick one and start. It uses the agent’s own login and tools on the computer; the phone shows its
@@ -100,9 +100,12 @@ stays the recommended default.
   on *Settings → Phone tools for the AI agent*. The agent can show notifications, speak, use the clipboard, get your
   location, ask you to take a photo, or **run commands in Termux on the phone** (`phone_termux_run`). Sensitive actions ask
   every time and it works only while the app is open. The agent is told about these tools automatically (opencode reads
-  `phone-tools.md`; ACP agents such as Claude Code get the phone MCP server when they start). For Termux: install it from
-  F-Droid, run `echo "allow-external-apps=true" >> ~/.termux/termux.properties && termux-reload-settings` once in Termux,
-  then switch on *Run commands in Termux* in the app and tap *Allow AgentLink in Termux*.
+  `phone-tools.md`; ACP agents such as Claude Code get the phone MCP server when they start). For Termux, tap
+  *Settings → Phone tools → Set up Termux*: the app downloads Termux from its official GitHub release, checks its
+  SHA-256 and installs it, then guides you through opening it once, allowing other apps
+  (`echo "allow-external-apps=true" >> ~/.termux/termux.properties && termux-reload-settings`), the Android permission and a
+  test command. If Termux came from F-Droid or Google Play, remove it first (builds from different sources cannot be installed over each other).
+  Every command the agent sends to Termux is shown on the phone and needs your approval.
 
 ## Let an AI agent do it
 

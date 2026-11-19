@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef, useEffect } from "react"
+import { useCallback, useMemo, useState, useRef, useEffect, useReducer } from "react"
 import {
   View,
   Text,
@@ -15,8 +15,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  BackHandler,
 } from "react-native"
-import { router, useFocusEffect } from "expo-router"
+import { router, useFocusEffect, useNavigation } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { useSessions } from "../../src/stores/sessions"
@@ -33,6 +34,9 @@ import { SETUP_GUIDE_URL } from "../../src/lib/links"
 import { Mascot } from "../../src/components/Mascot"
 import { RunnerGame } from "../../src/components/RunnerGame"
 import { filterSessions, splitPinned, togglePin, parsePinned, PINNED_KEY } from "../../src/lib/session-filter"
+import { EMPTY_SELECTION, selectionReducer, pruneSelection } from "../../src/lib/session-selection"
+import { buildMergePrompt } from "../../src/lib/session-merge"
+import { encodeReplyHex } from "../../src/lib/reply-link"
 import { StartServerBar } from "../../src/components/StartServerBar"
 import { ConnectionStatusChip } from "../../src/components/ConnectionStatus"
 import { canStartFromPhone } from "../../src/lib/launcher"
@@ -55,39 +59,36 @@ function formatTime(timestamp: number, t: (key: string, opts?: Record<string, un
 function SessionItem({
   session,
   isDark,
-  onRename,
-  onDelete,
   pinned,
-  onTogglePin,
+  selecting,
+  selected,
+  onToggleSelect,
+  onEnterSelect,
 }: {
   session: Session
   pinned: boolean
-  onTogglePin: () => void
   isDark: boolean
-  onRename: () => void
-  onDelete: () => void
+  selecting: boolean
+  selected: boolean
+  onToggleSelect: () => void
+  onEnterSelect: () => void
 }) {
   const { t } = useTranslation()
 
   const onPress = () => {
+    if (selecting) {
+      onToggleSelect()
+      return
+    }
     router.push({
       pathname: `/session/[id]`,
       params: { id: session.id, ...(session.directory ? { directory: session.directory } : {}) },
     })
   }
 
+  // Long press starts multi-select; pin / rename / delete live under "More" in the selection bar.
   const onLongPress = () => {
-    // Android shows at most three buttons, so there is no explicit Cancel: tapping outside or Back dismisses it.
-    Alert.alert(
-      session.title || t("sessionsList.untitledSession"),
-      undefined,
-      [
-        { text: t(pinned ? "sessionsList.actions.unpin" : "sessionsList.actions.pin"), onPress: onTogglePin },
-        { text: t("sessionsList.actions.rename"), onPress: onRename },
-        { text: t("common.delete"), style: "destructive", onPress: onDelete },
-      ],
-      { cancelable: true },
-    )
+    if (!selecting) onEnterSelect()
   }
 
   // Extract short directory name from session
@@ -95,11 +96,21 @@ function SessionItem({
 
   return (
     <TouchableOpacity
-      style={[styles.sessionItem, isDark && styles.sessionItemDark]}
+      style={[styles.sessionItem, isDark && styles.sessionItemDark, selected && styles.sessionItemSelected]}
       onPress={onPress}
       onLongPress={onLongPress}
       testID={`session-item-${session.id}`}
+      accessibilityState={selecting ? { checked: selected } : undefined}
     >
+      {selecting ? (
+        <Ionicons
+          name={selected ? "checkbox" : "square-outline"}
+          size={24}
+          color={selected ? "#22d3ee" : "#8a93a8"}
+          style={{ marginRight: 12 }}
+          testID={`session-check-${session.id}`}
+        />
+      ) : null}
       <View style={styles.sessionContent}>
         <View style={styles.sessionHeader}>
           {pinned ? <Ionicons name="pin" size={13} color="#22d3ee" style={{ marginRight: 6 }} /> : null}
@@ -124,7 +135,7 @@ function SessionItem({
           )}
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
+      {selecting ? null : <Ionicons name="chevron-forward" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />}
     </TouchableOpacity>
   )
 }
@@ -378,6 +389,71 @@ export default function SessionsScreen() {
     },
     [deleteSession, t],
   )
+
+  // ---- multi-select (long press): pin, rename, delete, merge context ----
+  const [selection, dispatchSelection] = useReducer(selectionReducer, EMPTY_SELECTION)
+  const [merging, setMerging] = useState(false)
+  useEffect(() => {
+    const pruned = pruneSelection(selection, sessions.map((s) => s.id))
+    if (pruned !== selection) dispatchSelection(pruned.active ? { type: "selectAll", ids: pruned.ids } : { type: "clear" })
+  }, [sessions, selection])
+  useEffect(() => {
+    if (!selection.active) return
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      dispatchSelection({ type: "clear" })
+      return true
+    })
+    return () => sub.remove()
+  }, [selection.active])
+  const selectedSessions = sessions.filter((s) => selection.ids.includes(s.id))
+
+  const deleteSelected = useCallback(() => {
+    const picked = sessions.filter((s) => selection.ids.includes(s.id))
+    Alert.alert(t("sessionsList.selection.deleteTitle"), t("sessionsList.selection.deleteMessage", { count: picked.length }), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: async () => {
+          let failed = 0
+          for (const s of picked) {
+            try {
+              await deleteSession(s.id)
+            } catch {
+              failed++
+            }
+          }
+          dispatchSelection({ type: "clear" })
+          if (failed) Alert.alert(t("sessionsList.alerts.deleteFailedTitle"), t("sessionsList.selection.deletePartial", { count: failed }))
+        },
+      },
+    ])
+  }, [sessions, selection.ids, deleteSession, t])
+
+  const mergeSelected = useCallback(async () => {
+    const picked = sessions.filter((s) => selection.ids.includes(s.id))
+    const c = useConnections.getState().client
+    if (!c || picked.length < 2) return
+    setMerging(true)
+    try {
+      const sources = []
+      for (const s of picked) {
+        const messages = await c.session.messages(s.id)
+        sources.push({ title: s.title, created: s.time?.created, messages: messages as never })
+      }
+      const { text } = buildMergePrompt(sources, { untitled: t("sessionsList.untitledSession") })
+      const session = await createSession()
+      if (!session) throw new Error("create failed")
+      dispatchSelection({ type: "clear" })
+      // The new session sends the context as its first message (same path as a reply from the notification shade).
+      router.push({ pathname: `/session/[id]`, params: { id: session.id, replyHex: encodeReplyHex(text), ...(session.directory ? { directory: session.directory } : {}) } })
+    } catch (err) {
+      console.error("Merge failed:", err)
+      Alert.alert(t("common.error"), t("sessionsList.selection.mergeFailed"))
+    } finally {
+      setMerging(false)
+    }
+  }, [sessions, selection.ids, createSession, t])
 
   const onCreateSession = async () => {
     if (creatingInFlight.current) return
@@ -646,8 +722,44 @@ export default function SessionsScreen() {
 
       <UpdateBanner isDark={isDark} />
 
+      {selection.active ? (
+        <View style={[styles.selectionBar, isDark && { borderBottomColor: "#1c2333", backgroundColor: "#0d1018" }]} testID="selection-bar">
+          <TouchableOpacity style={styles.selectionBtn} onPress={() => dispatchSelection({ type: "clear" })} accessibilityLabel={t("common.cancel")}>
+            <Ionicons name="close" size={20} color="#22d3ee" />
+          </TouchableOpacity>
+          <Text style={[styles.selectionCount, isDark && styles.textDark]}>{t("sessionsList.selection.count", { count: selection.ids.length })}</Text>
+          <TouchableOpacity style={styles.selectionBtn} onPress={() => dispatchSelection({ type: "selectAll", ids: sessions.map((s) => s.id) })}>
+            <Ionicons name="checkmark-done" size={18} color="#22d3ee" />
+          </TouchableOpacity>
+          {selectedSessions.length === 1 ? (
+            <>
+              <TouchableOpacity style={styles.selectionBtn} onPress={() => onTogglePin(selectedSessions[0].id)} accessibilityLabel={t("sessionsList.selection.pin")}>
+                <Ionicons name="pin" size={18} color="#22d3ee" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.selectionBtn} onPress={() => { const s = selectedSessions[0]; dispatchSelection({ type: "clear" }); handleRename(s) }} accessibilityLabel={t("sessionsList.selection.rename")}>
+                <Ionicons name="create-outline" size={18} color="#22d3ee" />
+              </TouchableOpacity>
+            </>
+          ) : null}
+          <TouchableOpacity style={[styles.selectionBtn, selection.ids.length < 2 && styles.selectionBtnDisabled]} disabled={selection.ids.length < 2 || merging} onPress={() => void mergeSelected()} testID="selection-merge">
+            <Ionicons name="git-merge-outline" size={18} color="#22d3ee" />
+            <Text style={styles.selectionBtnText}>{t("sessionsList.selection.merge")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.selectionBtn} onPress={deleteSelected} testID="selection-delete" accessibilityLabel={t("common.delete")}>
+            <Ionicons name="trash-outline" size={18} color="#ff4d6d" />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      {merging ? (
+        <View style={styles.mergeOverlay}>
+          <ActivityIndicator color="#22d3ee" />
+          <Text style={[styles.selectionBtnText, { marginTop: 8 }]}>{t("sessionsList.selection.merging")}</Text>
+        </View>
+      ) : null}
+
       <FlatList
         data={rows}
+        extraData={selection}
         keyExtractor={(row) => (row.type === "header" ? `dir:${row.directory}` : row.type === "pinned-header" ? "pinned" : row.session.id)}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
@@ -687,9 +799,10 @@ export default function SessionsScreen() {
               session={row.session}
               isDark={isDark}
               pinned={pinnedIds.includes(row.session.id)}
-              onTogglePin={() => onTogglePin(row.session.id)}
-              onRename={() => handleRename(row.session)}
-              onDelete={() => handleDelete(row.session)}
+              selecting={selection.active}
+              selected={selection.ids.includes(row.session.id)}
+              onToggleSelect={() => dispatchSelection({ type: "toggle", id: row.session.id })}
+              onEnterSelect={() => dispatchSelection({ type: "enter", id: row.session.id })}
             />
           )
         }
@@ -1124,6 +1237,53 @@ const styles = StyleSheet.create({
   },
   sessionItemDark: {
     borderBottomColor: "#0d1018",
+  },
+  sessionItemSelected: {
+    backgroundColor: "rgba(34, 211, 238, 0.12)",
+  },
+  selectionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1c2333",
+  },
+  selectionCount: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#07080c",
+    marginLeft: 4,
+  },
+  selectionBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  selectionBtnText: {
+    fontSize: 13,
+    color: "#22d3ee",
+  },
+  selectionBtnDisabled: {
+    opacity: 0.35,
+  },
+  mergeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(7, 8, 12, 0.75)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
+    zIndex: 20,
+  },
+  mergeOverlayText: {
+    color: "#ffffff",
+    fontSize: 15,
+    textAlign: "center",
   },
   sessionContent: {
     flex: 1,

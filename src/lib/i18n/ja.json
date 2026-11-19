@@ -345,7 +345,19 @@
     },
     "search": "セッションを検索",
     "pinned": "ピン留め済み",
-    "noMatches": "検索結果にセッションがありません。"
+    "noMatches": "検索結果にセッションがありません。",
+    "selection": {
+      "count": "{{count}} 件選択",
+      "deleteTitle": "セッションを削除しますか？",
+      "deleteMessage": "{{count}} 件のセッションを削除しますか？元に戻せません。",
+      "deletePartial": "{{count}} 件のセッションを削除できませんでした。",
+      "merge": "まとめる",
+      "merging": "セッションの文脈を集めています…",
+      "mergeFailed": "セッションをまとめられませんでした。",
+      "pin": "ピン留め",
+      "rename": "名前を変更",
+      "select": "選択"
+    }
   },
   "notifications": {
     "categories": {

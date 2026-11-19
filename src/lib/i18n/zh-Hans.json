@@ -345,7 +345,19 @@
     },
     "search": "搜索会话",
     "pinned": "已置顶",
-    "noMatches": "没有匹配的会话。"
+    "noMatches": "没有匹配的会话。",
+    "selection": {
+      "count": "已选 {{count}} 个",
+      "deleteTitle": "删除会话？",
+      "deleteMessage": "删除 {{count}} 个会话？此操作无法撤销。",
+      "deletePartial": "有 {{count}} 个会话未能删除。",
+      "merge": "合并",
+      "merging": "正在收集会话上下文…",
+      "mergeFailed": "无法合并会话。",
+      "pin": "置顶",
+      "rename": "重命名",
+      "select": "选择"
+    }
   },
   "notifications": {
     "categories": {

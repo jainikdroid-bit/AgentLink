@@ -2,7 +2,8 @@
   <img src="../brand/rig.svg" width="140" alt="RIG" />
 </p>
 
-<h1 align="center">OpenCode Mobile</h1>
+<h1 align="center">AgentLink</h1>
+<p align="center"><sub>OpenCode Mobile · opencode, Claude Code, Codex, Gemini CLI …</sub></p>
 
 <p align="center">
   <b>주머니 속의 코딩 에이전트.</b><br/>

@@ -345,7 +345,19 @@
     },
     "search": "Oturumları ara",
     "pinned": "Sabitlenmiş",
-    "noMatches": "Aramanızla eşleşen oturum yok."
+    "noMatches": "Aramanızla eşleşen oturum yok.",
+    "selection": {
+      "count": "{{count}} seçildi",
+      "deleteTitle": "Oturumlar silinsin mi?",
+      "deleteMessage": "{{count}} oturum silinsin mi? Bu geri alınamaz.",
+      "deletePartial": "{{count}} oturum silinemedi.",
+      "merge": "Birleştir",
+      "merging": "Oturumların bağlamı toplanıyor…",
+      "mergeFailed": "Oturumlar birleştirilemedi.",
+      "pin": "Sabitle",
+      "rename": "Yeniden adlandır",
+      "select": "Seç"
+    }
   },
   "notifications": {
     "categories": {
