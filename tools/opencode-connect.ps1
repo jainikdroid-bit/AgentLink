@@ -8,7 +8,7 @@
   that lets the phone start the server later (autostart at sign-in), and shows a pairing QR. Safe to re-run.
 
 .EXAMPLE
-  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 
 .EXAMPLE
   .\opencode-connect.ps1 -NoGuide | -Json | -Doctor | -Stop | -Uninstall | -Mode lan | -NoAutostart | -DryRun
@@ -16,7 +16,7 @@
   Exit codes: 0 ok, 1 failed, 2 a human has to do something (see "needs" in the JSON).
 #>
 $ErrorActionPreference = 'Continue'
-$BaseUrl = 'https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools'
+$BaseUrl = 'https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools'
 $Dir = if ($env:OPENCODE_CONNECT_DIR) { $env:OPENCODE_CONNECT_DIR } else { Join-Path $env:LOCALAPPDATA 'opencode-connect' }
 $json = $args -contains '-Json'
 function Say([string]$t) { if ($json) { [Console]::Error.WriteLine($t) } else { Write-Host $t -ForegroundColor Cyan } }

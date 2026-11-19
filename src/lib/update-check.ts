@@ -41,8 +41,8 @@ export type { AvailableUpdate }
 /** The running app version, read from app.json (kept in sync with Gradle by check-version-parity). */
 export const CURRENT_VERSION = (appJson as { expo?: { version?: string } }).expo?.version ?? "unknown"
 
-const RELEASES_API = "https://api.github.com/repos/jainikdroid-bit/opencode-mobile/releases/latest"
-const RELEASES_PAGE = "https://github.com/jainikdroid-bit/opencode-mobile/releases/latest"
+const RELEASES_API = "https://api.github.com/repos/jainikdroid-bit/AgentLink/releases/latest"
+const RELEASES_PAGE = "https://github.com/jainikdroid-bit/AgentLink/releases/latest"
 const TIMEOUT_MS = 8000
 
 const storage: UpdateStorage = {

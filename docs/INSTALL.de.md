@@ -18,13 +18,13 @@ Die Einrichtung dauert etwa zwei Minuten und drei Schritte. Nichts läuft über 
 **Windows.** Öffne **PowerShell** (Startmenü, `PowerShell` eintippen) und füge ein:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 **macOS oder Linux.** Öffne das **Terminal** und füge ein:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Das Skript erklärt jeden Schritt, während es arbeitet:
@@ -37,7 +37,7 @@ Du kannst den Befehl jederzeit gefahrlos erneut ausführen: Er repariert, statt 
 
 ## Schritt 2. Am Handy: die App installieren
 
-1. Scanne den **ersten** QR-Code oder öffne die [Releases-Seite](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest),
+1. Scanne den **ersten** QR-Code oder öffne die [Releases-Seite](https://github.com/jainikdroid-bit/AgentLink/releases/latest),
    lade `OpenCode-Mobile-<Version>.apk` herunter und öffne sie. Android fragt einmal, ob Installationen aus deinem Browser erlaubt sind: Erlaube es.
 2. Installiere **Tailscale** aus Google Play und melde dich mit **demselben Konto** wie am Computer an.
 
@@ -90,7 +90,7 @@ Tailscale bleibt die empfohlene Standardlösung.
 
 Sag deinem Agenten (Claude Code, opencode, Codex, ...):
 
-> Richte AgentLink für mich ein. Folge https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md
+> Richte AgentLink für mich ein. Folge https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md
 
 Du klickst nur auf **Ja** bei der Windows-Abfrage, meldest dich einmal bei Tailscale an und tippst am Handy auf **Verbinden**.
 

@@ -61,18 +61,18 @@
 **1. Bilgisayar: tek bir komut yapıştırın.** PowerShell’de (Windows):
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, Terminal’de:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Eksik olanları (Node.js, opencode, Tailscale) kurar, sizden Tailscale’e bir kez giriş yapmanızı ister, sunucuyu başlatır ve iki QR kodlu bir sayfa açar.
 
-**2. Telefon: kurun.** İlk QR kodunu tarayın (veya [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest) sayfasını açın), APK’yı indirip açın. Tailscale’i de kurun ve aynı hesapla giriş yapın.
+**2. Telefon: kurun.** İlk QR kodunu tarayın (veya [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest) sayfasını açın), APK’yı indirip açın. Tailscale’i de kurun ve aynı hesapla giriş yapın.
 
 **3. Telefon: eşleştirin.** Uygulamayı açın, **Eşleşmek için QR tara**’ya dokunun, ikinci QR koduna tutun, **Bağlan**’a dokunun.
 
@@ -80,7 +80,7 @@ Komutu yeniden çalıştırmak güvenlidir (çoğaltmaz, onarır). Tailscale ist
 
 ### Bir yapay zekâ ajanı yapsın
 
-Ajanınıza (Claude Code, opencode, Codex, ...) şunu söyleyin: *“OpenCode Mobile’ı benim için kur, https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md adresini izle”*.
+Ajanınıza (Claude Code, opencode, Codex, ...) şunu söyleyin: *“OpenCode Mobile’ı benim için kur, https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md adresini izle”*.
 
 Tasarım, ajan için telefon araçları ve kaynaktan derleme [İngilizce README](../../README.md) içinde anlatılır.
 

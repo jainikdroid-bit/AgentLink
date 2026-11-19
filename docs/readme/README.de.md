@@ -61,18 +61,18 @@ Ein nativer Android-Client für den [opencode](https://github.com/sst/opencode)-
 **1. Computer: einen Befehl einfügen.** In PowerShell (Windows):
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, im Terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Er installiert, was fehlt (Node.js, opencode, Tailscale), bittet dich einmal um die Tailscale-Anmeldung, startet den Server und öffnet eine Seite mit zwei QR-Codes.
 
-**2. Handy: installieren.** Scanne den ersten QR-Code (oder öffne [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)), lade die APK herunter und öffne sie. Installiere auch Tailscale und melde dich mit demselben Konto an.
+**2. Handy: installieren.** Scanne den ersten QR-Code (oder öffne [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)), lade die APK herunter und öffne sie. Installiere auch Tailscale und melde dich mit demselben Konto an.
 
 **3. Handy: koppeln.** Öffne die App, tippe auf **QR scannen zum Koppeln**, richte sie auf den zweiten QR-Code, tippe auf **Verbinden**.
 
@@ -80,7 +80,7 @@ Den Befehl erneut auszuführen ist sicher (er repariert statt zu duplizieren). K
 
 ### Lass einen KI-Agenten das erledigen
 
-Sag deinem Agenten (Claude Code, opencode, Codex, ...): *„Richte OpenCode Mobile für mich ein, folge https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md“*.
+Sag deinem Agenten (Claude Code, opencode, Codex, ...): *„Richte OpenCode Mobile für mich ein, folge https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md“*.
 
 Design, Handy-Werkzeuge für den Agenten und das Bauen aus dem Quellcode stehen im [englischen README](../../README.md).
 

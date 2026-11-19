@@ -17,13 +17,13 @@ AgentLink 是一款 Android 应用，用来控制运行在**你自己电脑**上
 **Windows。** 打开 **PowerShell**（开始菜单，输入 `PowerShell`），粘贴：
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 **macOS 或 Linux。** 打开**终端**，粘贴：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 脚本会在运行时解释每一步：
@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ## 第 2 步：在手机上安装应用
 
-1. 扫描**第一个**二维码，或打开[发布页面](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)，
+1. 扫描**第一个**二维码，或打开[发布页面](https://github.com/jainikdroid-bit/AgentLink/releases/latest)，
    下载 `OpenCode-Mobile-<版本>.apk` 并打开。Android 会询问一次是否允许从浏览器安装：请允许。
 2. 从 Google Play 安装 **Tailscale**，并用与电脑**相同的账号**登录。
 
@@ -84,7 +84,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 告诉你的代理（Claude Code、opencode、Codex 等）：
 
-> 请帮我设置 AgentLink。按照 https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md 操作
+> 请帮我设置 AgentLink。按照 https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md 操作
 
 你只需要在 Windows 弹窗中点击**是**，登录一次 Tailscale，并在手机上点击**连接**。
 

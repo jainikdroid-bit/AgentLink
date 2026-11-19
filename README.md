@@ -135,19 +135,19 @@ Full guide with troubleshooting: **[docs/INSTALL.md](docs/INSTALL.md)**. It is a
 **1. Computer: paste one command.** Open PowerShell (Windows) and paste:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, in Terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 It installs what is missing (Node.js, opencode, Tailscale), asks you to sign in to Tailscale once, starts the server and
 opens a page with two QR codes.
 
-**2. Phone: install.** Scan the first QR code (or open [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)),
+**2. Phone: install.** Scan the first QR code (or open [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)),
 download the APK and open it. Install Tailscale on the phone too and sign in with the same account.
 
 **3. Phone: pair.** Open the app, tap **Scan QR to pair**, point it at the second QR code, tap **Connect**.
@@ -158,7 +158,7 @@ Re-running the command is safe (it repairs instead of duplicating). No Tailscale
 ### Let an AI agent do it
 
 Tell your AI agent (Claude Code, opencode, Codex, ...): *"Set up AgentLink for me following
-https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md"*. The runbook is written for agents: JSON output,
+https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md"*. The runbook is written for agents: JSON output,
 exit codes, exact commands, safety rules. You only click **Yes** on a Windows prompt, sign in to Tailscale once and tap **Connect** on the phone.
 
 ## Agent phone tools

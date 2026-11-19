@@ -18,8 +18,8 @@ const { spawn, spawnSync } = require('node:child_process')
 const launcherLib = require('./launcher.js')
 const autostart = require('./autostart.js')
 
-const BASE_URL = 'https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools'
-const APP_URL = 'https://github.com/jainikdroid-bit/opencode-mobile/releases/latest'
+const BASE_URL = 'https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools'
+const APP_URL = 'https://github.com/jainikdroid-bit/AgentLink/releases/latest'
 const WIN = process.platform === 'win32'
 const VALUE_FLAGS = new Set(['mode', 'port', 'name', 'hostname'])
 const BOOL_FLAGS = new Set(['freemodel', 'phonetools', 'noinstall', 'json', 'noguide', 'noopen', 'noqr', 'nocode', 'nolan', 'rotate', 'noautostart', 'uninstall', 'status', 'doctor', 'stop', 'dryrun'])

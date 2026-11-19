@@ -61,18 +61,18 @@
 **1. 电脑：粘贴一条命令。** 在 PowerShell（Windows）中：
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux，在终端中：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 它会安装缺少的组件（Node.js、opencode、Tailscale），请你登录一次 Tailscale，启动服务器，并打开带两个二维码的页面。
 
-**2. 手机：安装。** 扫描第一个二维码（或打开 [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)），下载 APK 并打开。手机上也安装 Tailscale 并登录同一账号。
+**2. 手机：安装。** 扫描第一个二维码（或打开 [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)），下载 APK 并打开。手机上也安装 Tailscale 并登录同一账号。
 
 **3. 手机：配对。** 打开应用，点击**扫描二维码配对**，对准第二个二维码，点击**连接**。
 
@@ -80,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ### 让 AI 代理替你完成
 
-告诉你的代理（Claude Code、opencode、Codex 等）：*“请按 https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md 为我设置 OpenCode Mobile。”*
+告诉你的代理（Claude Code、opencode、Codex 等）：*“请按 https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md 为我设置 OpenCode Mobile。”*
 
 设计、代理的手机工具以及从源码构建，请见[英文 README](../../README.md)。
 

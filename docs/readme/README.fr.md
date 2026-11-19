@@ -61,18 +61,18 @@ Un client Android natif pour l'agent [opencode](https://github.com/sst/opencode)
 **1. Ordinateur : collez une commande.** Dans PowerShell (Windows) :
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, dans le Terminal :
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Elle installe ce qui manque (Node.js, opencode, Tailscale), vous demande de vous connecter une fois à Tailscale, démarre le serveur et ouvre une page avec deux codes QR.
 
-**2. Téléphone : installez.** Scannez le premier QR code (ou ouvrez [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)), téléchargez l'APK et ouvrez-le. Installez aussi Tailscale et connectez-vous avec le même compte.
+**2. Téléphone : installez.** Scannez le premier QR code (ou ouvrez [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)), téléchargez l'APK et ouvrez-le. Installez aussi Tailscale et connectez-vous avec le même compte.
 
 **3. Téléphone : jumelez.** Ouvrez l'application, touchez **Scanner QR pour associer**, pointez vers le second QR code, touchez **Se connecter**.
 
@@ -80,7 +80,7 @@ Relancer la commande est sans risque (elle répare au lieu de dupliquer). Pas de
 
 ### Laissez un agent IA s'en charger
 
-Dites à votre agent (Claude Code, opencode, Codex, ...) : *« Installe OpenCode Mobile pour moi en suivant https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md »*.
+Dites à votre agent (Claude Code, opencode, Codex, ...) : *« Installe OpenCode Mobile pour moi en suivant https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md »*.
 
 La conception, les outils du téléphone pour l'agent et la compilation depuis les sources sont décrits dans le [README en anglais](../../README.md).
 

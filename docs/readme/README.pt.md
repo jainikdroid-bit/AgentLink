@@ -61,18 +61,18 @@ Um cliente Android nativo para o agente [opencode](https://github.com/sst/openco
 **1. Computador: cole um comando.** No PowerShell (Windows):
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, no Terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Ele instala o que faltar (Node.js, opencode, Tailscale), pede que você entre uma vez no Tailscale, inicia o servidor e abre uma página com dois códigos QR.
 
-**2. Celular: instale.** Escaneie o primeiro QR (ou abra [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)), baixe o APK e abra. Instale também o Tailscale e entre com a mesma conta.
+**2. Celular: instale.** Escaneie o primeiro QR (ou abra [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)), baixe o APK e abra. Instale também o Tailscale e entre com a mesma conta.
 
 **3. Celular: pareie.** Abra o app, toque em **Escanear QR para emparelhar**, aponte para o segundo QR e toque em **Conectar**.
 
@@ -80,7 +80,7 @@ Executar o comando de novo é seguro (ele repara em vez de duplicar). Sem Tailsc
 
 ### Deixe um agente de IA fazer isso
 
-Diga ao seu agente (Claude Code, opencode, Codex, ...): *«Configure o OpenCode Mobile para mim seguindo https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md»*.
+Diga ao seu agente (Claude Code, opencode, Codex, ...): *«Configure o OpenCode Mobile para mim seguindo https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md»*.
 
 O design, as ferramentas do celular para o agente e a compilação a partir do código-fonte estão no [README em inglês](../../README.md).
 

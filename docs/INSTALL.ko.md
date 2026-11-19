@@ -17,13 +17,13 @@ AgentLink은 **내 컴퓨터**에서 실행되는 코딩 에이전트를 조작�
 **Windows.** **PowerShell**을 열고(시작 메뉴에서 `PowerShell` 입력) 다음을 붙여넣습니다.
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 **macOS 또는 Linux.** **터미널**을 열고 다음을 붙여넣습니다.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 스크립트는 작업하면서 각 단계를 설명합니다.
@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ## 2단계. 휴대폰에서: 앱 설치
 
-1. **첫 번째** QR 코드를 스캔하거나 [릴리스 페이지](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)를 열어
+1. **첫 번째** QR 코드를 스캔하거나 [릴리스 페이지](https://github.com/jainikdroid-bit/AgentLink/releases/latest)를 열어
    `OpenCode-Mobile-<버전>.apk`를 내려받아 실행하세요. Android가 브라우저에서의 설치 허용을 한 번 묻습니다. 허용하세요.
 2. Google Play에서 **Tailscale**을 설치하고 컴퓨터와 **같은 계정**으로 로그인하세요.
 
@@ -86,7 +86,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 에이전트(Claude Code, opencode, Codex 등)에게 이렇게 말하세요.
 
-> AgentLink을 설정해 줘. https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md 를 따라 줘
+> AgentLink을 설정해 줘. https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md 를 따라 줘
 
 여러분은 Windows 창에서 **예**를 누르고, Tailscale에 한 번 로그인하고, 휴대폰에서 **연결**을 누르기만 하면 됩니다.
 

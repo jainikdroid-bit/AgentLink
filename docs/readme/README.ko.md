@@ -61,18 +61,18 @@
 **1. 컴퓨터: 명령어 하나 붙여넣기.** PowerShell(Windows)에서:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux는 터미널에서:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 없는 것(Node.js, opencode, Tailscale)을 설치하고, Tailscale 로그인을 한 번 요청하고, 서버를 시작한 뒤 QR 코드 두 개가 있는 페이지를 엽니다.
 
-**2. 휴대폰: 설치.** 첫 번째 QR 코드를 스캔하거나 [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)를 열어 APK를 내려받아 실행하세요. Tailscale도 설치하고 같은 계정으로 로그인합니다.
+**2. 휴대폰: 설치.** 첫 번째 QR 코드를 스캔하거나 [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)를 열어 APK를 내려받아 실행하세요. Tailscale도 설치하고 같은 계정으로 로그인합니다.
 
 **3. 휴대폰: 페어링.** 앱을 열고 **QR 스캔하여 페어링**을 탭한 뒤 두 번째 QR 코드에 향하고 **연결**을 탭하세요.
 
@@ -80,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ### AI 에이전트에게 맡기기
 
-에이전트(Claude Code, opencode, Codex 등)에게 이렇게 말하세요: *“https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md 를 따라 OpenCode Mobile을 설정해 줘”*
+에이전트(Claude Code, opencode, Codex 등)에게 이렇게 말하세요: *“https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md 를 따라 OpenCode Mobile을 설정해 줘”*
 
 디자인, 에이전트용 휴대폰 도구, 소스에서 빌드하는 방법은 [영어 README](../../README.md)를 참고하세요.
 

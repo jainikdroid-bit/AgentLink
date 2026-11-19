@@ -61,18 +61,18 @@
 **1. パソコン：コマンドを 1 つ貼り付け。** PowerShell（Windows）で：
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux はターミナルで：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 足りないもの（Node.js、opencode、Tailscale）をインストールし、Tailscale へのログインを一度求め、サーバーを起動して、2 つの QR コードがあるページを開きます。
 
-**2. スマートフォン：インストール。** 1 つ目の QR コードを読み取る（または [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest) を開く）、APK をダウンロードして開きます。Tailscale も入れて同じアカウントでログインします。
+**2. スマートフォン：インストール。** 1 つ目の QR コードを読み取る（または [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest) を開く）、APK をダウンロードして開きます。Tailscale も入れて同じアカウントでログインします。
 
 **3. スマートフォン：ペアリング。** アプリを開き、**QR をスキャンしてペアリング**をタップして 2 つ目の QR コードに向け、**接続**をタップします。
 
@@ -80,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ### AI エージェントにお任せ
 
-お使いのエージェント（Claude Code、opencode、Codex など）にこう伝えてください：*「https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md に従って OpenCode Mobile をセットアップして」*
+お使いのエージェント（Claude Code、opencode、Codex など）にこう伝えてください：*「https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md に従って OpenCode Mobile をセットアップして」*
 
 デザイン、エージェント用スマートフォンツール、ソースからのビルドは[英語版 README](../../README.md) をご覧ください。
 

@@ -61,18 +61,18 @@
 **1. Компьютер: вставьте одну команду.** В PowerShell (Windows):
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, в Терминале:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Команда ставит недостающее (Node.js, opencode, Tailscale), один раз просит войти в Tailscale, запускает сервер и открывает страницу с двумя QR-кодами.
 
-**2. Телефон: установите.** Отсканируйте первый QR-код (или откройте [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)), скачайте APK и откройте его. Установите Tailscale и войдите в тот же аккаунт.
+**2. Телефон: установите.** Отсканируйте первый QR-код (или откройте [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)), скачайте APK и откройте его. Установите Tailscale и войдите в тот же аккаунт.
 
 **3. Телефон: подключитесь.** Откройте приложение, нажмите **Сканировать QR для подключения**, наведите на второй QR-код, нажмите **Подключиться**.
 
@@ -80,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ### Пусть всё сделает ИИ-агент
 
-Скажите агенту (Claude Code, opencode, Codex, ...): *«Настрой для меня OpenCode Mobile по инструкции https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md»*.
+Скажите агенту (Claude Code, opencode, Codex, ...): *«Настрой для меня OpenCode Mobile по инструкции https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md»*.
 
 Дизайн, инструменты телефона для агента и сборка из исходников описаны в [английском README](../../README.md).
 

@@ -1,13 +1,13 @@
 #!/bin/sh
 # OpenCode Connect (macOS / Linux launcher): makes sure Node.js exists, then runs tools/connect.js, the cross-platform core.
 #
-#   curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 #   curl -fsSL .../opencode-connect.sh | sh -s -- --no-guide --mode lan     # flags go after "--"
 #
 # Flags: --mode tailscale|lan|local --port N --name X --json --no-guide --no-open --no-qr --rotate
 #        --no-autostart --no-install --dry-run --doctor --stop --uninstall
 # Exit codes: 0 ok, 1 failed, 2 a human has to do something (see "needs" in the --json output).
-BASE_URL="https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools"
+BASE_URL="https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools"
 DIR="${OPENCODE_CONNECT_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode-connect}"
 
 json=0; noinstall=0

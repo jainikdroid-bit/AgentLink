@@ -17,13 +17,13 @@ iki dakika ve üç adım sürer. Bizim hiçbir bulut hizmetimizden geçmez: tele
 **Windows.** **PowerShell**'i açın (Başlat menüsü, `PowerShell` yazın) ve şunu yapıştırın:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 **macOS veya Linux.** **Terminal**'i açın ve şunu yapıştırın:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Betik çalışırken her adımı açıklar:
@@ -36,7 +36,7 @@ Komutu istediğiniz zaman güvenle tekrar çalıştırabilirsiniz: çoğaltmaz, 
 
 ## Adım 2. Telefonda: uygulamayı kurun
 
-1. **İlk** QR kodunu tarayın ya da [sürümler sayfasını](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest) açıp
+1. **İlk** QR kodunu tarayın ya da [sürümler sayfasını](https://github.com/jainikdroid-bit/AgentLink/releases/latest) açıp
    `OpenCode-Mobile-<sürüm>.apk` dosyasını indirin ve açın. Android, tarayıcıdan kuruluma bir kez izin sorar: izin verin.
 2. Google Play'den **Tailscale**'i kurun ve bilgisayardaki **aynı hesapla** giriş yapın.
 
@@ -87,7 +87,7 @@ herkes ajanınızı kullanabilir, bu yüzden asla paylaşmayın. Varsayılan ola
 
 Ajanınıza (Claude Code, opencode, Codex, ...) şunu söyleyin:
 
-> AgentLink'ı benim için kur. https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md adresini izle
+> AgentLink'ı benim için kur. https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md adresini izle
 
 Siz yalnızca Windows isteminde **Evet**'e tıklarsınız, Tailscale'e bir kez giriş yaparsınız ve telefonda **Bağlan**'a dokunursunuz.
 

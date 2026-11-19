@@ -2,11 +2,11 @@
 // unit-tested with plain `node --test`.
 
 export const WINDOWS_COMMAND =
-  "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))"
+  "& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))"
 export const UNIX_COMMAND =
-  "curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh"
+  "curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh"
 export const TAILSCALE_STORE_URL = "https://play.google.com/store/apps/details?id=com.tailscale.ipn"
-export const GUIDE_DOC_URL = "https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/INSTALL.md"
+export const GUIDE_DOC_URL = "https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/INSTALL.md"
 
 export const GUIDE_DONE_KEY = "oc_guide_done"
 export const GUIDE_STEPS = ["computer", "tailscale", "scan"] as const

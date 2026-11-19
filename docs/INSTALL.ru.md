@@ -18,13 +18,13 @@ AgentLink — приложение для Android, которым вы упра�
 **Windows.** Откройте **PowerShell** (меню «Пуск», наберите `PowerShell`) и вставьте:
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 **macOS или Linux.** Откройте **Терминал** и вставьте:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Скрипт объясняет каждый шаг по ходу работы:
@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ## Шаг 2. На телефоне: установите приложение
 
-1. Отсканируйте **первый** QR-код или откройте [страницу релизов](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest),
+1. Отсканируйте **первый** QR-код или откройте [страницу релизов](https://github.com/jainikdroid-bit/AgentLink/releases/latest),
    скачайте `OpenCode-Mobile-<версия>.apk` и откройте его. Android один раз спросит разрешение на установку из браузера:
    разрешите.
 2. Установите **Tailscale** из Google Play и войдите в **ту же учётную запись**, что и на компьютере.
@@ -115,7 +115,7 @@ GitHub Copilot CLI, установленными на компьютере, че
 
 Скажите своему агенту (Claude Code, opencode, Codex, ...):
 
-> Настрой для меня AgentLink. Следуй https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md
+> Настрой для меня AgentLink. Следуй https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md
 
 От вас потребуется только нажать **Да** в окне Windows, один раз войти в Tailscale и нажать **Подключиться** на телефоне.
 

@@ -28,7 +28,7 @@ Everything else is yours. Do not ask the person to open a terminal, edit files o
 Windows (PowerShell 5.1 or 7). macOS/Linux: use `tools/opencode-connect.sh` with the same flags (`--json`, `--doctor`, ...).
 
 ```powershell
-$u = 'https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1'
+$u = 'https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1'
 & ([scriptblock]::Create((irm $u))) -Doctor -Json
 ```
 
@@ -59,12 +59,12 @@ cannot be scanned, the person taps **Pair with a code** in the app and types the
 
 ## Step 2: get the app onto the phone
 
-Latest APK: `GET https://api.github.com/repos/jainikdroid-bit/opencode-mobile/releases/latest`, asset `OpenCode-Mobile-<version>.apk`;
+Latest APK: `GET https://api.github.com/repos/jainikdroid-bit/AgentLink/releases/latest`, asset `OpenCode-Mobile-<version>.apk`;
 verify it against the asset `SHA256SUMS`. Pick the first option that applies:
 
 1. **Phone already visible to adb** (`adb devices` lists it; wireless debugging counts): download, verify, then
    `adb install -r OpenCode-Mobile-<version>.apk`. The person does nothing.
-2. **No adb:** tell the person to open `https://github.com/jainikdroid-bit/opencode-mobile/releases/latest` on the phone,
+2. **No adb:** tell the person to open `https://github.com/jainikdroid-bit/AgentLink/releases/latest` on the phone,
    download the APK and open it (allow installs from the browser when Android asks). Alternatively run Step 1 without
    `-NoOpen`: it opens a page on the computer with a QR code for that download link.
 

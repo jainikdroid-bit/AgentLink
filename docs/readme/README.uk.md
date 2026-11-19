@@ -61,18 +61,18 @@
 **1. Комп'ютер: вставте одну команду.** У PowerShell (Windows):
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.ps1)))
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
 macOS / Linux, у Терміналі:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/main/tools/opencode-connect.sh | sh
+curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
 Вона встановлює відсутнє (Node.js, opencode, Tailscale), один раз просить увійти в Tailscale, запускає сервер і відкриває сторінку з двома QR-кодами.
 
-**2. Телефон: встановіть.** Відскануйте перший QR-код (або відкрийте [Releases](https://github.com/jainikdroid-bit/opencode-mobile/releases/latest)), завантажте APK і відкрийте його. Встановіть також Tailscale й увійдіть у той самий обліковий запис.
+**2. Телефон: встановіть.** Відскануйте перший QR-код (або відкрийте [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)), завантажте APK і відкрийте його. Встановіть також Tailscale й увійдіть у той самий обліковий запис.
 
 **3. Телефон: підключіться.** Відкрийте застосунок, торкніться **Сканувати QR для сполучення**, наведіть на другий QR-код, торкніться **Підключитися**.
 
@@ -80,7 +80,7 @@ curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/opencode-mobile/mai
 
 ### Нехай усе зробить ШІ-агент
 
-Скажіть агентові (Claude Code, opencode, Codex, ...): *«Налаштуй для мене OpenCode Mobile за інструкцією https://github.com/jainikdroid-bit/opencode-mobile/blob/main/docs/AI-SETUP.md»*.
+Скажіть агентові (Claude Code, opencode, Codex, ...): *«Налаштуй для мене OpenCode Mobile за інструкцією https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md»*.
 
 Дизайн, інструменти телефона для агента й збірку з вихідного коду описано в [англійському README](../../README.md).
 
