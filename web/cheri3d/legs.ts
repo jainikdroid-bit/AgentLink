@@ -1,20 +1,9 @@
 import { MathUtils, Matrix4, Quaternion, Vector3, type Object3D } from "three"
 import type { VRM } from "@pixiv/three-vrm"
+import { stepOffset, WALK_MILLISECONDS } from "../../src/lib/cheri/walk"
 
 const UP = new Vector3(0, 1, 0)
 const FORWARD = new Vector3(0, 0, 1)
-export const WALK_MILLISECONDS = 1080
-
-export function stepOffset(time: number, side: 0 | 1) {
-  const cycle = time * 1000 / WALK_MILLISECONDS + side * 0.5
-  const phase = cycle - Math.floor(cycle)
-  const stance = 0.62
-  const halfStride = 0.085
-  if (phase < stance) return { forward: halfStride * (1 - 2 * phase / stance), lift: 0 }
-  const swing = (phase - stance) / (1 - stance)
-  const ease = swing * swing * (3 - 2 * swing)
-  return { forward: halfStride * (2 * ease - 1), lift: 0.085 * Math.sin(swing * Math.PI) ** 2 }
-}
 
 function boneFrame(down: Vector3, axis: Vector3, matrix: Matrix4, result: Quaternion, y: Vector3, z: Vector3) {
   y.copy(down).negate().normalize()
@@ -80,6 +69,7 @@ export function createLegRig(model: VRM) {
   const matrix = new Matrix4()
   const desired = new Quaternion()
   const parent = new Quaternion()
+  const shoePitch = new Quaternion()
 
   function orient(node: Object3D, rotation: Quaternion) {
     node.parent!.getWorldQuaternion(parent)
@@ -94,6 +84,8 @@ export function createLegRig(model: VRM) {
     // Shift the pelvis behind the feet in a squat so the knees have room to bend.
     if (hips && restHips) {
       hips.position.copy(restHips)
+      const stride = time * 1000 / WALK_MILLISECONDS
+      hips.position.y -= walk * (0.027 + 0.009 * Math.cos(stride * 4 * Math.PI))
       if (lift < 0) {
         hips.parent!.getWorldQuaternion(parent).invert()
         waist.copy(forward).multiplyScalar(lift * 0.66).applyQuaternion(parent)
@@ -114,7 +106,8 @@ export function createLegRig(model: VRM) {
       axis.crossVectors(chain, bend).normalize()
       orient(leg.upper, boneFrame(dir.subVectors(knee, hip), axis, matrix, desired, y, z).multiply(leg.upperBind))
       orient(leg.lower, boneFrame(dir.subVectors(ankle, knee), axis, matrix, desired, y, z).multiply(leg.lowerBind))
-      orient(leg.foot, desired.copy(travel).multiply(leg.footOrientation))
+      shoePitch.setFromAxisAngle(sideAxis, walk * step.pitch)
+      orient(leg.foot, desired.copy(shoePitch).multiply(travel).multiply(leg.footOrientation))
       leg.toes.quaternion.identity()
     }
   }

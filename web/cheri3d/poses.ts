@@ -1,4 +1,4 @@
-import { WALK_MILLISECONDS } from "./legs"
+import { WALK_MILLISECONDS } from "../../src/lib/cheri/walk"
 
 // Cheri 3D: bone poses (degrees, applied to three-vrm normalized humanoid bones) and per-mood/scene
 // timelines. Pure data + math so it can be tuned in the browser lab and unit-tested.

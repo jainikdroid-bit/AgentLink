@@ -5,11 +5,12 @@ import * as THREE from "three"
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm"
 import { createLegRig } from "./legs"
+import { CHERI_CAMERA_DISTANCE, CHERI_CAMERA_FOV } from "../../src/lib/cheri/walk"
 import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, TAP_ORDER, WALK, activeProps, sample, type Bone, type BonePose, type Pose, type PropKind, type Scene } from "./poses"
 
 declare global {
   interface Window {
-    cheri: { setMood(m: string): void; play(id: string): void; tap(): void; pet(): void; walk(dir: number): void; debug: Record<string, unknown> }
+    cheri: { setMood(m: string): void; play(id: string): void; tap(): void; pet(): void; walk(dir: number, startAt?: number): void; debug: Record<string, unknown> }
     ReactNativeWebView?: { postMessage(s: string): void }
   }
 }
@@ -24,8 +25,8 @@ renderer.setClearColor(0x000000, 0)
 renderer.outputColorSpace = THREE.SRGBColorSpace
 
 const scene = new THREE.Scene()
-const camera = new THREE.PerspectiveCamera(24, 1, 0.1, 20)
-camera.position.set(0, 0.9, 4.2)
+const camera = new THREE.PerspectiveCamera(CHERI_CAMERA_FOV, 1, 0.1, 20)
+camera.position.set(0, 0.9, CHERI_CAMERA_DISTANCE)
 camera.lookAt(0, 0.85, 0)
 scene.add(new THREE.AmbientLight(0xffffff, 1.6))
 const sun = new THREE.DirectionalLight(0xffffff, 1.8)
@@ -564,6 +565,7 @@ let mood = "idle"
 let walking = 0
 let walkWeight = 0
 let walkTime = 0
+let walkStart = 0
 let baseTurn = 0
 let skit: { scene: Scene; start: number } | null = null
 /** performance.now() plus the time the lab skipped ahead with debug.step. */
@@ -601,8 +603,11 @@ window.cheri = {
   play,
   tap,
   pet: () => play("pet"),
-  walk: (dir: number) => {
-    if (dir && !walking && walkWeight < 0.05) walkTime = 0
+  walk: (dir: number, startAt = Date.now()) => {
+    if (dir) {
+      walkTime = 0
+      walkStart = nowMs() + (startAt - Date.now())
+    }
     walking = dir > 0 ? 1 : dir < 0 ? -1 : 0
     if (walking) skit = null
   },
@@ -616,7 +621,7 @@ window.cheri = {
       }
     },
     view: (degrees: number) => {
-      camera.position.set(4.2 * Math.sin(degrees * DEG), 0.9, 4.2 * Math.cos(degrees * DEG))
+      camera.position.set(CHERI_CAMERA_DISTANCE * Math.sin(degrees * DEG), 0.9, CHERI_CAMERA_DISTANCE * Math.cos(degrees * DEG))
       camera.lookAt(0, 0.85, 0)
     },
     feet: () => (["leftUpperLeg", "leftLowerLeg", "leftFoot", "leftToes", "rightUpperLeg", "rightLowerLeg", "rightFoot", "rightToes"] as const).map(
@@ -712,9 +717,10 @@ function step(dt: number) {
     if (pool.length) play(pool[Math.floor(Math.random() * pool.length)])
     else nextSkitAt = now + 8000
   }
-  walkWeight = THREE.MathUtils.damp(walkWeight, walking ? 1 : 0, 9, dt)
-  if (walking || walkWeight > 0.01) walkTime += dt
-  const base = walking ? { ...sample(WALK, walkTime * 1000, REST), turn: walking * 64 } : sample(BASE[mood], now, REST)
+  const moving = walking !== 0 && now >= walkStart
+  if (walking) walkTime = Math.max(0, now - walkStart) / 1000
+  walkWeight = moving ? 1 : THREE.MathUtils.damp(walkWeight, walking ? 1 : 0, 16, dt)
+  const base = walking ? { ...sample(WALK, walkTime * 1000, REST), turn: walking * 90 } : sample(BASE[mood], now, REST)
   const pose = skit && !walking ? sample(skit.scene, now - skit.start, base) : base
   const breathe = Math.sin(now / 800) * 1.2
   const bones: BonePose = { ...pose.bones, chest: [(pose.bones.chest?.[0] ?? 0) + breathe, pose.bones.chest?.[1] ?? 0, pose.bones.chest?.[2] ?? 0] }
@@ -727,7 +733,7 @@ function step(dt: number) {
     const want = walking ? "walk" : running ? clipSkit : "idle"
     selectClip(motion, want, want === "jump" ? 0.15 : want === "idle" ? 0.35 : 0.4)
   }
-  bodyTurn = THREE.MathUtils.damp(bodyTurn, pose.turn, 11, dt)
+  bodyTurn = moving ? pose.turn : THREE.MathUtils.damp(bodyTurn, pose.turn, 18, dt)
   const posed: Pose = { ...pose, bones, turn: bodyTurn }
   applyBones(posed, 1 - Math.exp(-dt * 14))
   if (motion) applyMotion(motion, dt)

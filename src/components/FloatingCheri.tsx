@@ -8,6 +8,7 @@ import { useSettings } from "../stores/settings"
 import { useAvatar } from "../stores/avatar"
 import { useOverallStatus } from "../lib/useOverallStatus"
 import { AVATAR_ASPECT, AVATAR_OPACITIES, AVATAR_SIZES, avatarMood, clampPosition, pinchWidth, type AvatarSize } from "../lib/avatar-mood"
+import { WALK_TURN_MS, walkScreenSpeed } from "../lib/cheri/walk"
 
 const SOURCE = { uri: "file:///android_asset/cheri3d/index.html" }
 const CELEBRATE_MS = 6000
@@ -111,12 +112,17 @@ export function FloatingCheri() {
       if (walkAnim.current || Date.now() - lastTouch.current < 20_000) return
       const from = current.current
       const span = Math.max(0, sw - w - 8)
+      if (span < 60) return
       let x = 4 + Math.random() * span
-      if (Math.abs(x - from.x) < 60) x = from.x > span / 2 ? 4 + Math.random() * (span / 3) : span - Math.random() * (span / 3)
+      if (Math.abs(x - from.x) < 60) x = from.x > 4 + span / 2 ? 4 : 4 + span
       const dir = x > from.x ? 1 : -1
-      const ms = (Math.abs(x - from.x) / 45) * 1000
-      web.current?.injectJavaScript(`window.cheri && cheri.walk(${dir}); true;`)
-      const anim = Animated.timing(pos, { toValue: { x, y: from.y }, duration: ms, easing: Easing.linear, useNativeDriver: false })
+      const ms = (Math.abs(x - from.x) / walkScreenSpeed(h)) * 1000
+      const startAt = Date.now() + WALK_TURN_MS
+      web.current?.injectJavaScript(`window.cheri && cheri.walk(${dir}, ${startAt}); true;`)
+      const anim = Animated.sequence([
+        Animated.delay(Math.max(0, startAt - Date.now())),
+        Animated.timing(pos, { toValue: { x, y: from.y }, duration: ms, easing: Easing.linear, useNativeDriver: false }),
+      ])
       walkAnim.current = anim
       anim.start(({ finished }) => {
         if (!finished) return
@@ -129,7 +135,7 @@ export function FloatingCheri() {
     }, 25_000 + Math.random() * 25_000)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, mood, menu, sw, w, avatar.pos])
+  }, [ready, mood, menu, sw, w, h, avatar.pos])
   useEffect(() => {
     if (mood !== "idle") stopWalk()
     // eslint-disable-next-line react-hooks/exhaustive-deps
