@@ -1,0 +1,1 @@
+v0.26.3 — rebuilt Cheri's gait, crouch and jump with forward-bending knees.

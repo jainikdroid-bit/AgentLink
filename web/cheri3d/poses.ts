@@ -1,3 +1,5 @@
+import { WALK_MILLISECONDS } from "./legs"
+
 // Cheri 3D: bone poses (degrees, applied to three-vrm normalized humanoid bones) and per-mood/scene
 // timelines. Pure data + math so it can be tuned in the browser lab and unit-tested.
 
@@ -208,23 +210,17 @@ export const BASE: Record<string, Scene> = {
   },
 }
 
-// Legs (degrees on the normalized bones; -x swings a thigh forward, +x bends a knee back).
-const STEP_A: BonePose = { leftUpperLeg: [-24, 0, 0], leftLowerLeg: [12, 0, 0], rightUpperLeg: [18, 0, 0], rightLowerLeg: [34, 0, 0], rightFoot: [-14, 0, 0] }
-const STEP_B: BonePose = { rightUpperLeg: [-24, 0, 0], rightLowerLeg: [12, 0, 0], leftUpperLeg: [18, 0, 0], leftLowerLeg: [34, 0, 0], leftFoot: [-14, 0, 0] }
-const SQUAT: BonePose = { hips: [8, 0, 0], spine: [18, 0, 0], leftUpperLeg: [-112, 0, -10], rightUpperLeg: [-112, 0, 10], leftLowerLeg: [140, 0, 0], rightLowerLeg: [140, 0, 0], leftFoot: [-30, 0, 0], rightFoot: [-30, 0, 0] }
-const TUCK: BonePose = { leftUpperLeg: [-40, 0, 0], rightUpperLeg: [-40, 0, 0], leftLowerLeg: [80, 0, 0], rightLowerLeg: [80, 0, 0] }
+const SQUAT: BonePose = { hips: [-8, 0, 0], spine: [-14, 0, 0], head: [8, 0, 0] }
 
-/** Walking (looped while the app moves her window); `turn` is set by the runtime. */
+/** Arm swing and expression; the foot targets share this walk cycle. */
 export const WALK: Scene = {
   id: "walk",
-  ms: 900,
+  ms: WALK_MILLISECONDS,
   loop: true,
   keys: [
-    k(0, { ...arms({ l: T(0.2, -0.38, 0.1, "chest"), r: T(-0.2, -0.38, -0.08, "chest") }, STEP_A), lift: 0, face: "happy", faceWeight: 0.5 }),
-    k(225, { lift: 0.025 }),
-    k(450, { ...arms({ l: T(0.2, -0.38, -0.08, "chest"), r: T(-0.2, -0.38, 0.1, "chest") }, STEP_B), lift: 0 }),
-    k(675, { lift: 0.025 }),
-    k(900, { ...arms({ l: T(0.2, -0.38, 0.1, "chest"), r: T(-0.2, -0.38, -0.08, "chest") }, STEP_A), lift: 0 }),
+    k(0, { ...arms({ l: T(0.2, -0.38, -0.04, "chest"), r: T(-0.2, -0.38, 0.07, "chest") }), face: "happy", faceWeight: 0.35 }),
+    k(WALK_MILLISECONDS / 2, arms({ l: T(0.2, -0.38, 0.07, "chest"), r: T(-0.2, -0.38, -0.04, "chest") })),
+    k(WALK_MILLISECONDS, arms({ l: T(0.2, -0.38, -0.04, "chest"), r: T(-0.2, -0.38, 0.07, "chest") })),
   ],
 }
 
@@ -234,7 +230,7 @@ export const SKITS: Record<string, Scene> = {
     id: "squat",
     ms: 6000,
     keys: [
-      k(500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, SQUAT), lift: -0.36, lookY: -0.2 }),
+      k(500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, SQUAT), lift: -0.205, lookY: -0.2 }),
       k(2200, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, { ...SQUAT, head: [0, 25, 6] }), lookX: -0.8 }),
       k(3600, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, { ...SQUAT, head: [0, -25, -6] }), lookX: 0.8, face: "happy", faceWeight: 0.6 }),
       k(5000, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, SQUAT), lookX: 0 }),
@@ -245,10 +241,10 @@ export const SKITS: Record<string, Scene> = {
     id: "joyJump",
     ms: 2400,
     keys: [
-      k(150, { ...arms(ARMS.rest, { leftUpperLeg: [-20, 0, 0], rightUpperLeg: [-20, 0, 0], leftLowerLeg: [40, 0, 0], rightLowerLeg: [40, 0, 0] }), lift: -0.05 }),
-      k(400, { ...arms(ARMS.cheer, TUCK), lift: 0.22, face: "happy", faceWeight: 1, mouth: 0.8, curlL: 1, curlR: 1 }),
+      k(150, { ...arms(ARMS.rest), lift: -0.05 }),
+      k(400, { ...arms(ARMS.cheer), lift: 0.22, face: "happy", faceWeight: 1, mouth: 0.8, curlL: 1, curlR: 1 }),
       k(700, { ...arms(ARMS.cheer), lift: 0 }),
-      k(950, { ...arms(ARMS.cheer, TUCK), lift: 0.2 }),
+      k(950, { ...arms(ARMS.cheer), lift: 0.2 }),
       k(1250, { ...arms(ARMS.cheer), lift: 0 }),
     ],
     props: [{ kind: "sparkle" }, { kind: "heart", from: 400, to: 2200 }],
@@ -325,7 +321,7 @@ export const SKITS: Record<string, Scene> = {
   victory: {
     id: "victory",
     ms: 2600,
-    keys: [k(150, { lift: -0.02, ...arms(ARMS.rest, { spine: [8, 0, 0] }) }), k(450, { lift: 0.22, ...arms(ARMS.cheer, TUCK), curlL: 1, curlR: 1, face: "happy", faceWeight: 1, mouth: 0.8 }), k(800, { lift: 0 }), k(2000, { ...arms(ARMS.cheer) })],
+    keys: [k(150, { lift: -0.02, ...arms(ARMS.rest, { spine: [8, 0, 0] }) }), k(450, { lift: 0.22, ...arms(ARMS.cheer), curlL: 1, curlR: 1, face: "happy", faceWeight: 1, mouth: 0.8 }), k(800, { lift: 0 }), k(2000, { ...arms(ARMS.cheer) })],
     props: [{ kind: "confetti" }],
   },
   thumbsUp: {
