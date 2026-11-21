@@ -936,7 +936,7 @@ export default function SessionScreen() {
           >
             <Ionicons name="hardware-chip-outline" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
             <Text style={[s.modelLabel, isDark && s.metaDark]} numberOfLines={1}>
-              {modelLabel}
+              {t("chat.modelPicker.title") + " · " + modelLabel}
             </Text>
           </TouchableOpacity>
 

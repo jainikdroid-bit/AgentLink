@@ -23,3 +23,5 @@ android/app/src/main/assets/index.android.bundle
 
 # Built by scripts/build-cheri3d.mjs from web/cheri3d (run it before gradle)
 android/app/src/main/assets/cheri3d/
+
+/android/app/google-services.json

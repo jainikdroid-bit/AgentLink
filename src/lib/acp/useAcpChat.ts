@@ -9,7 +9,7 @@ import { replyLanguageInstruction } from "../reply-language"
 import pkg from "../../../package.json"
 import { AcpApiError, sendMessage, startAgent, stopAgent, streamEvents, type AcpTarget } from "./api"
 import {
-  cancelNotification, initialState, nextHandshakeStep, permissionResponse, promptRequest, reduce, setModeRequest, unsupportedRequestReply, type AcpState, type RpcMessage,
+  cancelNotification, initialState, nextHandshakeStep, permissionResponse, promptRequest, reduce, setModeRequest, setModelRequest, unsupportedRequestReply, type AcpState, type RpcMessage,
 } from "./protocol"
 
 export type LinkState = "starting" | "connecting" | "live" | "reconnecting"
@@ -159,5 +159,14 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
     if (t && handle) await stopAgent(t, handle.id)
   }, [handle])
 
-  return { state, link, fatal, agentId: handle?.id ?? null, send, cancel, answer, setMode, stop }
+  const setModel = useCallback(async (value: string) => {
+    const { sessionId, modelConfig, requests, nextId } = stateRef.current
+    if (!sessionId || !modelConfig?.options.some((option) => option.value === value)) return
+    if (Object.values(requests).includes("session/set_config_option")) return
+    const id = Math.max(nextId, idFloor.current)
+    idFloor.current = id + 1
+    await post(setModelRequest(id, sessionId, modelConfig.id, value))
+  }, [post])
+
+  return { setModel, state, link, fatal, agentId: handle?.id ?? null, send, cancel, answer, setMode, stop }
 }

@@ -1,0 +1,4 @@
+v0.25.1 — model controls and avatar tuning
+- Select supported models inside ACP chats. Show local computer model controls on the sessions screen.
+- Keep ACP mode labels fully visible.
+- Restyle Cheri’s top and align her arms with body turns.

@@ -42,7 +42,6 @@ import { ConnectionStatusChip } from "../../src/components/ConnectionStatus"
 import { LocalModelBar } from "../../src/components/LocalModelBar"
 import { canStartFromPhone } from "../../src/lib/launcher"
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { GUIDE_DONE_KEY, shouldAutoShowGuide } from "../../src/lib/guide"
 
 function formatTime(timestamp: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const date = new Date(timestamp)
@@ -197,12 +196,7 @@ export default function SessionsScreen() {
   // "No connection" mini game (RIG RUN): shown in place of the unplugged mascot.
   const [playOffline, setPlayOffline] = useState(false)
   // Setup guide: opens by itself once for someone with no server who has not skipped it.
-  const [guideFlag, setGuideFlag] = useState<{ loaded: boolean; done: boolean }>({ loaded: false, done: false })
-  useEffect(() => {
-    AsyncStorage.getItem(GUIDE_DONE_KEY)
-      .then((v) => setGuideFlag({ loaded: true, done: v === "1" }))
-      .catch(() => setGuideFlag({ loaded: true, done: true }))
-  }, [])
+
   const [customDir, setCustomDir] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [renaming, setRenaming] = useState<Session | null>(null)
@@ -297,12 +291,7 @@ export default function SessionsScreen() {
   }, [sessions, collapsedDirs, query, pinnedIds])
 
   // Fetch server-known projects when the new session modal opens
-  useEffect(() => {
-    if (shouldAutoShowGuide({ ...guideFlag, hasConnection: !!activeConnection })) {
-      setGuideFlag({ loaded: true, done: true }) // once per launch, even if the stored flag is not written yet
-      router.push("/guide")
-    }
-  }, [guideFlag, activeConnection, router])
+
 
   useEffect(() => {
     if (!showNewSession || !client) return

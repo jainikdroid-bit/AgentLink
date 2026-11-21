@@ -35,6 +35,12 @@
       }
     },
     "notifications": {
+    "fcm": {
+      "copy": "Copy FCM delivery token",
+      "hint": "For background notifications from your computer",
+      "copied": "Delivery token copied",
+      "unavailable": "FCM is unavailable. Check Android notification permission and Firebase setup."
+    },
       "disabledNotice": "システムレベルで通知が無効になっています。設定で有効にしてください。"
     },
     "privacy": {
@@ -883,6 +889,8 @@
     }
   },
   "localModel": {
+    "title": "Local models on your PC",
+    "unavailable": "Models unavailable. Check that llama.cpp is running and the AgentLink launcher is up to date.",
     "state": {
       "loaded": "メモリ上",
       "unloaded": "未読み込み",

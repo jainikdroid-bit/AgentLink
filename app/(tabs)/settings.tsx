@@ -1,3 +1,5 @@
+import * as Clipboard from "expo-clipboard"
+import { getAndroidPushToken } from "../../src/lib/notifications"
 import { useCallback, useEffect, useState } from "react"
 import {
   View,
@@ -254,6 +256,20 @@ export default function SettingsScreen() {
       </SettingSection>
 
       <SettingSection title={t("settings.sections.notifications")} isDark={isDark}>
+        <SettingRow
+          icon="notifications-outline"
+          label={t("notifications.fcm.copy")}
+          description={t("notifications.fcm.hint")}
+          isDark={isDark}
+          onPress={async () => {
+            try {
+              await Clipboard.setStringAsync(await getAndroidPushToken())
+              Alert.alert(t("notifications.fcm.copied"))
+            } catch {
+              Alert.alert(t("notifications.fcm.unavailable"))
+            }
+          }}
+        />
         {categories.map((category) => {
           const meta = categoryMeta[category]
           return (

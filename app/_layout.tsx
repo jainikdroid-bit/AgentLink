@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Stack, router } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { Appearance, useColorScheme, View, ActivityIndicator, AppState } from "react-native"
@@ -40,6 +40,7 @@ function RootLayout() {
   const { loadConnections, isLoading: connectionsLoading, client } = useConnections()
   const sseStarted = useRef(false)
   const notifPermissionRequested = useRef(false)
+  const [notificationSession, setNotificationSession] = useState<string | null>(null)
 
   useEffect(() => {
     initAuth()
@@ -52,10 +53,7 @@ function RootLayout() {
     // Navigate to session when user taps a notification. Connection-drop
     // notifications carry no sessionId (they aren't about a session) — route
     // to the home tab instead of "/session/" (an empty, dead-end route).
-    const unsubNotifications = notifications.onTap((data) => {
-      if (data.sessionId) router.push(`/session/${data.sessionId}`)
-      else router.push("/")
-    })
+    const unsubNotifications = notifications.onTap((data) => setNotificationSession(data.sessionId))
 
     // Allow / Deny pressed on a permission notification: answer without opening the app.
     const unsubActions = notifications.onAction((reply, sessionId, requestId) => {
@@ -133,6 +131,13 @@ function RootLayout() {
   }, [client])
 
   const isLoading = authLoading || connectionsLoading
+
+  useEffect(() => {
+    if (isLoading || notificationSession === null) return
+    setNotificationSession(null)
+    if (notificationSession) router.push({ pathname: "/session/[id]", params: { id: notificationSession } })
+    else router.push("/")
+  }, [isLoading, notificationSession, router])
   usePhoneBridge()
   useTailnetLifecycle()
   useTunnelDiscovery()

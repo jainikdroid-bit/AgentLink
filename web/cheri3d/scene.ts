@@ -146,7 +146,7 @@ async function load(url: string) {
   }
 }
 
-// ---------- outfit: pink top, plaid skirt ----------
+// ---------- outfit ----------
 
 function solidTexture(color: string): THREE.CanvasTexture {
   const c = document.createElement("canvas")
@@ -159,38 +159,37 @@ function solidTexture(color: string): THREE.CanvasTexture {
   return t
 }
 
-/** Tartan in pinks and navy: wide bands, thin stripes, then a lighter overlay so the crossings mix. */
-function plaidTexture(): THREE.CanvasTexture {
-  const c = document.createElement("canvas")
-  c.width = c.height = 512
-  const g = c.getContext("2d") as CanvasRenderingContext2D
-  g.fillStyle = "#3a2a4a"
-  g.fillRect(0, 0, 512, 512)
-  const band = (pos: number, width: number, color: string, alpha: number) => {
-    g.globalAlpha = alpha
-    g.fillStyle = color
-    g.fillRect(pos, 0, width, 512)
-    g.fillRect(0, pos, 512, width)
+/** Shape and paint the top in the VRM's rest coordinates, retaining skin weights. */
+function styleSportsTop(mesh: THREE.Mesh) {
+  mesh.geometry = mesh.geometry.clone()
+  const geometry = mesh.geometry
+  const position = geometry.getAttribute("position")
+  const colors = new Float32Array(position.count * 3)
+  const pink = new THREE.Color("#f08eb6")
+  const edging = new THREE.Color("#7c3560")
+  const waist = new THREE.Color("#d95896")
+  for (let i = 0; i < position.count; i++) {
+    const x = position.getX(i)
+    const y = position.getY(i)
+    const z = position.getZ(i)
+    // The front of this VRM faces negative Z in its bind geometry.
+    const front = THREE.MathUtils.smoothstep(-z, 0.015, 0.095)
+    const volume = 0.046 * Math.exp(-(((Math.abs(x) - 0.081) / 0.067) ** 2 + ((y - 1.245) / 0.07) ** 2))
+    position.setZ(i, z - volume * front)
+    const neckline = y > 1.345 + Math.min(Math.abs(x), 0.11) * 0.24
+    const trim = neckline || Math.abs(x) > 0.225
+    const color = trim ? edging : y < 1.015 ? waist : pink
+    color.toArray(colors, i * 3)
   }
-  for (let i = 0; i < 4; i++) {
-    const o = i * 128
-    band(o + 8, 52, "#d4537e", 0.55)
-    band(o + 70, 20, "#f4c0d1", 0.45)
-    band(o + 100, 4, "#ffffff", 0.7)
-    band(o + 112, 3, "#22d3ee", 0.6)
-  }
-  g.globalAlpha = 1
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  t.wrapS = t.wrapT = THREE.RepeatWrapping
-  t.repeat.set(3, 3)
-  return t
+  position.needsUpdate = true
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3))
+  geometry.computeVertexNormals()
+  geometry.computeBoundingSphere()
 }
 
-// Sporty look: pink top, white tennis skirt, no school bow.
 function restyleOutfit(model: VRM) {
-  const pink = solidTexture("#f29abd")
-  const plaid = solidTexture("#f7f6f9")
+  const white = solidTexture("#ffffff")
+  const skirtTexture = solidTexture("#f7f6f9")
   model.scene.traverse((o) => {
     const mesh = o as THREE.Mesh
     if (!mesh.isMesh) return
@@ -204,8 +203,12 @@ function restyleOutfit(model: VRM) {
         continue
       }
       if (!top && !skirt) continue
-      m.map = top ? pink : plaid
-      if (m.shadeMultiplyTexture !== undefined) m.shadeMultiplyTexture = top ? pink : plaid
+      if (top) {
+        styleSportsTop(mesh)
+        m.vertexColors = true
+      }
+      m.map = top ? white : skirtTexture
+      if (m.shadeMultiplyTexture !== undefined) m.shadeMultiplyTexture = top ? white : skirtTexture
       if (m.shadeColorFactor) m.shadeColorFactor.set(top ? "#c8708f" : "#c3c2d4")
       if (m.color) m.color.set("#ffffff")
       m.needsUpdate = true
@@ -237,8 +240,8 @@ const GROUP: Record<string, Group> = {
 }
 /** How strongly each clip drives each body part (the rest keeps coming from the hand-made poses). */
 const INFLUENCE: Record<string, Record<Group, number>> = {
-  idle: { hips: 1, trunk: 0, legs: 1 },
-  walk: { hips: 1, trunk: 1, legs: 1 },
+  idle: { hips: 0, trunk: 0, legs: 0 },
+  walk: { hips: 0.65, trunk: 0.65, legs: 1 },
   crouch: { hips: 1, trunk: 0.25, legs: 1 },
   jump: { hips: 1, trunk: 1, legs: 1 },
 }
@@ -272,6 +275,7 @@ interface Motion {
 let motion: Motion | null = null
 const mqA = new THREE.Quaternion()
 const mqB = new THREE.Quaternion()
+const motionWeight = new Map<THREE.Object3D, number>()
 
 /**
  * Same idea as three-vrm's loadMixamoAnimation. The normalized VRM rig has an identity rest pose, so a source local
@@ -349,6 +353,13 @@ function applyMotion(m: Motion, dt: number): { liftOwned: number; arc: number } 
   let liftOwned = 0
   let arc = 0
   let dy = 0
+  motionWeight.clear()
+  for (const { name, w } of layers) {
+    for (const { bone, node } of m.clips[name].quats) {
+      const weight = w * INFLUENCE[name][GROUP[bone]]
+      motionWeight.set(node, (motionWeight.get(node) ?? 1) - weight)
+    }
+  }
   for (const { name, t, w } of layers) {
     const c = m.clips[name]
     if (OWNS_LIFT[name]) liftOwned += w
@@ -361,7 +372,9 @@ function applyMotion(m: Motion, dt: number): { liftOwned: number; arc: number } 
       const k = w * INFLUENCE[name][GROUP[bone]]
       if (k <= 0) continue
       mqB.fromArray(interp.evaluate(t) as unknown as number[])
-      node.quaternion.slerp(mqB, k)
+      const weight = Math.max(0, motionWeight.get(node) ?? 0) + k
+      node.quaternion.slerp(mqB, k / weight)
+      motionWeight.set(node, weight)
     }
   }
   const rest = m.clips[m.cur].hips
@@ -440,16 +453,44 @@ function solveArm(side: "left" | "right", target: THREE.Vector3) {
 
 const chestPos = new THREE.Vector3()
 
+const gestureYaw = new THREE.Quaternion()
+const worldUp = new THREE.Vector3(0, 1, 0)
+let lastGestureTurn = 0
+
+const feet = ["leftFoot", "rightFoot", "leftToes", "rightToes"] as const
+const footWorld = new THREE.Vector3()
+let floorCorrection = 0
+
+function stabilizeFeet(dt: number, jumping: boolean, grounded: boolean) {
+  if (!vrm) return
+  const model = vrm
+  let desired = 0
+  if (!jumping && grounded) {
+    model.scene.updateMatrixWorld(true)
+    let lowest = Infinity
+    for (const name of feet) {
+      const bone = model.humanoid.getNormalizedBoneNode(name)
+      if (bone) lowest = Math.min(lowest, bone.getWorldPosition(footWorld).y)
+    }
+    if (Number.isFinite(lowest)) desired = THREE.MathUtils.clamp(0.045 - lowest, -0.10, 0.12)
+  }
+  floorCorrection += (desired - floorCorrection) * (1 - Math.exp(-dt * 14))
+  model.scene.position.y += floorCorrection
+}
+
 function targetWorld(t: Pose["l"], into: THREE.Vector3) {
   if (!vrm) return into
   const ref = vrm.humanoid.getNormalizedBoneNode(t.ref === "head" ? "head" : "chest")
   ref?.getWorldPosition(ikRef)
-  return into.set(ikRef.x + t.x, ikRef.y + t.y, ikRef.z + t.z)
+  return into.set(t.x, t.y, t.z).applyQuaternion(gestureYaw).add(ikRef)
 }
 
 function applyArms(pose: Pose, k: number) {
   if (!vrm) return
   vrm.scene.updateMatrixWorld(true)
+  gestureYaw.setFromAxisAngle(worldUp, pose.turn * DEG)
+  if (Math.abs(lastGestureTurn - pose.turn) > 25) smoothTargets.ready = false
+  lastGestureTurn = pose.turn
   const l = targetWorld(pose.l, new THREE.Vector3())
   const r = targetWorld(pose.r, new THREE.Vector3())
   if (!smoothTargets.ready) {
@@ -472,7 +513,8 @@ function applyBones(pose: Pose, k: number) {
     if (!node) continue
     tmpEuler.set(deg[0] * DEG, deg[1] * DEG, deg[2] * DEG)
     tmpQuat.setFromEuler(tmpEuler)
-    node.quaternion.slerp(tmpQuat, k)
+    // Motion tracks blend from this frame's base pose, with no previous-frame rotation.
+    node.quaternion.slerp(tmpQuat, motion && name in GROUP ? 1 : k)
   }
   for (const side of ["left", "right"] as const) {
     const curl = side === "left" ? pose.curlL : pose.curlR
@@ -714,14 +756,15 @@ function step(dt: number) {
     const m = applyMotion(motion, dt)
     lift = pose.lift * (1 - m.liftOwned) + m.arc
   }
-  applyArms(posed, 1 - Math.exp(-dt * 10))
-  applyFace(posed, now)
-  applyLook(posed)
   if (vrm) {
     vrm.scene.position.y = lift
     vrm.scene.rotation.y = baseTurn + posed.turn * DEG
-    vrm.update(dt)
   }
+  stabilizeFeet(dt, motion?.cur === "jump", !!motion && (motion.cur === "walk" || motion.cur === "crouch"))
+  applyArms(posed, 1 - Math.exp(-dt * 10))
+  applyFace(posed, now)
+  applyLook(posed)
+  vrm?.update(dt)
   const cues = new Set<PropKind>([...activeProps(BASE[mood], now).map((p) => p.kind), ...(skit ? activeProps(skit.scene, now - skit.start).map((p) => p.kind) : [])])
   placeProps([...cues], now)
   renderer.render(scene, camera)

@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/mobile",
-  "version": "0.24.1",
+  "version": "0.25.1",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {

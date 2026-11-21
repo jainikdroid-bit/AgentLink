@@ -24,7 +24,7 @@ export function LocalModelBar() {
         : null,
     [activeConnection, clientBase],
   )
-  const [models, setModels] = useState<LocalModel[] | null>(null)
+  const [models, setModels] = useState<LocalModel[] | null | undefined>(undefined)
   const [busy, setBusy] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
@@ -54,10 +54,13 @@ export function LocalModelBar() {
     void refresh()
   }
 
-  if (!models || models.length === 0) return null
+  if (!activeConnection) return null
   return (
     <View style={s.wrap} testID="local-model-bar">
-      {models.map((m) => {
+      <Text style={s.heading}>{t("localModel.title")}</Text>
+      {models === undefined ? <ActivityIndicator color={cyber.cyan} /> : null}
+      {models?.length ? null : models === undefined ? null : <Text style={s.hint}>{t("localModel.unavailable")}</Text>}
+      {models?.map((m) => {
         const loaded = m.state === "loaded"
         const working = busy === m.id || m.state === "loading"
         return (
@@ -85,6 +88,8 @@ export function LocalModelBar() {
 
 const s = StyleSheet.create({
   wrap: { marginHorizontal: 16, marginTop: 8, borderRadius: 10, borderWidth: 1, borderColor: cyber.border, backgroundColor: cyber.surface },
+  heading: { color: cyber.text, fontWeight: "600", paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4 },
+  hint: { color: cyber.muted, fontSize: 12, paddingHorizontal: 12, paddingBottom: 8 },
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8 },
   text: { flex: 1 },
   name: { color: cyber.text, fontSize: 14, fontWeight: "600" },

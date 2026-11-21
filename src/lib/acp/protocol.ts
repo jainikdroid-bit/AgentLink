@@ -91,6 +91,7 @@ export interface AcpState {
   authMethods: { id: string; name: string; type: string }[]
   sessionId: string | null
   modelName: string
+  modelConfig: { id: string; current: string; options: { value: string; name: string }[] } | null
   items: ChatItem[]
   busy: boolean
   pendingPermissions: PermissionRequest[]
@@ -118,6 +119,7 @@ export const initialState: AcpState = {
   authMethods: [],
   sessionId: null,
   modelName: "",
+  modelConfig: null,
   items: [],
   busy: false,
   pendingPermissions: [],
@@ -226,13 +228,19 @@ function modesFrom(raw: unknown): { modes: AgentMode[]; modeId: string } {
   return { modes, modeId: str(raw.currentModeId) }
 }
 
-function modelFrom(configOptions: unknown): string {
-  if (!Array.isArray(configOptions)) return ""
+function modelFrom(configOptions: unknown): Pick<AcpState, "modelConfig" | "modelName"> {
+  if (!Array.isArray(configOptions)) return { modelConfig: null, modelName: "" }
   const model = configOptions.find((o) => isObject(o) && (o.category === "model" || o.id === "model"))
-  if (!isObject(model)) return ""
-  const options = Array.isArray(model.options) ? model.options : []
-  const current = options.find((o) => isObject(o) && o.value === model.currentValue)
-  return isObject(current) ? str(current.name) || str(current.value) : str(model.currentValue)
+  if (!isObject(model)) return { modelConfig: null, modelName: "" }
+  const raw = Array.isArray(model.options) ? model.options : []
+  const options = raw.filter(isObject).flatMap((item) => Array.isArray(item.options) ? item.options.filter(isObject) : [item])
+    .map((item) => ({ value: str(item.value), name: str(item.name) || str(item.value) })).filter((item) => item.value)
+  const current = str(model.currentValue)
+  const id = str(model.id)
+  return {
+    modelConfig: id && options.length ? { id, current, options } : null,
+    modelName: options.find((item) => item.value === current)?.name || current,
+  }
 }
 
 function errorText(error: RpcMessage["error"]): string {
@@ -265,11 +273,15 @@ function onResponse(state: AcpState, msg: RpcMessage): AcpState {
     if (failed) return { ...next, handshake: "failed", error: errorText(msg.error) }
     const r = isObject(msg.result) ? msg.result : {}
     const { modes, modeId } = modesFrom(r.modes)
-    next = { ...next, handshake: "done", sessionId: str(r.sessionId) || null, modelName: modelFrom(r.configOptions), modes, modeId }
+    next = { ...next, handshake: "done", sessionId: str(r.sessionId) || null, ...modelFrom(r.configOptions), modes, modeId }
     const safe = RISKY_MODES.has(modeId.toLowerCase()) ? SAFE_MODES.map((id) => modes.find((m) => m.id === id)).find(Boolean) : undefined
     if (!safe) return next
     const from = modes.find((m) => m.id === modeId)
     return notice({ ...next, safeSwitch: { toId: safe.id } }, "safeMode", "info", { from: from?.name ?? modeId, to: safe.name })
+  }
+  if (method === "session/set_config_option") {
+    if (failed) return notice(next, errorText(msg.error), "error")
+    return Array.isArray(msg.result?.configOptions) ? { ...next, ...modelFrom(msg.result.configOptions) } : next
   }
   if (method === "session/set_mode") return failed ? notice(next, errorText(msg.error), "error") : next
   if (method === "authenticate") {
@@ -308,6 +320,8 @@ function onUpdate(state: AcpState, update: Record<string, any>): AcpState {
       if (at >= 0) return { ...state, items: state.items.map((i, n) => (n === at ? { ...i, entries } as ChatItem : i)) }
       return withItem(state, (id) => ({ id, type: "plan", entries }))
     }
+    case "config_option_update":
+      return Array.isArray(update.configOptions) ? { ...state, ...modelFrom(update.configOptions) } : state
     case "current_mode_update":
       return typeof update.currentModeId === "string" ? { ...state, modeId: update.currentModeId } : state
     case "available_commands_update":
@@ -393,6 +407,9 @@ export const initializeRequest = (id: number, version: string): RpcMessage => ({
 })
 
 export const newSessionRequest = (id: number, cwd: string): RpcMessage => ({ jsonrpc: "2.0", id, method: "session/new", params: { cwd, mcpServers: [] } })
+
+export const setModelRequest = (id: number, sessionId: string, configId: string, value: string): RpcMessage =>
+  ({ jsonrpc: "2.0", id, method: "session/set_config_option", params: { sessionId, configId, value } })
 
 export const setModeRequest = (id: number, sessionId: string, modeId: string): RpcMessage => ({ jsonrpc: "2.0", id, method: "session/set_mode", params: { sessionId, modeId } })
 

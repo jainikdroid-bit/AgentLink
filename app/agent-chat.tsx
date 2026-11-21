@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native"
+import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Pressable } from "react-native"
 import { Stack, router, useLocalSearchParams } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
@@ -36,6 +36,7 @@ export default function AgentChatScreen() {
   const { state } = chat
   // The name from the list ("Claude Code") reads better than what some adapters report (their package name).
   const agentName = params.name || state.agentName || String(params.agent)
+  const [modelMenu, setModelMenu] = useState(false)
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const list = useRef<FlatList<Grouped<ChatItem>>>(null)
@@ -135,6 +136,32 @@ export default function AgentChatScreen() {
           </View>
         </View>
       ) : null}
+      {state.modelConfig || state.modelName ? (
+        <Pressable style={s.modelButton} onPress={() => setModelMenu(true)} disabled={!state.modelConfig || !ready || Object.values(state.requests).includes("session/set_config_option")} accessibilityRole="button" accessibilityLabel={t("chat.modelPicker.title")}>
+          <Ionicons name="hardware-chip-outline" size={16} color={cyber.cyan} />
+          <Text style={s.modelText} numberOfLines={1}>{state.modelName || t("chat.modelPicker.title")}</Text>
+          {state.modelConfig ? <Ionicons name="chevron-down" size={16} color={cyber.cyan} /> : null}
+        </Pressable>
+      ) : null}
+      <Modal visible={modelMenu && !!state.modelConfig} transparent animationType="fade" onRequestClose={() => setModelMenu(false)}>
+        <View style={s.modelBackdrop}>
+          <View style={s.modelPanel}>
+            <Text style={s.modelHeading}>{t("chat.modelPicker.title")}</Text>
+            <FlatList data={state.modelConfig?.options ?? []} keyExtractor={(option) => option.value} renderItem={({ item }) => (
+              <Pressable style={s.modelButton} onPress={() => {
+                setModelMenu(false)
+                if (item.value !== state.modelConfig?.current) void chat.setModel(item.value).catch(() => Alert.alert(t("common.error")))
+              }} accessibilityRole="button" accessibilityState={{ selected: item.value === state.modelConfig?.current }}>
+                <Text style={s.modelText}>{item.name}</Text>
+                {item.value === state.modelConfig?.current ? <Ionicons name="checkmark" size={18} color={cyber.cyan} /> : null}
+              </Pressable>
+            )} />
+            <Pressable style={s.modelButton} onPress={() => setModelMenu(false)} accessibilityRole="button">
+              <Text style={s.modelText}>{t("common.close")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       {state.modes.length > 1 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.modes} contentContainerStyle={s.modesContent} keyboardShouldPersistTaps="handled">
           {state.modes.map((mode) => (
@@ -202,8 +229,13 @@ const s = StyleSheet.create({
   statusTextWrap: { flex: 1, gap: 4 },
   statusText: { color: cyber.text, fontSize: 13 },
   statusDetail: { color: cyber.muted, fontSize: 11, fontFamily: cyber.mono },
-  modes: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: cyber.border },
-  modesContent: { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  modelButton: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
+  modelText: { flex: 1, color: cyber.text, fontSize: 14 },
+  modelBackdrop: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.65)" },
+  modelPanel: { maxHeight: "75%", backgroundColor: cyber.surface, borderRadius: 16, paddingVertical: 8 },
+  modelHeading: { color: cyber.text, fontSize: 17, fontWeight: "600", padding: 16 },
+  modes: { flexGrow: 0, flexShrink: 0, borderBottomWidth: 1, borderBottomColor: cyber.border },
+  modesContent: { alignItems: "center", paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: cyber.border, backgroundColor: cyber.surface },
   chipOn: { borderColor: cyber.cyan, backgroundColor: "#0a2530" },
   chipText: { color: cyber.muted, fontSize: 13 },

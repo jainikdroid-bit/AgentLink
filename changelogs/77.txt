@@ -1,0 +1,3 @@
+v0.25.0 — simpler first launch and configurable Google push
+- First launch shows QR pairing directly.
+- Android builds configured with Firebase can receive OpenCode completion and error notifications in the background. Tap an alert to open the session.

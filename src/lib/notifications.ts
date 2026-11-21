@@ -117,6 +117,14 @@ export async function setup(): Promise<boolean> {
   return true
 }
 
+/** Native FCM token for a self-hosted sender on the paired computer. */
+export async function getAndroidPushToken(): Promise<string> {
+  if (Platform.OS !== "android" || !(await setup())) throw new Error("notifications unavailable")
+  const token = await Notifications.getDevicePushTokenAsync()
+  if (typeof token.data !== "string" || !token.data) throw new Error("FCM token unavailable")
+  return token.data
+}
+
 export async function granted(): Promise<boolean> {
   const { status } = await Notifications.getPermissionsAsync()
   return status === "granted"
@@ -180,16 +188,26 @@ export async function send(payload: Payload) {
 // ---------------------------------------------------------------------------
 
 export function onTap(handler: (data: NotificationData) => void) {
-  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+  let active = true
+  const handle = (response: Notifications.NotificationResponse) => {
+    if (!active) return
     if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return // a button press, handled by onAction
     const raw = response.notification.request.content.data
     const data = raw as unknown as NotificationData | undefined
     if (!data) return
-    if (data.sessionId || data.category === "connection") {
-      handler(data)
+    const sessionId = typeof data.sessionId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(data.sessionId)
+    if (sessionId || data.category === "connection") {
+      void Notifications.clearLastNotificationResponseAsync().catch(() => {})
+      handler({ ...data, sessionId: sessionId ? data.sessionId : "" })
     }
-  })
-  return () => subscription.remove()
+  }
+  const subscription = Notifications.addNotificationResponseReceivedListener(handle)
+  const last = Notifications.getLastNotificationResponse()
+  if (last) queueMicrotask(() => handle(last))
+  return () => {
+    active = false
+    subscription.remove()
+  }
 }
 
 /** Allow / Deny pressed on a permission notification (the app stays in the background). */
