@@ -3,8 +3,7 @@
  *
  * WHY THIS EXISTS (AGE-110)
  * -------------------------
- * This app has no update mechanism of its own. It ships through four channels
- * and only ONE of them auto-updates:
+ * Before in-app updates, the app shipped through four channels:
  *
  *   Play Store            auto-updates ... but only to whatever is on the
  *                         production track (which lagged eight weeks, see
@@ -99,7 +98,34 @@ export const LAST_CHECK_KEY = "opencode_update_last_check"
 export const DISMISSED_KEY = "opencode_update_dismissed_version"
 export const LATEST_KEY = "opencode_update_latest"
 
-export type AvailableUpdate = { version: string; url: string }
+export type UpdateApk = { name: string; url: string; sha256: string }
+export type AvailableUpdate = { version: string; url: string; apks?: UpdateApk[] }
+
+const RELEASE_ROOT = "https://github.com/jainikdroid-bit/AgentLink/releases/"
+const APKS = ["arm64-v8a", "armeabi-v7a", "x86_64", "x86", "universal"] as const
+
+export function releaseApks(version: string, tag: string, assets: unknown): UpdateApk[] {
+  if (!/^\d+\.\d+\.\d+$/.test(version) || (tag !== version && tag !== "v" + version) || !Array.isArray(assets)) return []
+  const names = new Set(APKS.map((abi) => "AgentLink-" + version + (abi === "universal" ? "" : "-" + abi) + ".apk"))
+  return assets.flatMap((asset) => {
+    if (!asset || typeof asset.name !== "string" || !names.has(asset.name)) return []
+    const url = RELEASE_ROOT + "download/" + tag + "/" + asset.name
+    if (asset.browser_download_url !== url || typeof asset.digest !== "string" || !/^sha256:[a-f0-9]{64}$/i.test(asset.digest)) return []
+    return [{ name: asset.name, url, sha256: asset.digest.slice(7).toLowerCase() }]
+  })
+}
+
+export function selectUpdateApk(update: AvailableUpdate, abis: readonly string[]): UpdateApk | undefined {
+  if (!Array.isArray(update.apks)) return undefined
+  const paths = update.apks.filter((apk) => apk && typeof apk.sha256 === "string" && /^[a-f0-9]{64}$/i.test(apk.sha256) &&
+    [update.version, "v" + update.version].some((tag) =>
+      releaseApks(update.version, tag, [{ name: apk.name, browser_download_url: apk.url, digest: "sha256:" + apk.sha256 }]).length > 0))
+  for (const abi of abis) {
+    const apk = paths.find((asset) => asset.name === "AgentLink-" + update.version + "-" + abi + ".apk")
+    if (apk) return apk
+  }
+  return paths.find((asset) => asset.name === "AgentLink-" + update.version + ".apk")
+}
 
 /** The two storage calls this needs, injected so the logic stays testable. */
 export type UpdateStorage = {
@@ -175,7 +201,7 @@ function parseCachedUpdate(raw: string | null): AvailableUpdate | null {
     const parsed = JSON.parse(raw) as Partial<AvailableUpdate>
     if (typeof parsed?.version !== "string" || typeof parsed?.url !== "string") return null
     if (!parseVersion(parsed.version)) return null
-    return { version: parsed.version, url: parsed.url }
+    return { version: parsed.version, url: parsed.url, ...(Array.isArray(parsed.apks) ? { apks: parsed.apks } : {}) }
   } catch {
     return null
   }

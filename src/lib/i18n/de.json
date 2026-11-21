@@ -518,6 +518,12 @@
     "setupGuideLink": "So richten Sie einen Server ein"
   },
   "update": {
+    "install": "Update",
+    "downloading": "Downloading update…",
+    "permission": "Allow installation from AgentLink",
+    "retry": "Allow installation in Android settings, then tap Update again.",
+    "settings": "Android settings",
+    "failed": "Could not install the update. Try again.",
     "available": "Update verfügbar",
     "body": "Version {{version}} ist verfügbar. Sie haben {{current}}.",
     "action": "Holen",

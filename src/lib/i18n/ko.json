@@ -518,6 +518,12 @@
     "setupGuideLink": "서버 설정 방법"
   },
   "update": {
+    "install": "Update",
+    "downloading": "Downloading update…",
+    "permission": "Allow installation from AgentLink",
+    "retry": "Allow installation in Android settings, then tap Update again.",
+    "settings": "Android settings",
+    "failed": "Could not install the update. Try again.",
     "available": "업데이트 가능",
     "body": "버전 {{version}}이(가) 출시되었습니다. 현재 버전: {{current}}.",
     "action": "받기",

@@ -187,6 +187,30 @@ class TermuxInstallerModule(private val ctx: ReactApplicationContext) : ReactCon
   }
 
   @ReactMethod
+  fun installAppUpdate(path: String, promise: Promise) {
+    try {
+      val file = File(path)
+      if (file.canonicalFile.parentFile != dir().canonicalFile || !file.isFile) {
+        return promise.reject("bad_path", "Update file is missing")
+      }
+      val pm = ctx.packageManager
+      @Suppress("DEPRECATION")
+      val archive = pm.getPackageArchiveInfo(file.absolutePath, 0)
+      @Suppress("DEPRECATION")
+      val installed = pm.getPackageInfo(ctx.packageName, 0)
+      @Suppress("DEPRECATION")
+      fun version(info: android.content.pm.PackageInfo): Long =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode else info.versionCode.toLong()
+      if (archive == null || archive.packageName != ctx.packageName || version(archive) <= version(installed)) {
+        return promise.reject("bad_update", "APK must be a newer version of AgentLink")
+      }
+      installApk(path, promise)
+    } catch (e: Exception) {
+      promise.reject("bad_update", e)
+    }
+  }
+
+  @ReactMethod
   fun installApk(path: String, promise: Promise) {
     val file = File(path)
     val inside = runCatching { file.canonicalFile.parentFile == dir().canonicalFile }.getOrDefault(false)

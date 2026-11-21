@@ -26,6 +26,7 @@ import {
 } from "../../src/lib/notifications"
 import type { Category } from "../../src/lib/notifications"
 import { PRIVACY_POLICY_URL } from "../../src/lib/links"
+import { useAppUpdate } from "../../src/lib/useAppUpdate"
 import { CURRENT_VERSION, checkForUpdate, type AvailableUpdate } from "../../src/lib/update-check"
 import { MascotOf } from "../../src/components/Mascot"
 import { AvatarControls } from "../../src/components/FloatingCheri"
@@ -95,6 +96,7 @@ export default function SettingsScreen() {
   // a newer build exists say so here too — the banner on the sessions list is
   // dismissible, this row is not (AGE-110). Uses the same 24h-throttled check,
   // so opening Settings repeatedly costs no extra requests.
+  const { openUpdate, busy: updatingApp } = useAppUpdate()
   const [updateAvailable, setUpdateAvailable] = useState<AvailableUpdate | null>(null)
   useEffect(() => {
     let cancelled = false
@@ -334,11 +336,11 @@ export default function SettingsScreen() {
           // of the base sat on a four-week-old build (AGE-110).
           description={
             updateAvailable
-              ? `${CURRENT_VERSION} → ${updateAvailable.version}`
+              ? (updatingApp ? t("update.downloading") : `${CURRENT_VERSION} → ${updateAvailable.version}`)
               : `${CURRENT_VERSION} · ${t("update.upToDate")}`
           }
           isDark={isDark}
-          onPress={updateAvailable ? () => Linking.openURL(updateAvailable.url) : undefined}
+          onPress={updateAvailable ? () => { if (!updatingApp) void openUpdate(updateAvailable) } : undefined}
           right={
             updateAvailable ? (
               <Ionicons name="arrow-up-circle" size={20} color={isDark ? "#7dd3fc" : "#0369a1"} />

@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 5 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 6 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -213,7 +213,7 @@ function createLauncher(deps) {
     }
   }
 
-  return { handle, status, start, stop }
+  return { handle, status, start, stop, isWorking: () => working !== null }
 }
 
 // ---------- real side effects ----------
@@ -409,6 +409,17 @@ function main() {
       const server = Number(state.port) || 4096
       startLanForward([server, port, ...(state.phoneTools ? [Number(state.bridgePort) || server - 2] : [])])
     }
+    try {
+      require('./launcher-update.js').scheduleLauncherUpdate({
+        current: VERSION,
+        launcherPath: __filename,
+        canRestart: () => !launcher.isWorking() && !deps.acp?.list().some((session) => !session.exited),
+        shutdown: () => process.exit(0),
+      })
+    } catch (error) {
+      console.warn('AgentLink launcher updater unavailable:', error.message)
+    }
+    if (process.send) process.send('agentlink-launcher-ready')
   })
 }
 

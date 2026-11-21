@@ -11,6 +11,7 @@ interface InstallerNative {
   downloadApk(url: string, sha256: string, fileName: string): Promise<string>
   cancelDownload(): Promise<boolean>
   installApk(path: string): Promise<boolean>
+  installAppUpdate(path: string): Promise<boolean>
 }
 
 const native: InstallerNative | undefined = Platform.OS === "android" ? (NativeModules.TermuxInstaller as InstallerNative | undefined) : undefined
@@ -28,6 +29,8 @@ export const canInstallApps = () => need().canInstallApps()
 export const openInstallSettings = () => need().openInstallSettings()
 export const cancelDownload = () => (native ? native.cancelDownload() : Promise.resolve(false))
 export const installApk = (path: string) => need().installApk(path)
+export const installAppUpdate = (path: string) => need().installAppUpdate(path)
+export const downloadVerifiedApk = (url: string, sha256: string, name: string) => need().downloadApk(url, sha256, name)
 
 export interface DownloadProgress {
   received: number

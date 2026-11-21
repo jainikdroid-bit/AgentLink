@@ -8,10 +8,31 @@ import {
   shouldCheck,
   shouldPrompt,
   resolveUpdate,
+  releaseApks,
+  selectUpdateApk,
   LAST_CHECK_KEY,
   LATEST_KEY,
   DISMISSED_KEY,
 } from "./update-check-policy.ts"
+
+test("selects a verified GitHub APK for the device ABI, with a universal fallback", () => {
+  const version = "0.26.0"
+  const tag = "v" + version
+  const url = "https://github.com/jainikdroid-bit/AgentLink/releases/download/" + tag + "/"
+  const digest = "sha256:" + "a".repeat(64)
+  const universal = "AgentLink-0.26.0.apk"
+  const arm = "AgentLink-0.26.0-arm64-v8a.apk"
+  const apks = releaseApks(version, tag, [
+    { name: universal, browser_download_url: url + universal, digest },
+    { name: arm, browser_download_url: url + arm, digest },
+    { name: "AgentLink-0.26.0-x86.apk", browser_download_url: "https://example.com/app.apk", digest },
+    { name: "AgentLink-0.26.0-x86_64.apk", browser_download_url: url + "AgentLink-0.26.0-x86_64.apk" },
+  ])
+  assert.equal(apks.length, 2)
+  assert.equal(selectUpdateApk({ version, url, apks }, ["arm64-v8a"])?.name, arm)
+  assert.equal(selectUpdateApk({ version, url, apks }, ["x86"])?.name, universal)
+  assert.equal(selectUpdateApk({ version, url, apks: [{ ...apks[0]!, url: "https://example.com/app.apk" }] }, ["x86"]), undefined)
+})
 
 test("parseVersion accepts the shapes our releases actually use", () => {
   assert.deepEqual(parseVersion("0.4.10"), [0, 4, 10])

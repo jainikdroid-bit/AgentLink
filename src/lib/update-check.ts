@@ -32,6 +32,7 @@ import appJson from "../../app.json"
 import {
   DISMISSED_KEY,
   resolveUpdate,
+  releaseApks,
   type AvailableUpdate,
   type UpdateStorage,
 } from "./update-check-policy"
@@ -59,11 +60,11 @@ async function fetchLatestRelease(): Promise<AvailableUpdate | null> {
       signal: controller.signal,
     })
     if (!response.ok) return null
-    const body = (await response.json()) as { tag_name?: string; html_url?: string; draft?: boolean; prerelease?: boolean }
+    const body = (await response.json()) as { tag_name?: string; html_url?: string; draft?: boolean; prerelease?: boolean; assets?: unknown }
     if (body?.draft || body?.prerelease) return null
     const tag = typeof body?.tag_name === "string" ? body.tag_name.replace(/^v/i, "") : null
     if (!tag) return null
-    return { version: tag, url: typeof body?.html_url === "string" ? body.html_url : RELEASES_PAGE }
+    return { version: tag, url: RELEASES_PAGE, apks: releaseApks(tag, body.tag_name!, body.assets) }
   } catch {
     return null
   } finally {

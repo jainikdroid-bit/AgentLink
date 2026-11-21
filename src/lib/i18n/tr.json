@@ -518,6 +518,12 @@
     "setupGuideLink": "Sunucu kurulum kılavuzu"
   },
   "update": {
+    "install": "Update",
+    "downloading": "Downloading update…",
+    "permission": "Allow installation from AgentLink",
+    "retry": "Allow installation in Android settings, then tap Update again.",
+    "settings": "Android settings",
+    "failed": "Could not install the update. Try again.",
     "available": "Güncelleme mevcut",
     "body": "{{version}} sürümü çıktı. Siz {{current}} kullanıyorsunuz.",
     "action": "Al",

@@ -11,23 +11,30 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from "react-native"
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, AppState } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { checkForUpdate, dismissUpdate, CURRENT_VERSION, type AvailableUpdate } from "../lib/update-check"
+
+import { useAppUpdate } from "../lib/useAppUpdate"
 
 export function UpdateBanner({ isDark }: { isDark: boolean }) {
   const { t } = useTranslation()
   const [update, setUpdate] = useState<AvailableUpdate | null>(null)
 
+  const { openUpdate, busy } = useAppUpdate()
+
   useEffect(() => {
     let cancelled = false
-    checkForUpdate()
+    const refresh = () => checkForUpdate()
       .then((result) => {
         if (!cancelled) setUpdate(result)
       })
       .catch(() => undefined)
+    void refresh()
+    const subscription = AppState.addEventListener("change", (state) => { if (state === "active") void refresh() })
     return () => {
+      subscription.remove()
       cancelled = true
     }
   }, [])
@@ -39,11 +46,8 @@ export function UpdateBanner({ isDark }: { isDark: boolean }) {
 
   const onOpen = useCallback(() => {
     if (!update) return
-    // Opening the release page is also an implicit "I've seen this version":
-    // do not nag about it again either.
-    void dismissUpdate(update.version)
-    void Linking.openURL(update.url)
-  }, [update])
+    void openUpdate(update)
+  }, [update, openUpdate])
 
   if (!update) return null
 
@@ -56,8 +60,8 @@ export function UpdateBanner({ isDark }: { isDark: boolean }) {
           {t("update.body", { version: update.version, current: CURRENT_VERSION })}
         </Text>
       </View>
-      <TouchableOpacity onPress={onOpen} testID="update-banner-open" hitSlop={8}>
-        <Text style={[styles.action, isDark && styles.actionDark]}>{t("update.action")}</Text>
+      <TouchableOpacity onPress={onOpen} disabled={busy} testID="update-banner-open" hitSlop={8}>
+        <Text style={[styles.action, isDark && styles.actionDark]}>{busy ? <ActivityIndicator size="small" /> : t("update.install")}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onDismiss} testID="update-banner-dismiss" hitSlop={8}>
         <Ionicons name="close" size={18} color={isDark ? "#94a3b8" : "#64748b"} />
