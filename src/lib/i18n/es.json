@@ -901,10 +901,12 @@
       "loaded": "En memoria",
       "unloaded": "No cargado",
       "loading": "Cargando…",
+      "unloading": "Descargando de memoria…",
       "unknown": "Desconocido"
     },
     "load": "Cargar",
     "unload": "Descargar",
+    "unconfirmed": "El ordenador no confirmó el nuevo estado del modelo.",
     "failed": "No se pudo cambiar el modelo"
   }
 }

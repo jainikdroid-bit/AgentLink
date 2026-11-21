@@ -901,10 +901,12 @@
       "loaded": "Im Speicher",
       "unloaded": "Nicht geladen",
       "loading": "Wird geladen…",
+      "unloading": "Wird entladen…",
       "unknown": "Unbekannt"
     },
     "load": "Laden",
     "unload": "Entladen",
+    "unconfirmed": "Der Computer hat den neuen Modellstatus nicht bestätigt.",
     "failed": "Modell konnte nicht geändert werden"
   }
 }

@@ -901,10 +901,12 @@
       "loaded": "In memory",
       "unloaded": "Not loaded",
       "loading": "Loading…",
+      "unloading": "Unloading…",
       "unknown": "Unknown"
     },
     "load": "Load",
     "unload": "Unload",
+    "unconfirmed": "The computer did not confirm the model’s new state.",
     "failed": "Could not change the model"
   }
 }

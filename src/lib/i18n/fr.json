@@ -901,10 +901,12 @@
       "loaded": "En mémoire",
       "unloaded": "Non chargé",
       "loading": "Chargement…",
+      "unloading": "Libération de la mémoire…",
       "unknown": "Inconnu"
     },
     "load": "Charger",
     "unload": "Décharger",
+    "unconfirmed": "L’ordinateur n’a pas confirmé le nouvel état du modèle.",
     "failed": "Impossible de modifier le modèle"
   }
 }

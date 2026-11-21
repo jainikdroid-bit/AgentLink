@@ -901,10 +901,12 @@
       "loaded": "Bellekte",
       "unloaded": "Yüklenmedi",
       "loading": "Yükleniyor…",
+      "unloading": "Bellekten çıkarılıyor…",
       "unknown": "Bilinmiyor"
     },
     "load": "Yükle",
     "unload": "Bellekten çıkar",
+    "unconfirmed": "Bilgisayar modelin yeni durumunu doğrulamadı.",
     "failed": "Model değiştirilemedi"
   }
 }

@@ -901,10 +901,12 @@
       "loaded": "メモリ上",
       "unloaded": "未読み込み",
       "loading": "読み込み中…",
+      "unloading": "アンロード中…",
       "unknown": "不明"
     },
     "load": "読み込む",
     "unload": "解放する",
+    "unconfirmed": "PCからモデルの新しい状態を確認できませんでした。",
     "failed": "モデルを変更できませんでした"
   }
 }

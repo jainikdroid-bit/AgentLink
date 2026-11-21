@@ -901,10 +901,12 @@
       "loaded": "已在内存中",
       "unloaded": "未加载",
       "loading": "加载中…",
+      "unloading": "正在卸载模型…",
       "unknown": "未知"
     },
     "load": "加载",
     "unload": "卸载",
+    "unconfirmed": "电脑未确认模型的新状态。",
     "failed": "无法更改模型"
   }
 }
