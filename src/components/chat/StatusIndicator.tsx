@@ -1,20 +1,16 @@
 import { useEffect, useRef, useState } from "react"
 import { View, Text, StyleSheet, Animated, Easing } from "react-native"
-import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { useEvents } from "../../stores/events"
 import { useSessions } from "../../stores/sessions"
 import { agentPhase, formatElapsed, type AgentPhase } from "../../lib/agent-phase"
-import { Mascot, type MascotState } from "../Mascot"
+import type { MascotState } from "../Mascot"
 import { useAvatar } from "../../stores/avatar"
-import { useSettings } from "../../stores/settings"
 
 interface Props {
   sessionID: string
   isDark: boolean
 }
-
-type IconName = keyof typeof Ionicons.glyphMap
 
 // How the mascot acts for each thing the agent can be doing.
 const MASCOT_STATE: Record<AgentPhase["kind"], MascotState> = {
@@ -22,13 +18,6 @@ const MASCOT_STATE: Record<AgentPhase["kind"], MascotState> = {
   tool: "working",
   writing: "writing",
   working: "loading",
-}
-
-const PHASE_ICON: Record<AgentPhase["kind"], IconName> = {
-  thinking: "bulb",
-  tool: "construct",
-  writing: "create",
-  working: "sparkles",
 }
 
 const PHASE_COLOR: Record<AgentPhase["kind"], string> = {
@@ -71,49 +60,6 @@ function BouncingDots({ color }: { color: string }) {
           ]}
         />
       ))}
-    </View>
-  )
-}
-
-/** The phase icon inside a softly pulsing halo; the construct icon also turns. */
-function PhaseOrb({ kind, color }: { kind: AgentPhase["kind"]; color: string }) {
-  const pulse = useRef(new Animated.Value(0)).current
-  const spin = useRef(new Animated.Value(0)).current
-
-  useEffect(() => {
-    const halo = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
-      ]),
-    )
-    halo.start()
-    return () => halo.stop()
-  }, [pulse])
-
-  useEffect(() => {
-    spin.setValue(0)
-    if (kind !== "tool") return
-    const turn = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 2400, easing: Easing.linear, useNativeDriver: true }))
-    turn.start()
-    return () => turn.stop()
-  }, [kind, spin])
-
-  return (
-    <View style={s.orbWrap}>
-      <Animated.View
-        style={[
-          s.halo,
-          {
-            backgroundColor: color,
-            opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.32] }),
-            transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1.25] }) }],
-          },
-        ]}
-      />
-      <Animated.View style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] }}>
-        <Ionicons name={PHASE_ICON[kind]} size={18} color={color} />
-      </Animated.View>
     </View>
   )
 }
@@ -161,8 +107,6 @@ export function StatusIndicator({ sessionID, isDark }: Props) {
   }, [busy, appear])
 
   // Tell the floating 3D Cheri what the agent is doing (thinking -> bulb and hand on chin, tools -> typing...).
-  // The floating 3D Cheri already shows what the agent does; no second picture next to the label then.
-  const show2d = !useSettings((st) => st.avatar.enabled)
   const activityKind = busy ? (status?.type === "retry" ? "working" : latest === "waiting" ? "thinking" : agentPhase(latest).kind) : null
   useEffect(() => {
     useAvatar.getState().setActivity(activityKind ? MASCOT_STATE[activityKind] : null)
@@ -192,7 +136,6 @@ export function StatusIndicator({ sessionID, isDark }: Props) {
       accessibilityLabel={label}
       testID="status-indicator"
     >
-      {show2d ? <Mascot state={MASCOT_STATE[phase.kind]} size={44} /> : null}
       <Text style={[s.text, isDark && s.textDark]} numberOfLines={1}>
         {label}
       </Text>
@@ -214,8 +157,6 @@ const s = StyleSheet.create({
     borderTopWidth: 2,
   },
   barDark: { backgroundColor: "#0a1522" },
-  orbWrap: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
-  halo: { position: "absolute", width: 30, height: 30, borderRadius: 15 },
   text: { flexShrink: 1, fontSize: 14, color: "#4c1d95", fontWeight: "600" },
   textDark: { color: "#67e8f9" },
   dots: { flexDirection: "row", alignItems: "center", gap: 4, height: 14, marginTop: 4 },

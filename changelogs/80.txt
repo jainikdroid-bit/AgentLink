@@ -1,0 +1,1 @@
+v0.26.1 — removed the 2D mascot from the chat progress bar.
