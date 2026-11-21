@@ -148,71 +148,118 @@ async function load(url: string) {
 
 // ---------- outfit ----------
 
-function solidTexture(color: string): THREE.CanvasTexture {
-  const c = document.createElement("canvas")
-  c.width = c.height = 64
-  const g = c.getContext("2d") as CanvasRenderingContext2D
-  g.fillStyle = color
-  g.fillRect(0, 0, 64, 64)
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  return t
+const TOP_HEM = 1.135
+
+type AvatarMaterial = THREE.Material & {
+  map?: THREE.Texture | null
+  shadeMultiplyTexture?: THREE.Texture | null
 }
 
-/** Shape and paint the top in the VRM's rest coordinates, retaining skin weights. */
-function styleSportsTop(mesh: THREE.Mesh) {
-  mesh.geometry = mesh.geometry.clone()
+function restoreWaistSkin(mesh: THREE.Mesh, material: AvatarMaterial, materialIndices: number[]) {
+  const map = material.map
   const geometry = mesh.geometry
-  const position = geometry.getAttribute("position")
-  const colors = new Float32Array(position.count * 3)
-  const pink = new THREE.Color("#f08eb6")
-  const edging = new THREE.Color("#7c3560")
-  const waist = new THREE.Color("#d95896")
-  for (let i = 0; i < position.count; i++) {
-    const x = position.getX(i)
-    const y = position.getY(i)
-    const z = position.getZ(i)
-    // The front of this VRM faces negative Z in its bind geometry.
-    const front = THREE.MathUtils.smoothstep(-z, 0.015, 0.095)
-    const volume = 0.046 * Math.exp(-(((Math.abs(x) - 0.081) / 0.067) ** 2 + ((y - 1.245) / 0.07) ** 2))
-    position.setZ(i, z - volume * front)
-    const neckline = y > 1.345 + Math.min(Math.abs(x), 0.11) * 0.24
-    const trim = neckline || Math.abs(x) > 0.225
-    const color = trim ? edging : y < 1.015 ? waist : pink
-    color.toArray(colors, i * 3)
+  const index = geometry.index
+  if (!map?.image || !index) return
+  const canvas = document.createElement("canvas")
+  canvas.width = map.image.width
+  canvas.height = map.image.height
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return
+  ctx.drawImage(map.image, 0, 0)
+  // The original atlas masks skin covered by the polo. Fill only the UV
+  // triangles in the exposed waist, behind the remaining shirt and skirt.
+  const p = geometry.getAttribute("position")
+  const uv = geometry.getAttribute("uv")
+  ctx.globalCompositeOperation = "destination-over"
+  ctx.fillStyle = "#f7e1d0"
+  ctx.strokeStyle = ctx.fillStyle
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  const groups = geometry.groups.length
+    ? geometry.groups.filter((group) => materialIndices.includes(group.materialIndex ?? 0))
+    : [{ start: 0, count: index.count }]
+  for (const { start, count } of groups) for (let i = start; i < start + count; i += 3) {
+    const triangle = [index.getX(i), index.getX(i + 1), index.getX(i + 2)]
+    if (triangle.some((j) => Math.abs(p.getX(j)) > 0.20 || p.getY(j) < 0.98 || p.getY(j) > 1.19)) continue
+    for (let k = 0; k < triangle.length; k++) {
+      const j = triangle[k]
+      const x = uv.getX(j) * canvas.width
+      const v = uv.getY(j)
+      const y = (map.flipY ? 1 - v : v) * canvas.height
+      if (k === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.closePath()
   }
-  position.needsUpdate = true
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3))
-  geometry.computeVertexNormals()
-  geometry.computeBoundingSphere()
+  ctx.fill()
+  ctx.stroke()
+  const skin = map.clone()
+  skin.image = canvas
+  skin.needsUpdate = true
+  material.map = skin
+  if (material.shadeMultiplyTexture === map) material.shadeMultiplyTexture = skin
+  material.needsUpdate = true
+}
+
+function sportsTop() {
+  const material = new THREE.MeshStandardMaterial({
+    color: "#f395bd", roughness: 1, side: THREE.DoubleSide,
+  })
+  material.onBeforeCompile = (shader) => {
+    // Compare the hem against bind-space Y so it follows the skinned torso.
+    shader.vertexShader = "varying float vShirtHeight;\n" + shader.vertexShader.replace(
+      "#include <begin_vertex>", "#include <begin_vertex>\nvShirtHeight = position.y;",
+    )
+    shader.fragmentShader = "varying float vShirtHeight;\n" + shader.fragmentShader.replace(
+      "#include <color_fragment>",
+      "#include <color_fragment>\n" +
+        "if (vShirtHeight < " + TOP_HEM.toFixed(3) + ") discard;\n" +
+        "diffuseColor.rgb *= mix(0.73, 1.0, smoothstep(1.146, 1.150, vShirtHeight));",
+    )
+  }
+  return material
+}
+
+function plaidSkirt() {
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = 128
+  const ctx = canvas.getContext("2d")
+  if (!ctx) return new THREE.MeshStandardMaterial({ color: "#524065" })
+  ctx.fillStyle = "#442940"
+  ctx.fillRect(0, 0, 128, 128)
+  for (const [pos, width, color] of [[6, 46, "#ac497e99"], [67, 26, "#d29eae80"], [101, 3, "#ffe2edb3"]] as const) {
+    ctx.fillStyle = color
+    ctx.fillRect(pos, 0, width, 128)
+    ctx.fillRect(0, pos, 128, width)
+  }
+  const plaid = new THREE.CanvasTexture(canvas)
+  plaid.colorSpace = THREE.SRGBColorSpace
+  plaid.wrapS = plaid.wrapT = THREE.RepeatWrapping
+  plaid.repeat.set(9, 9)
+  return new THREE.MeshStandardMaterial({ map: plaid, roughness: 1, side: THREE.DoubleSide })
 }
 
 function restyleOutfit(model: VRM) {
-  const white = solidTexture("#ffffff")
-  const skirtTexture = solidTexture("#f7f6f9")
+  const top = sportsTop()
+  const skirt = plaidSkirt()
   model.scene.traverse((o) => {
     const mesh = o as THREE.Mesh
     if (!mesh.isMesh) return
     const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-    for (const m of mats as (THREE.Material & { map?: THREE.Texture | null; shadeMultiplyTexture?: THREE.Texture | null; shadeColorFactor?: THREE.Color; color?: THREE.Color })[]) {
-      const name = m.name || ""
-      const top = /Tops/i.test(name)
-      const skirt = /Bottoms/i.test(name)
-      if (/Accessory/i.test(name)) {
-        m.visible = false
-        continue
+    const skin = new Map<AvatarMaterial, number[]>()
+    const styled = mats.map((material: AvatarMaterial, i) => {
+      if (/Accessory/i.test(material.name)) material.visible = false
+      if (/Body_.*SKIN/i.test(material.name)) {
+        const indices = skin.get(material) ?? []
+        indices.push(i)
+        skin.set(material, indices)
       }
-      if (!top && !skirt) continue
-      if (top) {
-        styleSportsTop(mesh)
-        m.vertexColors = true
-      }
-      m.map = top ? white : skirtTexture
-      if (m.shadeMultiplyTexture !== undefined) m.shadeMultiplyTexture = top ? white : skirtTexture
-      if (m.shadeColorFactor) m.shadeColorFactor.set(top ? "#c8708f" : "#c3c2d4")
-      if (m.color) m.color.set("#ffffff")
-      m.needsUpdate = true
-    }
+      if (/Tops/i.test(material.name)) return top
+      if (/Bottoms/i.test(material.name)) return skirt
+      return material
+    })
+    for (const [material, indices] of skin) restoreWaistSkin(mesh, material, indices)
+    mesh.material = Array.isArray(mesh.material) ? styled : styled[0]
   })
 }
 
@@ -241,7 +288,7 @@ const GROUP: Record<string, Group> = {
 /** How strongly each clip drives each body part (the rest keeps coming from the hand-made poses). */
 const INFLUENCE: Record<string, Record<Group, number>> = {
   idle: { hips: 0, trunk: 0, legs: 0 },
-  walk: { hips: 0.65, trunk: 0.65, legs: 1 },
+  walk: { hips: 0.65, trunk: 0.65, legs: 0.8 },
   crouch: { hips: 1, trunk: 0.25, legs: 1 },
   jump: { hips: 1, trunk: 1, legs: 1 },
 }
@@ -456,6 +503,7 @@ const chestPos = new THREE.Vector3()
 const gestureYaw = new THREE.Quaternion()
 const worldUp = new THREE.Vector3(0, 1, 0)
 let lastGestureTurn = 0
+let bodyTurn = 0
 
 const feet = ["leftFoot", "rightFoot", "leftToes", "rightToes"] as const
 const footWorld = new THREE.Vector3()
@@ -644,6 +692,13 @@ window.cheri = {
         step(dt)
       }
     },
+    view: (degrees: number) => {
+      camera.position.set(4.2 * Math.sin(degrees * DEG), 0.9, 4.2 * Math.cos(degrees * DEG))
+      camera.lookAt(0, 0.85, 0)
+    },
+    feet: () => (["leftUpperLeg", "leftLowerLeg", "leftFoot", "leftToes", "rightUpperLeg", "rightLowerLeg", "rightFoot", "rightToes"] as const).map(
+      (name) => vrm?.humanoid.getNormalizedBoneNode(name)?.getWorldPosition(new THREE.Vector3()).toArray(),
+    ),
     snap: () => (renderer.render(scene, camera), canvas.toDataURL("image/png")) },
 }
 
@@ -734,7 +789,7 @@ function step(dt: number) {
     if (pool.length) play(pool[Math.floor(Math.random() * pool.length)])
     else nextSkitAt = now + 8000
   }
-  const base = walking ? { ...sample(WALK, now, REST), turn: walking * 75 } : sample(BASE[mood], now, REST)
+  const base = walking ? { ...sample(WALK, now, REST), turn: walking * 60 } : sample(BASE[mood], now, REST)
   const pose = skit && !walking ? sample(skit.scene, now - skit.start, base) : base
   const breathe = Math.sin(now / 800) * 1.2
   const bones: BonePose = { ...pose.bones, chest: [(pose.bones.chest?.[0] ?? 0) + breathe, pose.bones.chest?.[1] ?? 0, pose.bones.chest?.[2] ?? 0] }
@@ -750,7 +805,8 @@ function step(dt: number) {
     selectClip(motion, want, want === "jump" ? 0.15 : want === "idle" ? 0.35 : 0.4)
     for (const name of Object.keys(GROUP)) if (GROUP[name] !== "trunk" || motion.cur !== "idle") delete bones[name as Bone]
   }
-  const posed: Pose = { ...pose, bones }
+  bodyTurn = THREE.MathUtils.damp(bodyTurn, pose.turn, 11, dt)
+  const posed: Pose = { ...pose, bones, turn: bodyTurn }
   applyBones(posed, 1 - Math.exp(-dt * 14))
   if (motion) {
     const m = applyMotion(motion, dt)

@@ -65,7 +65,14 @@ export interface Target {
 const T = (x: number, y: number, z: number, ref: Target["ref"] = "head"): Target => ({ x, y, z, ref })
 
 export const REST: Pose = {
-  bones: {},
+  bones: {
+    leftUpperLeg: [-2, 4, -4],
+    rightUpperLeg: [-2, -4, 4],
+    leftLowerLeg: [4, 0, 0],
+    rightLowerLeg: [4, 0, 0],
+    leftFoot: [-2, 0, 0],
+    rightFoot: [-2, 0, 0],
+  },
   l: T(0.21, -0.4, 0.04, "chest"),
   r: T(-0.21, -0.4, 0.04, "chest"),
   curlL: 0.35,
