@@ -20,6 +20,7 @@ export interface AcpChatParams {
   cwd?: string
   /** Reopen an agent that is already running. */
   existingId?: string
+  resumeId?: string
 }
 
 const RECONNECT_FIRST_MS = 1_000
@@ -115,13 +116,14 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
   useEffect(() => {
     const t = targetRef.current
     if (!t || !handle) return
-    const step = nextHandshakeStep(state, handle.cwd, pkg.version)
+    if (params.resumeId && state.handshake === "initialized" && !state.loadSession) { setFatal("ACP session/load is not supported by this agent"); return }
+    const step = nextHandshakeStep(state, handle.cwd, pkg.version, params.resumeId)
     if (!step) return
     const key = `${state.handshake}:${state.nextId}`
     if (stepSent.current === key) return
     stepSent.current = key
     sendMessage(t, handle.id, step).catch(() => { stepSent.current = null })
-  }, [state, handle])
+  }, [state, handle, params.resumeId])
 
   const post = useCallback(async (message: RpcMessage) => {
     const t = targetRef.current
