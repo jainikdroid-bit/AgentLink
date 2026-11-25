@@ -17,6 +17,7 @@ interface Settings {
   locale: LocalePreference
   mascot: MascotKind
   theme: ThemeId
+  avatarCharacter: "cheri" | "byte" | "orbit"
   /** Show the agent's reasoning open instead of folded. */
   showThinking: boolean
   /** Show the agent's actions (commands, edits) open instead of folded. */
@@ -43,6 +44,7 @@ const DEFAULTS: Settings = {
   locale: "system",
   mascot: DEFAULT_MASCOT,
   theme: "cyber",
+  avatarCharacter: "cheri",
   showThinking: true,
   showActions: false,
   replyInMyLanguage: true,
@@ -55,6 +57,7 @@ interface SettingsState extends Settings {
   setPageSize: (size: number) => Promise<void>
   setNotification: (category: Category, enabled: boolean) => Promise<void>
   setLocale: (locale: LocalePreference) => Promise<void>
+  setAvatarCharacter: (avatarCharacter: Settings["avatarCharacter"]) => Promise<void>
   setTheme: (theme: ThemeId) => Promise<void>
   setMascot: (mascot: MascotKind) => Promise<void>
   setShowThinking: (value: boolean) => Promise<void>
@@ -64,8 +67,8 @@ interface SettingsState extends Settings {
 }
 
 function snapshot(get: () => SettingsState): Settings {
-  const { pageSize, notifications, locale, mascot, theme, showThinking, showActions, replyInMyLanguage, avatar } = get()
-  return { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage, avatar }
+  const { pageSize, notifications, locale, mascot, theme, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar } = get()
+  return { pageSize, notifications, locale, mascot, theme, showThinking, showActions, replyInMyLanguage, avatar }
 }
 
 async function persist(settings: Settings) {
@@ -81,7 +84,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>
       // Merge stored settings with defaults so new fields/categories get their default
-      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), theme: resolveTheme(parsed.theme), avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
+      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), theme: resolveTheme(parsed.theme), avatarCharacter: parsed.avatarCharacter === "byte" || parsed.avatarCharacter === "orbit" ? parsed.avatarCharacter : "cheri", avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
       set({ ...merged, loaded: true })
       setAppLocale(merged.locale)
       return
@@ -105,6 +108,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set({ locale })
     setAppLocale(locale) // applies immediately
     await persist({ ...snapshot(get), locale })
+  },
+
+  setAvatarCharacter: async (avatarCharacter) => {
+    set({ avatarCharacter })
+    await persist(snapshot(get))
   },
 
   setTheme: async (theme) => {
