@@ -37,3 +37,6 @@ writeFileSync(join(outDir, "index.html"), html)
 copyFileSync(join(root, "web/cheri3d/model/cheri.vrm"), join(outDir, "cheri.vrm"))
 copyFileSync(join(root, "web/cheri3d/anim/cheri-anim.json"), join(outDir, "cheri-anim.json"))
 console.log(`wrote ${join(outDir, "index.html")} (${Math.round(html.length / 1024)} KB), cheri.vrm and cheri-anim.json`)
+
+// Build the optional companions alongside the existing, unchanged Cheri output.
+if (!lab && !args.some(a => !a.startsWith("--"))) execFileSync(process.execPath, [join(root, "scripts/build-companions3d.mjs")], { cwd: root, stdio: "inherit" })
