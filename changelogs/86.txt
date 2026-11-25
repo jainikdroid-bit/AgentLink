@@ -1,0 +1,1 @@
+v0.26.7 — a short tap reacts on Cheri and still reaches the screen under her.

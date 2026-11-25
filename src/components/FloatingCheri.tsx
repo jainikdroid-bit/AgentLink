@@ -86,7 +86,10 @@ export function FloatingCheri({ character = "cheri" }: { character?: "cheri" | "
       stopWalk()
       web.current?.injectJavaScript("window.cheri && cheri.play('giggle'); true;")
     }
-    else if (msg.type === "menu") setMenu(true)
+    else if (msg.type === "tap") {
+      stopWalk()
+      web.current?.injectJavaScript("window.cheri && cheri.tap(); true;")
+    } else if (msg.type === "menu") setMenu(true)
     else if (msg.type === "pinchStart") pinchStart.current = w
     else if (msg.type === "pinch") setLiveWidth(pinchWidth(pinchStart.current || w, msg.scale ?? 1))
     else if (msg.type === "pinchEnd") {

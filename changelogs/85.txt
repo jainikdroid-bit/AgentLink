@@ -1,1 +1,1 @@
-v0.26.6 — simplify pairing with guided LAN/Tailscale setup, expandable troubleshooting and credential recovery; improve chat readability and retry status. Preserve Cheri's existing behavior. Add Aurora, Nebula and Ember themes, plus optional floating 3D Byte and Orbit companions.
+v0.26.6 — Cheri crouches and ponders with a wisp of smoke when the AI thinks long; her actions now play in turn.

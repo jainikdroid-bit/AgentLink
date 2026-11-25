@@ -97,8 +97,8 @@ android {
         applicationId 'cc.agentlabs.opencode'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 85
-        versionName "0.26.6"
+        versionCode 87
+        versionName "0.26.8"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -190,7 +190,6 @@ android {
 }
 
 dependencies {
-    implementation project(":localmodel")
     // Built-in Tailscale (userspace tsnet). Built by native/tsnet/build.sh.
     implementation(files("libs/tsnetbridge.aar"))
 
