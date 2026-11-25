@@ -222,3 +222,28 @@ test('session metadata survives launcher restart, and duplicate RPC IDs are not 
     try{assert.deepEqual((await second.call('GET','/acp/saved')).json.sessions,saved)}finally{second.close()}
   }finally{t.close();fs.rmSync(dir,{recursive:true,force:true})}
 })
+
+test('host queue drains on success, pauses on cancellation and deduplicates submitted items',async()=>{
+ const t=await setup()
+ try{
+  const started=await t.call('POST','/acp/start',{agent:'fake',cwd:os.tmpdir()})
+  const id=started.json.id,base='/acp/'+id
+  await t.call('POST',base+'/send',rpc(1,'initialize',{protocolVersion:1}))
+  await t.call('POST',base+'/send',rpc(2,'session/new',{cwd:os.tmpdir(),mcpServers:[]}))
+  await t.stream(base+'/events',events=>events.some(e=>e.data?.result?.sessionId==='s1'))
+  await t.call('POST',base+'/send',rpc(3,'session/prompt',{sessionId:'s1',prompt:[{type:'text',text:'first'}]}))
+  await t.stream(base+'/events',events=>events.some(e=>e.data?.method==='session/request_permission'))
+  const item={action:'enqueue',id:'12345678-1234-1234-1234-123456789012',text:'second'}
+  assert.equal((await t.call('POST',base+'/queue',item)).json.items.length,1)
+  assert.equal((await t.call('POST',base+'/queue',item)).json.duplicate,true)
+  assert.equal((await t.call('GET',base+'/queue')).json.items.length,1)
+  const running=(await t.call('GET','/acp/agents')).json.running[0]
+  assert.equal(running.busy,true);assert.equal(running.pendingPermissions,1)
+  await t.call('POST',base+'/queue',{action:'pause'})
+  await t.call('POST',base+'/send',{jsonrpc:'2.0',id:900,result:{outcome:{outcome:'selected',optionId:'ok'}}})
+  await t.stream(base+'/events',events=>events.some(e=>e.data?.result?.stopReason==='end_turn'))
+  assert.equal((await t.call('GET',base+'/queue')).json.items.length,1)
+  assert.equal((await t.call('POST',base+'/queue',{action:'resume'})).json.items.length,0)
+  await t.stream(base+'/events',events=>events.some(e=>e.event==='sent'&&e.data?.id==='agentlink-queue-'+item.id))
+ }finally{t.close()}
+})
