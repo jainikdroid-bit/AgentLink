@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "如何连接？",
+      "tailscaleTitle": "远程连接 · Tailscale",
+      "tailscaleBody": "私有网络，两台设备登录同一账号。",
+      "lanTitle": "同一 Wi-Fi · LAN",
+      "lanBody": "无需账号，请使用可信的家庭网络。",
+      "platform": "电脑操作系统",
+      "details": "详细说明与故障排查",
+      "computerDetails": "Windows 打开 PowerShell，Linux/macOS 打开终端。粘贴命令并回车，等待二维码。请保密配对链接。",
+      "tailscaleDetails": "两台设备使用同一 Tailscale 账号，电脑保持唤醒。如果正在使用其他 VPN，请检查 Tailscale 连接。",
+      "scanDetails": "扫描配对二维码，而不是 APK 下载二维码。确认电脑名称。无法扫码时，请在 10 分钟内输入六位数验证码。出现 401 时请重新生成配对链接。",
+      "manual": "手动连接（IP 和密码）",
+      "choosePairing": "选择分步设置，或连接已配置的电脑。"
+    },
     "computer": {
       "title": "在电脑上运行一条命令",
       "body": "打开 PowerShell（Windows）或终端（macOS / Linux），粘贴命令并按回车。它会安装缺少的组件、启动服务器并显示二维码。",
