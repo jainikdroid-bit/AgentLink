@@ -275,7 +275,9 @@ function onResponse(state: AcpState, msg: RpcMessage): AcpState {
     if (failed) return { ...next, handshake: "failed", error: errorText(msg.error) }
     const r = isObject(msg.result) ? msg.result : {}
     const { modes, modeId } = modesFrom(r.modes)
-    next = { ...next, handshake: "done", sessionId: str(r.sessionId) || next.sessionId || null, ...modelFrom(r.configOptions), modes, modeId }
+    const sessionId=method === "session/load" ? next.sessionId : str(r.sessionId) || null
+    if(!sessionId) return {...next,handshake:"failed",error:"Agent returned no session ID"}
+    next = { ...next, handshake: "done", sessionId, ...modelFrom(r.configOptions), modes, modeId }
     const safe = RISKY_MODES.has(modeId.toLowerCase()) ? SAFE_MODES.map((id) => modes.find((m) => m.id === id)).find(Boolean) : undefined
     if (!safe) return next
     const from = modes.find((m) => m.id === modeId)
