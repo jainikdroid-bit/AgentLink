@@ -220,6 +220,13 @@ function createLauncher(deps) {
     // Other coding agents (ACP): the bridge answers its own routes, once the password has been checked above.
     if (route.startsWith('/acp/') && deps.acp) { await deps.acp.handle(req, res, route); return }
     try {
+      if (route === '/git/inventory' && req.method === 'GET') {
+        if (!process.env.AGENTLINK_GIT_ROOTS) return send(res, 403, {ok:false,error:'Git workspace access is not enabled'})
+        let workspace
+        try { workspace = require('./git-workspace.js') } catch { return send(res, 501, {ok:false,error:'update the installer to enable Git inventory'}) }
+        try { return send(res, 200, {ok:true,...await workspace.inventory(new URL(req.url,'http://local').searchParams.get('cwd'))}) }
+        catch (e) { return send(res, e.status || 500, {ok:false,error:e.status ? e.message : 'Git inventory failed'}) }
+      }
       if (route === '/hardware' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.hardware || sampleHardware)()) })
       if (route === '/status' && req.method === 'GET') return send(res, 200, { ok: true, launcher: VERSION, acp: !!deps.acp, server: await status(), ...addresses(deps.readState() || {}) })
       // Local model (llama.cpp router): state, and load/unload it from the computer's memory.
