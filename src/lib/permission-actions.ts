@@ -14,6 +14,7 @@ export async function replyPermission(sessionID: string, requestID: string, repl
   const client = (directory ? connections.clientForDirectory(directory) : null) ?? connections.client
   if (!client) return
   const snapshot = useEvents.getState().permissions[sessionID] || []
+  if (!snapshot.some(p=>p.id===requestID)) return
   useEvents.setState((state) => ({
     permissions: { ...state.permissions, [sessionID]: snapshot.filter((p) => p.id !== requestID) },
   }))
@@ -21,7 +22,7 @@ export async function replyPermission(sessionID: string, requestID: string, repl
     await client.permission.reply(requestID, reply)
   } catch (error) {
     console.error("Permission reply failed:", error)
-    useEvents.setState((state) => ({ permissions: { ...state.permissions, [sessionID]: snapshot } }))
+    if (useConnections.getState().activeConnection?.id === connections.activeConnection?.id) useEvents.setState((state) => ({ permissions: { ...state.permissions, [sessionID]: snapshot } }))
     if (!quiet) Alert.alert(i18n.t("session.alerts.replyFailedTitle"), i18n.t("session.alerts.replyFailedMessage"))
   }
 }
