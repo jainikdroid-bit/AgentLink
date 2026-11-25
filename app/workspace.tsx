@@ -54,6 +54,7 @@ export default function Workspace(){
  useFocusEffect(useCallback(()=>{generation.current++;void poll();const timer=setInterval(()=>void poll(),20000);return()=>{clearInterval(timer);generation.current++}},[poll]))
  const reset=(id:string)=>{
   if(operation.current)return
+  selection.current=id
   const c=connections.find(c=>c.id===id)
   setSelected(id);setCwd(c?.directory||"");setInventory(null);setEdit(null);setOutput("");setError("");setFile("");setBranch("");setMessage("");setResume("");setBenchModels([]);setBenchResult("")
  }
@@ -62,7 +63,9 @@ export default function Workspace(){
   if(operation.current)return
   operation.current=true;setBusy(true);setError("")
   try{
-   const id=selected,target=await getConnectionTarget(id)
+   const id=selected
+   if(selection.current!==id)throw Error(w("noHost"))
+   const target=await getConnectionTarget(id)
    if(!target||selection.current!==id)throw Error(w("noHost"))
    await fn(target,"?cwd="+encodeURIComponent(cwd.trim()))
   }catch(e){setError(describe(e))}finally{operation.current=false;setBusy(false)}
@@ -94,7 +97,7 @@ export default function Workspace(){
   await Linking.openURL(routed)
  })
  const start=(agent:AgentInfo,existingId?:string,folder=cwd,savedId?:string)=>{
-  if(busy||!selected)return
+  if(busy||!selected||selection.current!==selected)return
   router.push({pathname:"/agent-chat",params:{agent:agent.id,name:agent.name,cwd:folder,connectionId:selected,...(existingId?{id:existingId}:(savedId||resume.trim())?{resumeId:savedId||resume.trim()}:{}),...(handoff.trim()?{draft:handoff.trim().slice(0,8000)}:{})}})
  }
  const box={backgroundColor:p.surface,borderRadius:12,borderWidth:1,borderColor:p.border,padding:12,gap:8} as const
