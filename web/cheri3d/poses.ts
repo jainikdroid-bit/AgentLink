@@ -113,7 +113,7 @@ export const ARMS = {
   shrug: { l: T(0.3, -0.06, 0.12, "chest"), r: T(-0.3, -0.06, 0.12, "chest") },
 } satisfies Record<string, Hands>
 
-export type PropKind = "keyboard" | "bulb" | "cup" | "z" | "heart" | "sweat" | "confetti" | "cloud" | "question" | "exclaim" | "note" | "stars" | "panel" | "ring" | "phone" | "sparkle"
+export type PropKind = "keyboard" | "bulb" | "cup" | "z" | "heart" | "sweat" | "confetti" | "cloud" | "question" | "exclaim" | "note" | "stars" | "panel" | "ring" | "phone" | "sparkle" | "smoke"
 
 export interface PropCue {
   kind: PropKind
@@ -236,6 +236,19 @@ export const SKITS: Record<string, Scene> = {
       k(5000, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.12, -0.42, 0.24, "chest") }, SQUAT), lookX: 0 }),
     ],
     props: [{ kind: "note", from: 3000, to: 4800 }],
+  },
+  // Long thinking: crouched, pensive, a wisp of smoke drifting up from the raised hand (looks like a thoughtful puff).
+  thinkSmoke: {
+    id: "thinkSmoke",
+    ms: 12000,
+    keys: [
+      k(600, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.02, -0.1, 0.1) }, { ...SQUAT, head: [6, -8, 6] }), lift: -0.205, lookY: -0.3, lookX: 0.4, face: "relaxed", faceWeight: 0.5, lids: 0.3 }),
+      k(3500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.03, -0.04, 0.12) }, { ...SQUAT, head: [-6, -8, 6] }), lookY: 0.4, lookX: 0.6, lids: 0.5 }),
+      k(6500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.02, -0.1, 0.1) }, { ...SQUAT, head: [6, -6, 6] }), lookY: -0.3, lookX: 0.4, lids: 0.3 }),
+      k(9500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.03, -0.04, 0.12) }, { ...SQUAT, head: [-6, -8, 6] }), lookY: 0.4, lookX: 0.6, lids: 0.5 }),
+      k(11500, { ...arms({ l: T(0.12, -0.42, 0.24, "chest"), r: T(-0.02, -0.1, 0.1) }, SQUAT), lookY: -0.2, lids: 0.2 }),
+    ],
+    props: [{ kind: "smoke", from: 1000, to: 11000 }, { kind: "question", from: 5000, to: 6500 }],
   },
   joyJump: {
     id: "joyJump",
@@ -388,7 +401,7 @@ export const SKITS: Record<string, Scene> = {
 
 export const MOOD_SKITS: Record<string, string[]> = {
   idle: ["wave", "peace", "kawaii", "nya", "stretch", "coffee", "lookAround", "heartHands", "squat", "squat"],
-  thinking: ["idea", "lookAround"],
+  thinking: ["thinkSmoke", "idea", "lookAround"],
   working: ["coffeeChug", "sweatTyping"],
   writing: ["coffeeChug", "sweatTyping"],
   loading: ["lookAround", "nya"],

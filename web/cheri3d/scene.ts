@@ -97,6 +97,7 @@ const props: Record<PropKind, THREE.Object3D> = {
   ring: emojiSprite("⏳", 0.12),
   phone: emojiSprite("📱", 0.1),
   sparkle: emojiSprite("✨", 0.13),
+  smoke: emojiSprite("💨", 0.12),
 }
 props.keyboard.rotation.x = -1.1
 for (const p of Object.values(props)) {
@@ -275,7 +276,7 @@ interface AnimData {
 }
 const TRUNK = new Set(["spine", "chest", "upperChest"])
 const TRUNK_WEIGHT: Record<string, number> = { idle: 0, walk: 0.45, crouch: 0.25, jump: 0.7 }
-const SKIT_CLIP: Record<string, string> = { squat: "crouch", joyJump: "jump", victory: "jump" }
+const SKIT_CLIP: Record<string, string> = { squat: "crouch", thinkSmoke: "crouch", joyJump: "jump", victory: "jump" }
 /** Bones a motion clip can drive: they return to rest whenever a pose does not name them. */
 const ZERO_BONES = Object.fromEntries([...TRUNK, "hips"].map((b) => [b, [0, 0, 0]])) as Record<string, [number, number, number]>
 
@@ -556,6 +557,10 @@ function placeProps(cues: PropKind[], now: number) {
   props.confetti.position.set(headPos.x - 0.2, headPos.y + 0.18 + bob, headPos.z)
   props.ring.position.set(headPos.x + 0.2, headPos.y + 0.12, headPos.z)
   props.ring.rotation.z = now / 300
+  // Smoke wisp: rises from the hand and fades, repeating, over a transparent background.
+  const puff = (now % 2400) / 2400
+  props.smoke.position.set(handPos.x + Math.sin(now / 400) * 0.03, handPos.y + 0.04 + puff * 0.22, handPos.z + 0.04)
+  ;(props.smoke as THREE.Sprite).material.opacity = Math.sin(puff * Math.PI) * 0.8
 }
 
 // ---------- director ----------
@@ -573,6 +578,10 @@ let skew = 0
 const nowMs = () => performance.now() + skew
 let nextSkitAt = nowMs() + 4000
 let last: string | null = null
+let moodSince = nowMs()
+const LONG_THINK_MS = 10_000
+/** Next skit index per mood: skits go round in order. */
+const cycle: Record<string, number> = {}
 const taps = { count: 0, at: 0 }
 
 function play(id: string) {
@@ -586,6 +595,7 @@ function setMood(m: string) {
   if (!BASE[m] || m === mood) return
   const enter = ENTER_SKIT[m]
   mood = m
+  moodSince = nowMs()
   skit = null
   if (enter) play(enter)
   nextSkitAt = nowMs() + 5000 + Math.random() * 5000
@@ -712,10 +722,17 @@ function step(dt: number) {
     skit = null
     nextSkitAt = now + 6000 + Math.random() * 7000
   }
-  if (!skit && !walking && now >= nextSkitAt) {
-    const pool = (MOOD_SKITS[mood] ?? []).filter((id) => id !== last)
-    if (pool.length) play(pool[Math.floor(Math.random() * pool.length)])
-    else nextSkitAt = now + 8000
+  if (!skit && !walking && mood === "thinking" && now - moodSince > LONG_THINK_MS && last !== "thinkSmoke" && now >= nextSkitAt - 5000) {
+    // Thinking for a long time: crouch and ponder with a wisp of smoke.
+    play("thinkSmoke")
+  } else if (!skit && !walking && now >= nextSkitAt) {
+    // Actions play in turn (a playlist), not at random.
+    const pool = MOOD_SKITS[mood] ?? []
+    if (pool.length) {
+      const i = (cycle[mood] ?? 0) % pool.length
+      cycle[mood] = i + 1
+      play(pool[i])
+    } else nextSkitAt = now + 8000
   }
   const moving = walking !== 0 && now >= walkStart
   if (walking) walkTime = Math.max(0, now - walkStart) / 1000

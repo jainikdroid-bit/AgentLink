@@ -1,0 +1,1 @@
+v0.26.6 — Cheri crouches and ponders with a wisp of smoke when the AI thinks long; her actions now play in turn.
