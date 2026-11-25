@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "Como vai conectar?",
+      "tailscaleTitle": "De qualquer lugar · Tailscale",
+      "tailscaleBody": "Rede privada; entre nos dois dispositivos.",
+      "lanTitle": "Mesmo Wi-Fi · LAN",
+      "lanBody": "Sem conta; use uma rede doméstica confiável.",
+      "platform": "Sistema operacional do computador",
+      "details": "Detalhes e solução de problemas",
+      "computerDetails": "Abra PowerShell no Windows ou Terminal no Linux/macOS. Cole o comando, pressione Enter e aguarde o QR. Mantenha o link de pareamento privado.",
+      "tailscaleDetails": "Use a mesma conta Tailscale nos dois dispositivos. O computador deve estar ativo. Se houver outra VPN, confira a conexão Tailscale.",
+      "scanDetails": "Escaneie o QR de pareamento, não o do APK. Confirme o nome. Se falhar, use o código de seis dígitos em 10 minutos. Se ocorrer 401, gere outro link.",
+      "manual": "Conexão manual (IP e senha)",
+      "choosePairing": "Escolha a configuração guiada ou conecte um computador já configurado."
+    },
     "computer": {
       "title": "Execute um comando no seu computador",
       "body": "Abra o PowerShell (Windows) ou Terminal (macOS / Linux), cole o comando, pressione Enter. Ele instala o que falta, inicia o servidor e mostra um código QR.",
