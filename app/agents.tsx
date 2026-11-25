@@ -86,7 +86,7 @@ export default function AgentsScreen() {
           <Text style={s.cardSub}>CPU {hardware.cpu.percent === null ? "—" : `${hardware.cpu.percent.toFixed(1)}%`} · {hardware.cpu.logicalCores}×</Text>
           <Text style={s.cardSub}>RAM {((hardware.memory.totalBytes - hardware.memory.availableBytes) / 1024 ** 3).toFixed(1)} / {(hardware.memory.totalBytes / 1024 ** 3).toFixed(1)} GiB</Text>
           {hardware.storage && <Text style={s.cardSub}>SSD/HDD {((hardware.storage.totalBytes - hardware.storage.availableBytes) / 1024 ** 3).toFixed(1)} / {(hardware.storage.totalBytes / 1024 ** 3).toFixed(1)} GiB</Text>}
-          <Text style={s.cardSub}>GPU — · °C —</Text>
+          {hardware.gpu?.length ? hardware.gpu.map((g,i)=><Text key={i} style={s.cardSub}>{g.name} · GPU {g.percent??"—"}% · VRAM {g.memoryUsedMiB??"—"}/{g.memoryTotalMiB??"—"} MiB · {g.temperatureC??"—"} °C</Text>) : <Text style={s.cardSub}>GPU — · °C —</Text>}
           <Text style={s.cardSub}>{new Date(hardware.at).toLocaleTimeString()}</Text>
         </View>
       </View>}
