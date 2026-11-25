@@ -40,7 +40,21 @@ const PAIR_BODY_LIMIT = 1024
 
 // Lightweight host metrics. CPU is measured between two samples (not loadavg).
 // Unknown sensor values remain null rather than inventing hardware readings.
-function createHardwareSampler({ system = os, clock = Date.now, disk = () => fs.promises.statfs(system.homedir()) } = {}) {
+async function sampleNvidia() {
+  const {execFile}=require('node:child_process')
+  return new Promise(resolve=>{
+    execFile('nvidia-smi',['--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu','--format=csv,noheader,nounits'],{timeout:2000,maxBuffer:16384,windowsHide:true},(error,stdout)=>{
+      if(error)return resolve(null)
+      const rows=stdout.trim().split(/\r?\n/).map(line=>{
+        const [name,...raw]=line.split(',').map(x=>x.trim())
+        const values=raw.map(x=>x===''||!Number.isFinite(Number(x))?null:Number(x))
+        return {name,percent:values[0]??null,memoryUsedMiB:values[1]??null,memoryTotalMiB:values[2]??null,temperatureC:values[3]??null}
+      }).filter(x=>x.name)
+      resolve(rows.length?rows:null)
+    })
+  })
+}
+function createHardwareSampler({ system = os, clock = Date.now, disk = () => fs.promises.statfs(system.homedir()), gpu = system===os?sampleNvidia:async()=>null } = {}) {
   let previous = null
   return async function sample() {
     const at = clock()
@@ -55,13 +69,15 @@ function createHardwareSampler({ system = os, clock = Date.now, disk = () => fs.
       if (total > 0 && idle >= 0 && idle <= total) cpuPercent = Math.round((1-idle/total)*1000)/10
     }
     previous = {...ticks,at,count:cores.length}
-    const total = system.totalmem(), free = system.freemem()
+    const total = system.totalmem()
+    let free = system.freemem(), memorySource='os.freemem'
+    if(system===os&&system.platform()==='linux')try{const m=/^MemAvailable:\s+(\d+)\s+kB/m.exec(await fs.promises.readFile('/proc/meminfo','utf8'));if(m){free=Math.min(total,Number(m[1])*1024);memorySource='MemAvailable'}}catch{}
     let storage = null
     try {
       const d = await disk()
       storage = { totalBytes: Number(d.blocks)*Number(d.bsize), availableBytes: Number(d.bavail)*Number(d.bsize) }
     } catch { /* not supported by this host */ }
-    return { at, platform: system.platform(), arch: system.arch(), cpu: { model: cores[0]?.model || null, logicalCores: cores.length, percent:cpuPercent }, memory: { totalBytes:total, availableBytes:free, source:"os.freemem" }, storage, gpu:null, temperatureC:null, uptimeSeconds:system.uptime() }
+    return { at, platform: system.platform(), arch: system.arch(), cpu: { model: cores[0]?.model || null, logicalCores: cores.length, percent:cpuPercent }, memory: { totalBytes:total, availableBytes:free, source:memorySource }, storage, gpu:await gpu().catch(()=>null), temperatureC:null, uptimeSeconds:system.uptime() }
   }
 }
 const sampleHardware = createHardwareSampler()
