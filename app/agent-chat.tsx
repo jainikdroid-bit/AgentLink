@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { cyber } from "../src/theme/cyber"
-import { useConnections } from "../src/stores/connections"
+import { getConnectionTarget, useConnections } from "../src/stores/connections"
+import type { AcpTarget } from "../src/lib/acp/api"
 import { useAcpChat } from "../src/lib/acp/useAcpChat"
 import { loginHint, type ChatItem } from "../src/lib/acp/protocol"
 import { Markdown } from "../src/components/markdown"
@@ -26,21 +27,24 @@ export default function AgentChatScreen() {
   const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
-  const params = useLocalSearchParams<{ agent: string; name?: string; cwd?: string; id?: string }>()
+  const params = useLocalSearchParams<{ agent: string; name?: string; cwd?: string; id?: string; connectionId?: string; resumeId?: string; draft?: string }>()
   const { activeConnection, clientBase } = useConnections()
-  const target = useMemo(
+  const activeTarget = useMemo(
     () =>
       activeConnection?.launcherPort
         ? { serverUrl: activeConnection.url, launcherPort: activeConnection.launcherPort, auth: clientBase?.auth, tunnel: !!activeConnection.tunnelTopic }
         : null,
     [activeConnection, clientBase],
   )
-  const chat = useAcpChat(target, { agent: String(params.agent), cwd: params.cwd || undefined, existingId: params.id || undefined })
+  const [explicitTarget, setExplicitTarget] = useState<AcpTarget | null>(null)
+  useEffect(() => { let cancelled = false; if (params.connectionId) void getConnectionTarget(params.connectionId).then(target => { if (!cancelled) setExplicitTarget(target) }).catch(() => undefined); return () => { cancelled = true } }, [params.connectionId])
+  const target = params.connectionId ? explicitTarget : activeTarget
+  const chat = useAcpChat(target, { agent: String(params.agent), cwd: params.cwd || undefined, existingId: params.id || undefined, resumeId: params.resumeId || undefined })
   const { state } = chat
   // The name from the list ("Claude Code") reads better than what some adapters report (their package name).
   const agentName = params.name || state.agentName || String(params.agent)
   const [modelMenu, setModelMenu] = useState(false)
-  const [text, setText] = useState("")
+  const [text, setText] = useState(params.draft || "")
   const [sending, setSending] = useState(false)
   const list = useRef<FlatList<Grouped<ChatItem>>>(null)
   const showActions = useSettings((st) => st.showActions)
@@ -52,7 +56,7 @@ export default function AgentChatScreen() {
     if (nearBottom.current) list.current?.scrollToEnd({ animated: true })
   }, [state.items, state.pendingPermissions.length])
 
-  const ready = state.handshake === "done" && !state.exit
+  const ready = state.handshake === "done" && !state.exit && !chat.fatal && chat.link === "live"
   const hint = loginHint(state)
   const lastItem = state.items.at(-1)
 
