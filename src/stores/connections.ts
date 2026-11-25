@@ -40,7 +40,7 @@ export async function getConnectionTarget(id: string) {
   if (!saved?.launcherPort) return null
   const secret = await SecureStore.getItemAsync(`${PASSWORDS_PREFIX}${id}`)
   const current = useConnections.getState().connections.find(c => c.id === id)
-  if (current !== saved) return null
+  if (current !== saved || !secret) return null
   return { serverUrl: saved.url, launcherPort: saved.launcherPort, auth: buildAuth(saved.username, secret), tunnel: !!saved.tunnelTopic }
 }
 
