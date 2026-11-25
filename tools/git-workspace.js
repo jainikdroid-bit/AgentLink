@@ -14,7 +14,7 @@ async function git(cwd,args){
  const env={...process.env,GIT_OPTIONAL_LOCKS:'0',GIT_TERMINAL_PROMPT:'0',GIT_CONFIG_NOSYSTEM:'1'}
  // Do not let inherited Git variables redirect repository or index selection.
  for(const key of ['GIT_DIR','GIT_WORK_TREE','GIT_COMMON_DIR','GIT_INDEX_FILE','GIT_OBJECT_DIRECTORY','GIT_ALTERNATE_OBJECT_DIRECTORIES','GIT_CONFIG','GIT_CONFIG_COUNT','GIT_CONFIG_PARAMETERS','GIT_CEILING_DIRECTORIES'])delete env[key]
- const {stdout}=await run('git',['-c','core.fsmonitor=false','-c','core.hooksPath='+path.join(cwd,'.git','agentlink-no-hooks'),'-c','core.quotePath=false','-C',cwd,...args],{encoding:'utf8',timeout:8000,maxBuffer:2*1024*1024,windowsHide:true,env})
+ const {stdout}=await run('git',['-c','core.fsmonitor=false','-c','core.hooksPath='+(process.platform==='win32'?'NUL':'/dev/null'),'-c','core.quotePath=false','-C',cwd,...args],{encoding:'utf8',timeout:8000,maxBuffer:2*1024*1024,windowsHide:true,env})
  return stdout
 }
 async function resolveWorkspace(requested,{roots=allowedRoots(),execute=git}={}){
@@ -51,7 +51,7 @@ async function inventory(requested,options={}){
 const MAX_FILE_BYTES=256*1024
 const digest=buffer=>crypto.createHash('sha256').update(buffer).digest('hex')
 function safeRelative(value){
- if(typeof value!=='string'||!value||value.length>4096||path.isAbsolute(value)||/^[A-Za-z]:/.test(value)||value.includes('\0')||value.includes('\\')||value.split('/').some(x=>!x||x==='.'||x==='..'||x.toLowerCase()==='.git'))throw problem(400,'invalid relative file path')
+ if(typeof value!=='string'||!value||value.length>4096||path.isAbsolute(value)||/^[A-Za-z]:/.test(value)||value.includes('\0')||value.includes('\\')||/[\x00-\x1f:]/.test(value)||value.split('/').some(x=>!x||x==='.'||x==='..'||x.toLowerCase()==='.git'))throw problem(400,'invalid relative file path')
  return value
 }
 async function resolveFile(cwd,relative,options){
@@ -109,7 +109,7 @@ async function gitAction(cwd,body,options={}){
  const {top,permitted,execute}=await resolveWorkspace(cwd,options)
  return exclusive(top,async()=>{
   switch(body?.action){
-   case 'diff':return {text:await execute(top,['diff','--no-ext-diff','--no-textconv',...(body.staged===true?['--cached']:[]),'--',...(body.file?[safeRelative(body.file)]:[])])}
+   case 'diff':return {text:await execute(top,['--literal-pathspecs','diff','--no-ext-diff','--no-textconv',...(body.staged===true?['--cached']:[]),'--',...(body.file?[safeRelative(body.file)]:[])])}
    case 'log':return {text:await execute(top,['log','-30','--format=%h %s','--'])}
    case 'stage':case 'unstage':{
     const name=safeRelative(body.file)
