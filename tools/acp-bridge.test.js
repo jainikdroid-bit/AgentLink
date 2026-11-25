@@ -200,3 +200,25 @@ test('withPhoneMcp covers session/load, adds missing mcpServers, never duplicate
   const unchanged = rpc(6, 'session/new', { cwd: '/', mcpServers: [] })
   assert.equal(withPhoneMcp(unchanged, null), unchanged)
 })
+
+test('session metadata survives launcher restart, and duplicate RPC IDs are not dispatched',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'agentlink-saved-'))
+  const catalogFile=path.join(dir,'saved.json')
+  const t=await setup({catalogFile})
+  try{
+    const started=await t.call('POST','/acp/start',{agent:'fake',cwd:os.tmpdir()})
+    const id=started.json.id
+    const msg=rpc(2,'session/new',{cwd:os.tmpdir(),mcpServers:[]})
+    await t.call('POST',`/acp/${id}/send`,rpc(1,'initialize',{protocolVersion:1}))
+    await t.call('POST',`/acp/${id}/send`,msg)
+    assert.equal((await t.call('POST',`/acp/${id}/send`,msg)).json.duplicate,true)
+    assert.equal((await t.call('POST',`/acp/${id}/send`,rpc(2,'session/new',{cwd:'other'}))).status,409)
+    const events=await t.stream(`/acp/${id}/events`,es=>es.some(e=>e.data?.result?.sessionId==='s1'))
+    assert.equal(events.filter(e=>e.event==='sent'&&e.data?.id===2).length,1)
+    const saved=(await t.call('GET','/acp/saved')).json.sessions
+    assert.equal(saved[0].sessionId,'s1')
+    assert.equal(saved[0].loadSession,false)
+    const second=await setup({catalogFile})
+    try{assert.deepEqual((await second.call('GET','/acp/saved')).json.sessions,saved)}finally{second.close()}
+  }finally{t.close();fs.rmSync(dir,{recursive:true,force:true})}
+})
