@@ -107,11 +107,27 @@ function safeBranch(name){
  if(typeof name!=='string'||!(/^[A-Za-z0-9][A-Za-z0-9/_-]{0,79}$/).test(name)||name.includes('//')||name.endsWith('/')||name.split('/').some(p=>!p||p.endsWith('.lock')))throw problem(400,'invalid branch name')
  return name
 }
+// Repository-aware browser: list tracked/nonignored files without following symlinks.
+async function listFiles(cwd,options={}){
+ const {top,execute}=await resolveWorkspace(cwd,options)
+ const raw=await execute(top,['ls-files','-z','--cached','--others','--exclude-standard'])
+ const files=[]
+ const seen=new Set()
+ for(const name of raw.split('\0')){
+  if(!name||seen.has(name))continue
+  seen.add(name)
+  try{safeRelative(name)}catch{continue}
+  if(files.length>=4000)return {files,truncated:true}
+  files.push(name)
+ }
+ return {files,truncated:false}
+}
 async function gitAction(cwd,body,options={}){
  const {top,permitted,execute,common}=await resolveWorkspace(cwd,options)
  return exclusive(common,async()=>{
   switch(body?.action){
    case 'diff':return {text:await execute(top,['--literal-pathspecs','diff','--no-ext-diff','--no-textconv',...(body.staged===true?['--cached']:[]),'--',...(body.file?[safeRelative(body.file)]:[])])}
+   case 'files':return listFiles(top,options)
    case 'log':return {text:await execute(top,['log','-30','--format=%h %s','--'])}
    case 'stage':case 'unstage':{
     const name=safeRelative(body.file)
@@ -146,4 +162,4 @@ async function gitAction(cwd,body,options={}){
   }
  })
 }
-module.exports={inventory,inside,readText,writeText,gitAction,safeRelative,safeBranch}
+module.exports={inventory,inside,readText,writeText,gitAction,listFiles,safeRelative,safeBranch}
