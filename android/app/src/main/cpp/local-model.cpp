@@ -48,7 +48,7 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeReset(JNIEnv *, jobject) { can
 extern "C" JNIEXPORT void JNICALL
 Java_cc_agentlabs_opencode_LocalModelModule_nativeCancel(JNIEnv *, jobject) { cancelled.store(true); }
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject, jbyteArray file, jbyteArray input, jint context, jint threads, jint limit) {
+Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject self, jbyteArray file, jbyteArray input, jint context, jint threads, jint limit, jlong memoryBudget) {
 #ifndef AGENTLINK_LLAMA
     fail(env, "Local inference requires a 64-bit Android build");
     return nullptr;
@@ -63,6 +63,11 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject,
         mp.n_gpu_layers = 0; mp.use_mmap = true; mp.use_mlock = false; mp.progress_callback = progress;
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(llama_model_load_from_file(path.c_str(), mp), llama_model_free);
         if (!model || cancelled.load()) throw std::runtime_error("Model load failed or cancelled");
+        // Conservative bound for conventional attention; unsupported architectures may need more.
+        const auto embedding=llama_model_n_embd(model.get()), layers=llama_model_n_layer(model.get());
+        const long double estimate=static_cast<long double>(llama_model_size(model.get())) + 4.0L * context * embedding * layers + 768.0L * 1024 * 1024;
+        if (embedding <= 0 || layers <= 0 || estimate > memoryBudget) throw std::runtime_error("Model and context may exceed available memory; reduce context or choose a smaller model");
+        if (llama_model_n_ctx_train(model.get()) > 0 && context > llama_model_n_ctx_train(model.get())) throw std::runtime_error("Context exceeds the model training context");
         if (llama_model_has_encoder(model.get())) throw std::runtime_error("Encoder-decoder models are not supported");
         const char *tmpl = llama_model_chat_template(model.get(), nullptr);
         if (!tmpl) throw std::runtime_error("GGUF has no supported chat template");
@@ -94,6 +99,10 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject,
             if (llama_decode(ctx.get(), llama_batch_get_one(tokens.data() + start, std::min(512,count-start)))) throw std::runtime_error("Prompt evaluation failed or cancelled");
         }
         std::string output;
+        jclass cls=env->GetObjectClass(self);
+        jmethodID preview=env->GetMethodID(cls,"nativePreview","([B)V");
+        env->DeleteLocalRef(cls);
+        if (!preview) return nullptr;
         for (int i = 0; i < limit && !cancelled.load(); ++i) {
             llama_token token = llama_sampler_sample(sampler.get(), ctx.get(), -1);
             if (llama_vocab_is_eog(vocab, token)) break;
@@ -106,6 +115,13 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject,
                 if (n < 0) throw std::runtime_error("Token decoding failed");
                 output.append(large.data(), n);
             } else output.append(buf, n);
+            if (i % 8 == 0) {
+                auto chunk=to_bytes(env,output);
+                if (!chunk) return nullptr;
+                env->CallVoidMethod(self,preview,chunk);
+                env->DeleteLocalRef(chunk);
+                if (env->ExceptionCheck()) return nullptr;
+            }
             if (i + 1 < limit && !cancelled.load() && llama_decode(ctx.get(), llama_batch_get_one(&token, 1))) {
                 if (cancelled.load()) break;
                 throw std::runtime_error("Generation failed");
