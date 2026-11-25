@@ -49,13 +49,13 @@ const CALL_TIMEOUT_MS = 20_000
 const START_TIMEOUT_MS = 30_000
 const STREAM_IDLE_MS = 45_000 // the bridge sends a heartbeat every 15 s
 
-async function call<T>(target: AcpTarget, path: string, init: RequestInit = {}, timeoutMs = CALL_TIMEOUT_MS): Promise<T> {
+export async function call<T>(target: AcpTarget, path: string, init: RequestInit = {}, timeoutMs = CALL_TIMEOUT_MS): Promise<T> {
   const base = launcherUrl(target.serverUrl, target.launcherPort, target.tunnel)
   if (!base) throw new AcpApiError(0, "bad launcher address")
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const response = await fetch(await routeUrl(`${base}${path}`), { ...init, headers: buildRequestHeaders({ auth: target.auth }), signal: controller.signal })
+    const response = await fetch(await routeUrl(`${base}${path}`), { ...init, redirect: "error", headers: buildRequestHeaders({ auth: target.auth }), signal: controller.signal })
     const text = await response.text()
     let body: any = null
     try {
@@ -114,7 +114,7 @@ export async function* streamEvents(target: AcpTarget, id: string, from: number,
   let response
   try {
     // expo/fetch gives a ReadableStream body on native.
-    response = await expoFetch(await routeUrl(`${base}/acp/${encodeURIComponent(id)}/events?from=${from}`), { headers, signal })
+    response = await expoFetch(await routeUrl(`${base}/acp/${encodeURIComponent(id)}/events?from=${from}`), { headers, signal, redirect: "error" })
   } catch (error) {
     throw new AcpApiError(0, error instanceof Error ? error.message : String(error))
   }
