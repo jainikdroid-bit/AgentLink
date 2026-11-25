@@ -201,6 +201,7 @@ function RootLayout() {
               <Stack.Screen name="scan" options={{ title: t("scan.title"), presentation: "modal" }} />
               <Stack.Screen name="pair-code" options={{ title: t("pairCode.title"), presentation: "modal" }} />
               <Stack.Screen name="agents" options={{ title: t("acp.title") }} />
+              <Stack.Screen name="workspace" options={{ title: "AgentLink Workspace" }} />
               <Stack.Screen name="agent-chat" options={{ title: "" }} />
               <Stack.Screen name="termux-setup" options={{ title: t("termuxSetup.title") }} />
               <Stack.Screen name="files" options={{ title: t("files.title"), presentation: "card" }} />
