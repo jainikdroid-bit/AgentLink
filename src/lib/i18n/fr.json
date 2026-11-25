@@ -88,11 +88,21 @@
         "other": "Inconnu"
       }
     },
+    "appearance": {
+      "title": "Apparence",
+      "character3d": "Personnage 3D flottant",
+      "cyber": "Cyber",
+      "aurora": "Aurora",
+      "nebula": "Nebula",
+      "ember": "Ember"
+    },
     "mascot": {
       "label": "Mascotte",
       "title": "Choisir la mascotte",
       "cheri": "Cheri",
-      "rig": "RIG"
+      "rig": "RIG",
+      "byte": "Byte",
+      "orbit": "Orbit"
     },
     "chat": {
       "showThinking": {
