@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
 import { useEffect, useState } from "react"
 import {
   View,
@@ -25,6 +26,8 @@ import { parsePairingLink } from "../../src/lib/pairing"
 
 
 export default function AddConnectionScreen() {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -240,7 +243,7 @@ export default function AddConnectionScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.quickHeader}>
-          <Ionicons name="wifi" size={48} color={isDark ? "#ffffff" : "#07080c"} />
+          <Ionicons name="wifi" size={48} color={isDark ? "#ffffff" : palette.bg} />
           <Text style={[styles.quickTitle, isDark && styles.textDark]}>{t("connection.add.quick.title")}</Text>
           <Text style={[styles.quickSubtitle, isDark && styles.hintDark]}>{t("guide.easy.choosePairing")}</Text>
         </View>
@@ -248,7 +251,7 @@ export default function AddConnectionScreen() {
         {/* OpenCode Connect — self-hosted pairing (QR / link from tools/opencode-connect.ps1) */}
         <View style={[styles.connectCard, isDark && styles.connectCardDark]}>
           <View style={styles.connectCardHeader}>
-            <Ionicons name="cloud-done-outline" size={28} color="#0891b2" />
+            <Ionicons name="cloud-done-outline" size={28} color={palette.cyanDim} />
             <View style={styles.connectCardTitles}>
               <Text style={[styles.connectCardTitle, isDark && styles.textDark]}>
                 {t("connection.add.quick.connectCardTitle")}
@@ -262,7 +265,7 @@ export default function AddConnectionScreen() {
             {t("connection.add.quick.connectCardDesc")}
           </Text>
           <TouchableOpacity style={[styles.connectButton, styles.connectButtonDark, { marginTop: 10 }]} onPress={() => router.push("/guide")} testID="pair-guide-button">
-            <Ionicons name="list-outline" size={20} color="#07080c" />
+            <Ionicons name="list-outline" size={20} color={palette.bg} />
             <Text style={[styles.connectButtonText, styles.connectButtonTextDark]}>{t("guide.title")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pairButton, { marginBottom: 8 }]} onPress={() => router.push("/scan")} testID="pair-scan-button">
@@ -281,7 +284,7 @@ export default function AddConnectionScreen() {
 
         <TouchableOpacity style={styles.manualToggle} accessibilityRole="button" accessibilityState={{ expanded: showManual }} onPress={() => setShowManual(!showManual)} testID="manual-connect-toggle">
           <Text style={[styles.label, isDark && styles.labelDark, { marginVertical: 0, flex: 1 }]}>{t("guide.easy.manual")}</Text>
-          <Ionicons name={showManual ? "chevron-up" : "chevron-down"} size={20} color="#22d3ee" />
+          <Ionicons name={showManual ? "chevron-up" : "chevron-down"} size={20} color={palette.cyan} />
         </TouchableOpacity>
         {showManual && <>
         {/* IP Address */}
@@ -290,7 +293,7 @@ export default function AddConnectionScreen() {
           <TextInput
             style={[styles.input, styles.ipInput, isDark && styles.inputDark]}
             placeholder="192.168.1.100"
-            placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+            placeholderTextColor={isDark ? palette.muted : palette.muted}
             value={ip}
             onChangeText={setIp}
             autoCapitalize="none"
@@ -302,7 +305,7 @@ export default function AddConnectionScreen() {
           <TextInput
             style={[styles.input, styles.portInput, isDark && styles.inputDark]}
             placeholder="4096"
-            placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+            placeholderTextColor={isDark ? palette.muted : palette.muted}
             value={port}
             onChangeText={setPort}
             keyboardType="number-pad"
@@ -315,7 +318,7 @@ export default function AddConnectionScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           placeholder={t("connection.add.quick.namePlaceholder")}
-          placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+          placeholderTextColor={isDark ? palette.muted : palette.muted}
           value={name}
           onChangeText={setName}
         />
@@ -325,7 +328,7 @@ export default function AddConnectionScreen() {
         <TextInput
           style={[styles.input, isDark && styles.inputDark]}
           placeholder={t("connection.add.quick.passwordPlaceholder")}
-          placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+          placeholderTextColor={isDark ? palette.muted : palette.muted}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -349,10 +352,10 @@ export default function AddConnectionScreen() {
           testID="connect-submit-button"
         >
           {isConnecting ? (
-            <ActivityIndicator size="small" color={isDark ? "#07080c" : "#ffffff"} />
+            <ActivityIndicator size="small" color={isDark ? palette.bg : "#ffffff"} />
           ) : (
             <>
-              <Ionicons name="flash" size={20} color={isDark ? "#07080c" : "#ffffff"} />
+              <Ionicons name="flash" size={20} color={isDark ? palette.bg : "#ffffff"} />
               <Text style={[styles.connectButtonText, isDark && styles.connectButtonTextDark]}>
                 {t("connection.add.quick.connectButton")}
               </Text>
@@ -364,7 +367,7 @@ export default function AddConnectionScreen() {
         <View style={[styles.helpBox, isDark && styles.helpBoxDark]}>
           <TouchableOpacity style={styles.manualToggle} onPress={() => setShowHelp(!showHelp)} accessibilityRole="button" accessibilityState={{ expanded: showHelp }}>
             <Text style={[styles.helpTitle, isDark && styles.textDark, { flex: 1, marginBottom: 0 }]}>{t("connection.add.quick.helpTitle")}</Text>
-            <Ionicons name={showHelp ? "chevron-up" : "chevron-down"} size={18} color="#22d3ee" />
+            <Ionicons name={showHelp ? "chevron-up" : "chevron-down"} size={18} color={palette.cyan} />
           </TouchableOpacity>
           {showHelp && <>
           <Text style={[styles.helpText, isDark && styles.hintDark]}>
@@ -400,7 +403,7 @@ export default function AddConnectionScreen() {
           <Text style={[styles.advancedLinkText, isDark && styles.hintDark]}>
             {t("connection.add.quick.advancedLink")}
           </Text>
-          <Ionicons name="chevron-forward" size={16} color={isDark ? "#8a93a8" : "#8a93a8"} />
+          <Ionicons name="chevron-forward" size={16} color={isDark ? palette.muted : palette.muted} />
         </TouchableOpacity>
       </ScrollView>
       </KeyboardAvoidingView>
@@ -420,7 +423,7 @@ export default function AddConnectionScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <TouchableOpacity style={styles.backToQuick} onPress={() => setMode("quick")}>
-        <Ionicons name="chevron-back" size={16} color={isDark ? "#8a93a8" : "#8a93a8"} />
+        <Ionicons name="chevron-back" size={16} color={isDark ? palette.muted : palette.muted} />
         <Text style={[styles.backToQuickText, isDark && styles.hintDark]}>{t("connection.add.advanced.backToQuick")}</Text>
       </TouchableOpacity>
 
@@ -445,7 +448,7 @@ export default function AddConnectionScreen() {
             <Ionicons
               name={opt.icon}
               size={20}
-              color={type === opt.type ? (isDark ? "#07080c" : "#ffffff") : isDark ? "#8a93a8" : "#8a93a8"}
+              color={type === opt.type ? (isDark ? palette.bg : "#ffffff") : isDark ? palette.muted : palette.muted}
             />
             <Text
               style={[
@@ -466,7 +469,7 @@ export default function AddConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder={t("connection.shared.namePlaceholder")}
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={name}
         onChangeText={setName}
       />
@@ -482,7 +485,7 @@ export default function AddConnectionScreen() {
               ? "https://your-tunnel.trycloudflare.com"
               : "https://api.opencode.ai"
         }
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={url}
         onChangeText={setUrl}
         autoCapitalize="none"
@@ -504,7 +507,7 @@ export default function AddConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder="/path/to/project"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={directory}
         onChangeText={setDirectory}
         autoCapitalize="none"
@@ -519,7 +522,7 @@ export default function AddConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder="admin"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
@@ -530,7 +533,7 @@ export default function AddConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder="password"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -543,7 +546,7 @@ export default function AddConnectionScreen() {
         disabled={isConnecting}
       >
         {isConnecting ? (
-          <ActivityIndicator size="small" color={isDark ? "#07080c" : "#ffffff"} />
+          <ActivityIndicator size="small" color={isDark ? palette.bg : "#ffffff"} />
         ) : (
           <Text style={[styles.connectButtonText, isDark && styles.connectButtonTextDark]}>
             {t("connection.add.advanced.saveButton")}
@@ -555,7 +558,7 @@ export default function AddConnectionScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
