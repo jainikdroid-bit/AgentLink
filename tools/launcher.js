@@ -243,6 +243,12 @@ function createLauncher(deps) {
       if (route === '/hardware' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.hardware || sampleHardware)()) })
       if (route === '/status' && req.method === 'GET') return send(res, 200, { ok: true, launcher: VERSION, acp: !!deps.acp, server: await status(), ...addresses(deps.readState() || {}) })
       // Local model (llama.cpp router): state, and load/unload it from the computer's memory.
+      if (route === '/llm/benchmark' && req.method === 'GET') return send(res,200,{ok:true,models:await (deps.llm||llm()).benchmarkModels()})
+      if (route === '/llm/benchmark' && req.method === 'POST') {
+        const body=await readBody(req,8192)
+        const result=await (deps.llm||llm()).benchmark(body.engine,body.model)
+        return send(res,result.ok?200:400,result)
+      }
       if (route === '/llm' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.llm || llm()).llmStatus()) })
       const llmMatch = /^\/llm\/(load|unload)$/.exec(route)
       if (llmMatch) {
