@@ -31,6 +31,8 @@ export default function AddConnectionScreen() {
 
   const { addConnection, testConnection } = useConnections()
 
+  const [showManual, setShowManual] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
   const [mode, setMode] = useState<"quick" | "advanced">("quick")
   const [type, setType] = useState<ConnectionType>("local")
   const [name, setName] = useState("")
@@ -142,7 +144,7 @@ export default function AddConnectionScreen() {
     }
     router.push({
       pathname: "/connect",
-      params: { url: pairing.url, password: pairing.password ?? "", name: pairing.name, launcher: pairing.launcherPort ? String(pairing.launcherPort) : "", topic: pairing.tunnelTopic ?? "" },
+      params: { url: pairing.url, password: pairing.password ?? "", name: pairing.name, launcher: pairing.launcherPort ? String(pairing.launcherPort) : "", topic: pairing.tunnelTopic ?? "", lan: pairing.lanHost ?? "" },
     })
   }
 
@@ -240,9 +242,48 @@ export default function AddConnectionScreen() {
         <View style={styles.quickHeader}>
           <Ionicons name="wifi" size={48} color={isDark ? "#ffffff" : "#07080c"} />
           <Text style={[styles.quickTitle, isDark && styles.textDark]}>{t("connection.add.quick.title")}</Text>
-          <Text style={[styles.quickSubtitle, isDark && styles.hintDark]}>{t("connection.add.quick.subtitle")}</Text>
+          <Text style={[styles.quickSubtitle, isDark && styles.hintDark]}>{t("guide.easy.choosePairing")}</Text>
         </View>
 
+        {/* OpenCode Connect — self-hosted pairing (QR / link from tools/opencode-connect.ps1) */}
+        <View style={[styles.connectCard, isDark && styles.connectCardDark]}>
+          <View style={styles.connectCardHeader}>
+            <Ionicons name="cloud-done-outline" size={28} color="#0891b2" />
+            <View style={styles.connectCardTitles}>
+              <Text style={[styles.connectCardTitle, isDark && styles.textDark]}>
+                {t("connection.add.quick.connectCardTitle")}
+              </Text>
+              <View style={styles.connectCardBadge}>
+                <Text style={styles.connectCardBadgeText}>{t("connection.add.quick.connectCardBadge")}</Text>
+              </View>
+            </View>
+          </View>
+          <Text style={[styles.connectCardDesc, isDark && styles.hintDark]}>
+            {t("connection.add.quick.connectCardDesc")}
+          </Text>
+          <TouchableOpacity style={[styles.connectButton, styles.connectButtonDark, { marginTop: 10 }]} onPress={() => router.push("/guide")} testID="pair-guide-button">
+            <Ionicons name="list-outline" size={20} color="#07080c" />
+            <Text style={[styles.connectButtonText, styles.connectButtonTextDark]}>{t("guide.title")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.pairButton, { marginBottom: 8 }]} onPress={() => router.push("/scan")} testID="pair-scan-button">
+            <Ionicons name="qr-code-outline" size={16} color="#ffffff" />
+            <Text style={styles.pairButtonText}>{t("scan.button")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.pairButton, { marginBottom: 8 }]} onPress={() => router.push("/pair-code")} testID="pair-code-button">
+            <Ionicons name="keypad-outline" size={16} color="#ffffff" />
+            <Text style={styles.pairButtonText}>{t("pairCode.button")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.pairButton} onPress={handlePastePairingLink} testID="pair-paste-button">
+            <Ionicons name="clipboard-outline" size={16} color="#ffffff" />
+            <Text style={styles.pairButtonText}>{t("connection.pair.pasteButton")}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.manualToggle} accessibilityRole="button" accessibilityState={{ expanded: showManual }} onPress={() => setShowManual(!showManual)} testID="manual-connect-toggle">
+          <Text style={[styles.label, isDark && styles.labelDark, { marginVertical: 0, flex: 1 }]}>{t("guide.easy.manual")}</Text>
+          <Ionicons name={showManual ? "chevron-up" : "chevron-down"} size={20} color="#22d3ee" />
+        </TouchableOpacity>
+        {showManual && <>
         {/* IP Address */}
         <Text style={[styles.label, isDark && styles.labelDark]}>{t("connection.add.quick.ipAddressLabel")}</Text>
         <View style={styles.ipRow}>
@@ -321,7 +362,11 @@ export default function AddConnectionScreen() {
 
         {/* Help text */}
         <View style={[styles.helpBox, isDark && styles.helpBoxDark]}>
-          <Text style={[styles.helpTitle, isDark && styles.textDark]}>{t("connection.add.quick.helpTitle")}</Text>
+          <TouchableOpacity style={styles.manualToggle} onPress={() => setShowHelp(!showHelp)} accessibilityRole="button" accessibilityState={{ expanded: showHelp }}>
+            <Text style={[styles.helpTitle, isDark && styles.textDark, { flex: 1, marginBottom: 0 }]}>{t("connection.add.quick.helpTitle")}</Text>
+            <Ionicons name={showHelp ? "chevron-up" : "chevron-down"} size={18} color="#22d3ee" />
+          </TouchableOpacity>
+          {showHelp && <>
           <Text style={[styles.helpText, isDark && styles.hintDark]}>
             {t("connection.add.quick.helpMacPrefix")}
             {"\n"}
@@ -344,40 +389,12 @@ export default function AddConnectionScreen() {
           <Text style={[styles.helpText, isDark && styles.hintDark, { marginTop: 8 }]}>
             {t("connection.add.quick.helpRunningPrefix")}
             {"\n"}
-            <Text style={styles.code}>opencode serve --hostname 0.0.0.0</Text>
+            <Text style={styles.code}>opencode serve --hostname 127.0.0.1</Text>
           </Text>
+          </>}
         </View>
 
-        {/* OpenCode Connect — self-hosted pairing (QR / link from tools/opencode-connect.ps1) */}
-        <View style={[styles.connectCard, isDark && styles.connectCardDark]}>
-          <View style={styles.connectCardHeader}>
-            <Ionicons name="cloud-done-outline" size={28} color="#0891b2" />
-            <View style={styles.connectCardTitles}>
-              <Text style={[styles.connectCardTitle, isDark && styles.textDark]}>
-                {t("connection.add.quick.connectCardTitle")}
-              </Text>
-              <View style={styles.connectCardBadge}>
-                <Text style={styles.connectCardBadgeText}>{t("connection.add.quick.connectCardBadge")}</Text>
-              </View>
-            </View>
-          </View>
-          <Text style={[styles.connectCardDesc, isDark && styles.hintDark]}>
-            {t("connection.add.quick.connectCardDesc")}
-          </Text>
-          <TouchableOpacity style={[styles.pairButton, { marginBottom: 8 }]} onPress={() => router.push("/scan")} testID="pair-scan-button">
-            <Ionicons name="qr-code-outline" size={16} color="#ffffff" />
-            <Text style={styles.pairButtonText}>{t("scan.button")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.pairButton, { marginBottom: 8 }]} onPress={() => router.push("/pair-code")} testID="pair-code-button">
-            <Ionicons name="keypad-outline" size={16} color="#ffffff" />
-            <Text style={styles.pairButtonText}>{t("pairCode.button")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.pairButton} onPress={handlePastePairingLink} testID="pair-paste-button">
-            <Ionicons name="clipboard-outline" size={16} color="#ffffff" />
-            <Text style={styles.pairButtonText}>{t("connection.pair.pasteButton")}</Text>
-          </TouchableOpacity>
-        </View>
-
+        </>}
         {/* Advanced mode link */}
         <TouchableOpacity style={styles.advancedLink} onPress={() => setMode("advanced")}>
           <Text style={[styles.advancedLinkText, isDark && styles.hintDark]}>
@@ -551,9 +568,10 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   // Quick connect styles
+  manualToggle: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, marginTop: 8 },
   quickHeader: {
     alignItems: "center",
-    paddingVertical: 24,
+    paddingVertical: 8,
   },
   quickTitle: {
     fontSize: 24,
