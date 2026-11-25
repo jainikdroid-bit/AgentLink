@@ -934,6 +934,9 @@
     "failed": "Could not change the model"
   },
   "workspace": {
+    "browser": "Open in browser",
+    "previewScripts": "Enable JavaScript",
+    "previewScriptHelp": "Only enable scripts for your own trusted development website. Pages can make network requests; no AgentLink credentials or native bridge are provided.",
     "attention": "Attention center",
     "needsApproval": "Awaiting approval",
     "activeRuns": "Working",
