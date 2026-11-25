@@ -238,6 +238,38 @@ function createAcpBridge(deps = {}) {
   /** An agent's request the phone already answered is not worth showing again after a reconnect. */
   const stale = (session, entry) => entry.reqKey !== null && session.answered.has(entry.reqKey)
 
+  // Queue belongs to the live host process, not the mobile screen. Do not replay
+  // queued prompts after process death or an uncertain/failed/cancelled turn.
+  function drainQueue(session) {
+    if(session.exited||session.queuePaused||!session.protocolSessionId||session.prompts.size||session.pending.size||!session.queue.length||session.child.stdin.destroyed)return
+    const item=session.queue.shift()
+    const id='agentlink-queue-'+item.id
+    const msg={jsonrpc:'2.0',id,method:'session/prompt',params:{sessionId:session.protocolSessionId,prompt:[{type:'text',text:item.text}]}}
+    const key=keyOf(id)
+    session.prompts.add(key);session.requests.set(key,{method:msg.method})
+    add(session,'sent',JSON.stringify(msg))
+    try{session.child.stdin.write(JSON.stringify(msg)+'\n',error=>{if(error){session.queuePaused=true;notify('errors',session)}})}
+    catch{session.queuePaused=true;notify('errors',session)}
+  }
+  async function queueRoute(req,res,session){
+    if(req.method==='GET')return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused})
+    if(req.method!=='POST')return send(res,405,{ok:false,error:'wrong method'})
+    if(session.exited)return send(res,409,{ok:false,error:'agent stopped'})
+    const body=await readBody(req,65536)
+    if(body.action==='enqueue'){
+      if(!session.protocolSessionId)return send(res,409,{ok:false,error:'session not ready'})
+      if(typeof body.id!=='string'||!(/^[a-f0-9-]{36}$/i).test(body.id)||typeof body.text!=='string'||!body.text.trim()||body.text.length>8000)return send(res,400,{ok:false,error:'invalid queue item'})
+      const hash=crypto.createHash('sha256').update(body.text).digest('hex')
+      if(session.queueIds.has(body.id))return send(res,session.queueIds.get(body.id)===hash?200:409,session.queueIds.get(body.id)===hash?{ok:true,duplicate:true}:{ok:false,error:'queue ID conflict'})
+      if(session.queue.length>=20||session.queueIds.size>=2000)return send(res,429,{ok:false,error:'queue limit reached'})
+      session.queueIds.set(body.id,hash);session.queue.push({id:body.id,text:body.text});drainQueue(session)
+    }else if(body.action==='remove'){
+      session.queue=session.queue.filter(item=>item.id!==body.id)
+    }else if(body.action==='pause')session.queuePaused=true
+    else if(body.action==='resume'){session.queuePaused=false;drainQueue(session)}
+    else return send(res,400,{ok:false,error:'unsupported queue action'})
+    return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused})
+  }
   function onLine(session, line) {
     const text = line.trim()
     if (!text) return
@@ -268,8 +300,9 @@ function createAcpBridge(deps = {}) {
     }
     if(!message.method&&message.id!==undefined&&session.prompts.has(keyOf(message.id))){
       session.prompts.delete(keyOf(message.id))
-      if(message.error)notify('errors',session)
-      else if(message.result?.stopReason==='end_turn')notify('completed',session)
+      if(message.error){session.queuePaused=true;notify('errors',session)}
+      else if(message.result?.stopReason==='end_turn'){notify('completed',session);drainQueue(session)}
+      else session.queuePaused=true
     }
   }
 
@@ -281,7 +314,7 @@ function createAcpBridge(deps = {}) {
     const child = WIN && !agent.direct ? spawn('cmd.exe', ['/c', agent.cmd, ...agent.args], options) : spawn(agent.cmd, agent.args, options)
     const session = {
       id: crypto.randomBytes(9).toString('base64url'), agent: agent.id, name: agent.name, cwd, startedAt: now(), lastActivity: now(),
-      child, prompts: new Set(), pending: new Set(), permissions: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
+      child, queue: [], queueIds: new Map(), queuePaused: false, prompts: new Set(), pending: new Set(), permissions: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
     }
     let partial = ''
     child.stdout.setEncoding('utf8')
@@ -372,10 +405,12 @@ function createAcpBridge(deps = {}) {
     }else if(key!==null){
       const hash=crypto.createHash('sha256').update(text).digest('hex')
       if(session.sentIds.has(key))return send(res,session.sentIds.get(key)===hash?200:409,session.sentIds.get(key)===hash?{ok:true,duplicate:true}:{ok:false,error:'RPC id already used'})
+      if(message.method==='session/prompt'&&(session.prompts.size||session.pending.size||session.queue.length))return send(res,409,{ok:false,error:'agent busy or messages queued; use the queue'})
       if(session.sentIds.size>=20000)return send(res,409,{ok:false,error:'session request limit reached; resume in a new agent'})
       session.sentIds.set(key,hash)
       session.requests.set(key,{method:message.method,sessionId:message.method==='session/load'?message.params?.sessionId:undefined})
     }
+    if(message.method==='session/cancel')session.queuePaused=true
     if (isResponse) {session.answered.add(key);session.pending.delete(key);session.permissions.delete(key)}
     if(message.method==='session/prompt'&&key!==null)session.prompts.add(key)
     // The agent gets the phone's MCP server on session/new|load; the replay log keeps what the phone sent.
@@ -392,10 +427,11 @@ function createAcpBridge(deps = {}) {
       if (route === '/acp/inbox' && req.method === 'GET') return send(res,200,{ok:true,events:inbox.list(),pushConfigured:push.enabled}),true
       if (route === '/acp/agents' && req.method === 'GET') return agentsRoute(res), true
       if (route === '/acp/start' && req.method === 'POST') return await startRoute(req, res), true
-      const m = /^\/acp\/([A-Za-z0-9_-]{6,32})\/(events|send|stop)$/.exec(route)
+      const m = /^\/acp\/([A-Za-z0-9_-]{6,32})\/(events|send|stop|queue)$/.exec(route)
       if (!m) return send(res, 404, { ok: false, error: 'not found' }), true
       const session = sessions.get(m[1])
       if (!session) return send(res, 404, { ok: false, error: 'no such agent (it may have been stopped)' }), true
+      if (m[2] === 'queue') return await queueRoute(req,res,session),true
       if (m[2] === 'events' && req.method === 'GET') return eventsRoute(req, res, session, url.searchParams), true
       if (m[2] === 'send' && req.method === 'POST') return await sendRoute(req, res, session), true
       if (m[2] === 'stop' && req.method === 'POST') { killTree(session.child); return send(res, 200, { ok: true }), true }
@@ -410,7 +446,7 @@ function createAcpBridge(deps = {}) {
   const sweep = setInterval(() => {
     for (const [id, s] of sessions) {
       if (s.exited) { if (now() - s.exited.at > EXITED_KEEP_MS) sessions.delete(id) }
-      else if (s.clients.size === 0 && s.prompts.size === 0 && s.pending.size === 0 && now() - s.lastActivity > IDLE_STOP_MS) killTree(s.child)
+      else if (s.clients.size === 0 && s.queue.length === 0 && s.prompts.size === 0 && s.pending.size === 0 && now() - s.lastActivity > IDLE_STOP_MS) killTree(s.child)
     }
   }, SWEEP_MS)
   sweep.unref()
