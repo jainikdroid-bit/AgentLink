@@ -59,6 +59,14 @@ export default function ConnectScreen() {
     )
     if (!result.ok) {
       setBusy(false)
+      if (result.authFailed) {
+        Alert.alert(t("status.auth-failed.title"), t("status.auth-failed.body"), [
+          { text: t("common.cancel"), style: "cancel" },
+          { text: t("guide.title"), onPress: () => router.push("/guide") },
+          { text: t("scan.button"), onPress: () => router.replace("/scan") },
+        ])
+        return
+      }
       const tailnet = useTailnet.getState()
       // A tailnet address the phone cannot reach: usually the Tailscale app is off because another VPN is on.
       if (tailnetTarget(pairing.url) && tailnet.available && !tailnet.status?.ready) {
@@ -76,6 +84,7 @@ export default function ConnectScreen() {
         name: pairing.name,
         type: "local" as const,
         url: pairing.url,
+        ...(pairing.password ? { username: "opencode" } : {}),
         api: result.api,
         serverVersion: result.serverVersion,
         launcherPort: pairing.launcherPort,
@@ -149,7 +158,7 @@ export default function ConnectScreen() {
       <Text style={[styles.body, isDark && styles.hintDark]}>{t("connection.pair.confirmWarning")}</Text>
       <TouchableOpacity style={styles.primary} onPress={handleConnect} disabled={busy} testID="connect-confirm">
         {busy ? (
-          <ActivityIndicator color="#ffffff" />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><ActivityIndicator color="#ffffff" /><Text style={styles.primaryText}>{t("connection.pair.connecting")}</Text></View>
         ) : (
           <Text style={styles.primaryText}>{t("connection.pair.connect")}</Text>
         )}
