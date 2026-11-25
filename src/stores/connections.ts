@@ -22,6 +22,15 @@ const MAX_RECENT_DIRS = 10
 // second; this does NOT affect the timeout used for real session traffic.
 const CONNECTION_TEST_TIMEOUT_MS = 12_000
 
+// The edit form intentionally never displays the saved password. Testing the
+// unchanged endpoint must still use it; never send it to a newly typed URL.
+export async function getEditTestPassword(connection: ServerConnection, saved: ServerConnection | undefined, entered?: string): Promise<string | undefined> {
+  if (entered) return entered
+  if (!saved || saved.id !== connection.id || stripTrailingSlash(saved.url.trim()) !== stripTrailingSlash(connection.url.trim())) return undefined
+  return (await SecureStore.getItemAsync(`${PASSWORDS_PREFIX}${saved.id}`)) || undefined
+}
+
+
 // Cached auth so we can create directory-scoped clients without async SecureStore lookups
 interface ClientBase {
   baseUrl: string
