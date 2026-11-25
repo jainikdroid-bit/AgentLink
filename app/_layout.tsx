@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Stack, router, usePathname } from "expo-router"
+import { Stack, router } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { Appearance, useColorScheme, View, ActivityIndicator, AppState } from "react-native"
 import { cyber } from "../src/theme/cyber"
@@ -32,7 +32,6 @@ Appearance.setColorScheme("dark")
 const queryClient = new QueryClient()
 
 function RootLayout() {
-  const pathname = usePathname()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -220,7 +219,7 @@ function RootLayout() {
               />
             </Stack>
               <PermissionBanner />
-              {(pathname === "/" || pathname === "/settings") && <FloatingCheri />}
+              <FloatingCheri />
               <StatusBar style={isDark ? "light" : "dark"} />
             </AuthGate>
           </QueryClientProvider>
