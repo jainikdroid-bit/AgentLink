@@ -15,7 +15,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
-import { useConnections } from "../../src/stores/connections"
+import { getEditTestPassword, useConnections } from "../../src/stores/connections"
 import { useEvents } from "../../src/stores/events"
 import type { ConnectionType } from "../../src/lib/types"
 import { probeConnection, shareReport } from "../../src/lib/diagnostics"
@@ -83,40 +83,39 @@ export default function EditConnectionScreen() {
     }
 
     setIsTesting(true)
-    const result = await testConnection(
-      {
+    try {
+      const candidate = {
         id: connection.id,
         name: name || "Test",
         type,
         url: url.trim(),
         directory: directory.trim() || undefined,
         username: username.trim() || undefined,
-      },
-      "edit_test",
-      password || undefined,
-    )
+      }
+      const effectivePassword = await getEditTestPassword(candidate, connection, password)
+      const result = await testConnection(candidate, "edit_test", effectivePassword)
+      if (result.ok) {
+        Alert.alert(t("connection.edit.alerts.successTitle"), t("connection.edit.alerts.successMessage"))
+        return
+      }
 
-    if (result.ok) {
+      const report = await probeConnection(candidate.url, buildAuth(candidate.username, effectivePassword))
+      Alert.alert(
+        t("connection.shared.alerts.connectionFailedTitle"),
+        t("connection.edit.alerts.connectionFailedMessage", {
+          summary: report.summary,
+          detail: result.error || t("connection.edit.alerts.noDetail"),
+        }),
+        [
+          { text: t("common.ok"), style: "cancel" },
+          { text: t("common.shareReport"), onPress: () => shareReport(report) },
+        ],
+      )
+    } catch {
+      Alert.alert(t("common.error"), t("connection.shared.alerts.unknownError"))
+    } finally {
       setIsTesting(false)
-      Alert.alert(t("connection.edit.alerts.successTitle"), t("connection.edit.alerts.successMessage"))
-      return
     }
-
-    // Failed: run active diagnostics and offer a shareable report.
-    const report = await probeConnection(url.trim(), buildAuth(username, password))
-    setIsTesting(false)
-
-    Alert.alert(
-      t("connection.shared.alerts.connectionFailedTitle"),
-      t("connection.edit.alerts.connectionFailedMessage", {
-        summary: report.summary,
-        detail: result.error || t("connection.edit.alerts.noDetail"),
-      }),
-      [
-        { text: t("common.ok"), style: "cancel" },
-        { text: t("common.shareReport"), onPress: () => shareReport(report) },
-      ],
-    )
   }
 
   const handleSave = async () => {
@@ -266,7 +265,7 @@ export default function EditConnectionScreen() {
       <Text style={[styles.label, isDark && styles.labelDark]}>{t("connection.shared.username")}</Text>
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
-        placeholder="admin"
+        placeholder="opencode"
         placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
         value={username}
         onChangeText={setUsername}
@@ -277,7 +276,7 @@ export default function EditConnectionScreen() {
       <Text style={[styles.label, isDark && styles.labelDark]}>{t("connection.edit.passwordLabel")}</Text>
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
-        placeholder="••••••••"
+        placeholder={t("connection.edit.passwordLabel")}
         placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
         value={password}
         onChangeText={setPassword}
@@ -289,7 +288,7 @@ export default function EditConnectionScreen() {
         <TouchableOpacity
           style={[styles.testButton, isDark && styles.testButtonDark]}
           onPress={handleTest}
-          disabled={isTesting}
+          disabled={isTesting || isSaving}
         >
           {isTesting ? (
             <ActivityIndicator size="small" color={isDark ? "#ffffff" : "#07080c"} />
@@ -304,7 +303,7 @@ export default function EditConnectionScreen() {
         <TouchableOpacity
           style={[styles.saveButton, isDark && styles.saveButtonDark]}
           onPress={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isTesting}
         >
           {isSaving ? (
             <ActivityIndicator size="small" color={isDark ? "#07080c" : "#ffffff"} />
