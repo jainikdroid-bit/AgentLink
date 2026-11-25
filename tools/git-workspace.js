@@ -2,6 +2,7 @@
 // Read-only Git inventory. Opt-in on the computer via AGENTLINK_GIT_ROOTS
 // (path.delimiter-separated absolute roots). No arbitrary shell or remote URL.
 const fs=require('node:fs/promises')
+const crypto=require('node:crypto')
 const path=require('node:path')
 const {execFile}=require('node:child_process')
 const {promisify}=require('node:util')
@@ -16,7 +17,7 @@ async function git(cwd,args){
  const {stdout}=await run('git',['-c','core.fsmonitor=false','-c','core.hooksPath='+path.join(cwd,'.git','agentlink-no-hooks'),'-c','core.quotePath=false','-C',cwd,...args],{encoding:'utf8',timeout:8000,maxBuffer:2*1024*1024,windowsHide:true,env})
  return stdout
 }
-async function inventory(requested,{roots=allowedRoots(),execute=git}={}){
+async function resolveWorkspace(requested,{roots=allowedRoots(),execute=git}={}){
  if(!roots.length)throw problem(403,'Git workspace access is not enabled on this computer')
  if(typeof requested!=='string'||!path.isAbsolute(requested)||requested.includes('\0'))throw problem(400,'absolute project path required')
  const actual=await fs.realpath(requested).catch(()=>{throw problem(404,'project folder not found')})
@@ -26,6 +27,10 @@ async function inventory(requested,{roots=allowedRoots(),execute=git}={}){
  let top
  try{top=await fs.realpath((await execute(actual,['rev-parse','--show-toplevel'])).trim())}catch{throw problem(400,'not a Git working tree')}
  if(!permitted.some(r=>inside(r,top)))throw problem(403,'repository outside configured roots')
+ return {top,permitted,execute}
+}
+async function inventory(requested,options={}){
+ const {top,permitted,execute}=await resolveWorkspace(requested,options)
  // Read-only commands, bounded output. Worktree paths outside the allowlist are omitted.
  const [status,branches,worktrees]=await Promise.all([
    execute(top,['status','--porcelain=v1','-z','--branch','--untracked-files=normal']),
@@ -43,4 +48,97 @@ async function inventory(requested,{roots=allowedRoots(),execute=git}={}){
  }
  return {root:top,statusPorcelain:status,branches:branches.split(/\r?\n/).filter(Boolean),worktrees:trees}
 }
-module.exports={inventory,inside}
+const MAX_FILE_BYTES=256*1024
+const digest=buffer=>crypto.createHash('sha256').update(buffer).digest('hex')
+function safeRelative(value){
+ if(typeof value!=='string'||!value||value.length>4096||path.isAbsolute(value)||/^[A-Za-z]:/.test(value)||value.includes('\0')||value.includes('\\')||value.split('/').some(x=>!x||x==='.'||x==='..'||x.toLowerCase()==='.git'))throw problem(400,'invalid relative file path')
+ return value
+}
+async function resolveFile(cwd,relative,options){
+ const {top}=await resolveWorkspace(cwd,options)
+ const name=safeRelative(relative)
+ const file=path.join(top,...name.split('/'))
+ // Refuse symlinks/junctions at every component. Workspace must be trusted.
+ let cursor=top
+ for(const part of name.split('/')){
+  cursor=path.join(cursor,part)
+  const stat=await fs.lstat(cursor).catch(()=>{throw problem(404,'file not found')})
+  if(stat.isSymbolicLink())throw problem(403,'symbolic links are not editable')
+ }
+ if(await fs.realpath(file)!==file||!inside(top,file))throw problem(403,'file outside workspace')
+ const stat=await fs.stat(file)
+ if(!stat.isFile()||stat.size>MAX_FILE_BYTES)throw problem(400,'file is not an editable small text file')
+ return {file,stat}
+}
+async function readText(cwd,relative,options={}){
+ const {file}=await resolveFile(cwd,relative,options)
+ const buffer=await fs.readFile(file)
+ if(buffer.length>MAX_FILE_BYTES||buffer.includes(0))throw problem(400,'file is not editable text')
+ let text
+ try{text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(buffer)}catch{throw problem(400,'file is not UTF-8')}
+ return {text,revision:digest(buffer)}
+}
+const locks=new Map()
+async function exclusive(key,fn){
+ if(locks.has(key))throw problem(409,'another workspace operation is running')
+ locks.set(key,true)
+ try{return await fn()}finally{locks.delete(key)}
+}
+async function writeText(cwd,relative,text,revision,options={}){
+ if(typeof text!=='string'||Buffer.byteLength(text)>MAX_FILE_BYTES||text.includes('\0')||typeof revision!=='string'||!/^[a-f0-9]{64}$/.test(revision))throw problem(400,'invalid text or revision')
+ const {file,stat}=await resolveFile(cwd,relative,options)
+ return exclusive(file,async()=>{
+  const current=await fs.readFile(file)
+  if(digest(current)!==revision)throw problem(409,'file changed since it was opened')
+  const tmp=path.join(path.dirname(file),'.agentlink-'+crypto.randomUUID()+'.tmp')
+  const buffer=Buffer.from(text,'utf8')
+  try{
+   await fs.writeFile(tmp,buffer,{flag:'wx',mode:stat.mode&0o777})
+   const fresh=await resolveFile(cwd,relative,options)
+   if(fresh.file!==file||digest(await fs.readFile(file))!==revision)throw problem(409,'file changed while saving')
+   await fs.rename(tmp,file)
+   return {revision:digest(buffer)}
+  }finally{await fs.rm(tmp,{force:true}).catch(()=>{})}
+ })
+}
+function safeBranch(name){
+ if(typeof name!=='string'||!(/^[A-Za-z0-9][A-Za-z0-9/_-]{0,79}$/).test(name)||name.includes('//')||name.endsWith('/')||name.split('/').some(p=>!p||p.endsWith('.lock')))throw problem(400,'invalid branch name')
+ return name
+}
+async function gitAction(cwd,body,options={}){
+ const {top,permitted,execute}=await resolveWorkspace(cwd,options)
+ return exclusive(top,async()=>{
+  switch(body?.action){
+   case 'diff':return {text:await execute(top,['diff','--no-ext-diff','--no-textconv',...(body.staged===true?['--cached']:[]),'--',...(body.file?[safeRelative(body.file)]:[])])}
+   case 'log':return {text:await execute(top,['log','-30','--format=%h %s','--'])}
+   case 'stage':case 'unstage':{
+    const name=safeRelative(body.file)
+    await execute(top,body.action==='stage'?['--literal-pathspecs','add','--',name]:['--literal-pathspecs','restore','--staged','--',name])
+    return {}
+   }
+   case 'commit':{
+    if(typeof body.message!=='string'||!body.message.trim()||body.message.length>2000||body.message.includes('\0'))throw problem(400,'invalid commit message')
+    await execute(top,['-c','commit.gpgsign=false','commit','-m',body.message]);return {}
+   }
+   case 'branch':await execute(top,['branch',safeBranch(body.branch)]);return {}
+   case 'switch':{
+    const branch=safeBranch(body.branch)
+    if((await execute(top,['status','--porcelain=v1','-z'])).length)throw problem(409,'working tree has changes')
+    await execute(top,['switch','--',branch]);return {}
+   }
+   case 'worktree':{
+    const branch=safeBranch(body.branch)
+    // Locally configured root, generated path: the caller cannot choose arbitrary destination.
+    const parent=permitted.find(r=>inside(r,top))
+    const container=path.join(parent,'.agentlink-worktrees')
+    await fs.mkdir(container,{recursive:true})
+    if(await fs.realpath(container)!==container)throw problem(403,'invalid worktree directory')
+    const target=path.join(container,crypto.randomUUID())
+    await execute(top,['worktree','add','-b',branch,target,'HEAD'])
+    return {path:target,branch}
+   }
+   default:throw problem(400,'unsupported Git operation')
+  }
+ })
+}
+module.exports={inventory,inside,readText,writeText,gitAction,safeRelative,safeBranch}
