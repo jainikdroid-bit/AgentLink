@@ -73,6 +73,21 @@ async function call<T>(target: AcpTarget, path: string, init: RequestInit = {}, 
   }
 }
 
+export interface HostHardware {
+  at: number
+  platform: string
+  arch: string
+  cpu: { model: string | null; logicalCores: number; percent: number | null }
+  memory: { totalBytes: number; availableBytes: number; source: string }
+  storage: { totalBytes: number; availableBytes: number } | null
+  gpu: null
+  temperatureC: number | null
+  uptimeSeconds: number
+}
+export function getHostHardware(target: AcpTarget): Promise<HostHardware> {
+  return call(target, "/hardware", {}, 8000)
+}
+
 export async function listAgents(target: AcpTarget): Promise<{ agents: AgentInfo[]; running: RunningAgent[] }> {
   const body = await call<{ agents?: AgentInfo[]; running?: RunningAgent[] }>(target, "/acp/agents")
   return { agents: body.agents ?? [], running: body.running ?? [] }
