@@ -75,6 +75,9 @@ export default function AgentsScreen() {
 
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" testID="agents-screen">
+      <TouchableOpacity style={s.card} onPress={() => router.push("/workspace")}>
+        <Ionicons name="git-branch-outline" size={24} color={cyber.cyan}/><Text style={s.cardTitle}>AgentLink Workspace</Text>
+      </TouchableOpacity>
       <Text style={s.body}>{t("acp.intro")}</Text>
       {hardware && <View style={s.card}>
         <Ionicons name="hardware-chip-outline" size={24} color={cyber.cyan} />
