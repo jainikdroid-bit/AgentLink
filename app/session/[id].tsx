@@ -77,12 +77,6 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
   },
 ]
 
-function getShortDir(dir?: string): string | null {
-  if (!dir) return null
-  const parts = dir.split("/").filter(Boolean)
-  return parts[parts.length - 1] || null
-}
-
 export default function SessionScreen() {
   const { id, directory, replyHex } = useLocalSearchParams<{ id: string; directory?: string; replyHex?: string }>()
   const router = useRouter()
@@ -153,7 +147,6 @@ export default function SessionScreen() {
   const permissions = useEvents((s) => (sessionID ? s.permissions[sessionID] : undefined)) || []
   const questions = useEvents((s) => (sessionID ? s.questions[sessionID] : undefined)) || []
 
-  const shortDir = getShortDir(currentSession?.directory)
   const [showScrollButton, setShowScrollButton] = useState(false)
 
   // SSE reconnect banner
@@ -729,27 +722,25 @@ export default function SessionScreen() {
       title: currentSession?.title || t("session.titleFallback"),
       headerRight: () => (
         <View style={s.headerRight}>
-          {shortDir && (
-            <View style={[s.dirBadge, isDark && s.dirBadgeDark]}>
-              <Ionicons name="folder-outline" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
-              <Text style={[s.dirText, isDark && s.dirTextDark]}>{shortDir}</Text>
-            </View>
-          )}
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/files", params: { directory: currentSession?.directory ?? "" } })}
-            hitSlop={8}
+            style={s.headerButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("files.title")}
             testID="header-files"
           >
             <Ionicons name="folder-open-outline" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/terminal", params: { directory: currentSession?.directory ?? "" } })}
-            hitSlop={8}
+            style={s.headerButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("terminal.title")}
             testID="header-terminal"
           >
             <Ionicons name="terminal-outline" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
+          <TouchableOpacity onPress={() => setShowInfo((v) => !v)} style={s.headerButton} accessibilityRole="button">
             <Ionicons
               name={showInfo ? "stats-chart" : "stats-chart-outline"}
               size={20}
@@ -759,7 +750,7 @@ export default function SessionScreen() {
         </View>
       ),
     })
-  }, [navigation, currentSession?.title, currentSession?.directory, shortDir, showInfo, isDark, t, router])
+  }, [navigation, currentSession?.title, currentSession?.directory, showInfo, isDark, t, router])
 
   return (
     <>
@@ -797,7 +788,7 @@ export default function SessionScreen() {
             cleared by the next send. */}
         {error && (
           <View style={[s.banner, s.bannerError]}>
-            <Text style={[s.bannerText, s.bannerErrorText]} numberOfLines={3}>
+            <Text style={[s.bannerText, s.bannerErrorText]} selectable>
               {error}
             </Text>
             <TouchableOpacity onPress={() => useSessions.setState({ error: null })} hitSlop={8}>
@@ -932,11 +923,13 @@ export default function SessionScreen() {
           <TouchableOpacity
             style={[s.modelChip, isDark && s.modelChipDark]}
             onPress={() => modelSheetRef.current?.expand()}
+            accessibilityRole="button"
+            accessibilityLabel={t("chat.modelPicker.title") + " · " + modelLabel}
             testID="model-chip"
           >
             <Ionicons name="hardware-chip-outline" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
             <Text style={[s.modelLabel, isDark && s.metaDark]} numberOfLines={1}>
-              {t("chat.modelPicker.title") + " · " + modelLabel}
+              {modelLabel}
             </Text>
           </TouchableOpacity>
 
@@ -1126,7 +1119,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   agentDot: { width: 8, height: 8, borderRadius: 4 },
   agentLabel: { fontSize: 12, fontWeight: "600", color: "#07080c" },
@@ -1137,10 +1130,12 @@ const s = StyleSheet.create({
     backgroundColor: "#141926",
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 8,
+    flex: 1,
+    minWidth: 0,
   },
   modelChipDark: { backgroundColor: "#0d1018" },
-  modelLabel: { fontSize: 12, color: "#8a93a8", maxWidth: 160 },
+  modelLabel: { fontSize: 12, color: "#8a93a8", flexShrink: 1 },
 
   // Variant (reasoning effort) chip
   variantChip: {
@@ -1170,8 +1165,8 @@ const s = StyleSheet.create({
     alignItems: "flex-end",
   },
   attachBtn: {
-    width: 36,
-    height: 40,
+    width: 32,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1182,7 +1177,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
-    maxHeight: 120,
+    minHeight: 48,
+    maxHeight: 160,
     color: "#07080c",
   },
   inputDark: { backgroundColor: "#0d1018", color: "#ffffff" },
@@ -1191,7 +1187,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#07080c",
+    backgroundColor: "#0891b2",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 8,
@@ -1229,7 +1225,8 @@ const s = StyleSheet.create({
   },
 
   // Header
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 2 },
+  headerButton: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
   dirBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -1255,14 +1252,20 @@ const s = StyleSheet.create({
 
   // Session error banner (agent run failed)
   bannerError: {
-    backgroundColor: "#991b1b",
+    backgroundColor: "#30151e",
+    borderLeftWidth: 3,
+    borderLeftColor: "#ff4d6d",
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 8,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
   },
   bannerErrorAction: { color: "#fecaca", fontSize: 13, fontWeight: "700" },
-  bannerErrorText: { flex: 1 },
+  bannerErrorText: { flex: 1, lineHeight: 19 },
 
   // Pending revert (edit message) banner
   bannerRevert: {
