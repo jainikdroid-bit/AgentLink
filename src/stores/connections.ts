@@ -5,6 +5,7 @@ import type { ServerConnection, ConnectionType } from "../lib/types"
 import { createClient, probeServer, type Client, type Project } from "../lib/sdk"
 import type { ServerApi } from "../lib/api-detect"
 import { buildAuth } from "../lib/auth"
+import { isAuthError } from "../lib/api-error"
 import { stripTrailingSlash } from "../lib/path-utils"
 import { setLanRoutes } from "../lib/tailnet"
 
@@ -60,7 +61,7 @@ interface ConnectionsState {
     connection: ServerConnection,
     source: ConnectionTestSource,
     password?: string,
-  ) => Promise<{ ok: boolean; api?: ServerApi; serverVersion?: string; error?: string }>
+  ) => Promise<{ ok: boolean; api?: ServerApi; serverVersion?: string; error?: string; authFailed?: boolean }>
   updateConnection: (id: string, updates: Partial<ServerConnection>, password?: string) => Promise<void>
   refreshProject: () => Promise<void>
   // Create a one-off client pointing at a specific directory (for cross-project operations).
@@ -314,7 +315,7 @@ export const useConnections = create<ConnectionsState>((set, get) => ({
       return { ok: true, api: identity.api, serverVersion: identity.version }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      return { ok: false, error: message }
+      return { ok: false, error: message, authFailed: isAuthError(error) || /\b(?:401|403)\b/.test(message) }
     }
   },
 
