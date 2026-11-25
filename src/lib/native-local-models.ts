@@ -2,7 +2,7 @@ import {NativeModules,Platform} from "react-native"
 import type {HfFile} from "./phone-models"
 import {validModel} from "./phone-models"
 export interface PhoneStats {engine:boolean;availableRamBytes:number;totalRamBytes:number;freeStorageBytes:number;cores:number;abi:string;soc:string;thermal:number}
-export interface LocalProgress {busy:boolean;operation:string;bytes:number;total:number}
+export interface LocalProgress {busy:boolean;operation:string;bytes:number;total:number;text:string}
 type Result={text:string;metrics:string}
 interface LocalNative {
  stats():Promise<PhoneStats>
