@@ -42,7 +42,7 @@ function RootLayout() {
   const { loadConnections, isLoading: connectionsLoading, client } = useConnections()
   const sseStarted = useRef(false)
   const notifPermissionRequested = useRef(false)
-  const [notificationSession, setNotificationSession] = useState<string | null>(null)
+  const [notificationSession, setNotificationSession] = useState<{sessionId:string;workspace:boolean} | null>(null)
 
   useEffect(() => {
     initAuth()
@@ -55,7 +55,7 @@ function RootLayout() {
     // Navigate to session when user taps a notification. Connection-drop
     // notifications carry no sessionId (they aren't about a session) — route
     // to the home tab instead of "/session/" (an empty, dead-end route).
-    const unsubNotifications = notifications.onTap((data) => setNotificationSession(data.sessionId))
+    const unsubNotifications = notifications.onTap((data) => setNotificationSession({sessionId:data.sessionId,workspace:typeof data.eventId==="string"}))
 
     // Allow / Deny pressed on a permission notification: answer without opening the app.
     const unsubActions = notifications.onAction((reply, sessionId, requestId) => {
@@ -137,7 +137,8 @@ function RootLayout() {
   useEffect(() => {
     if (isLoading || notificationSession === null) return
     setNotificationSession(null)
-    if (notificationSession) router.push({ pathname: "/session/[id]", params: { id: notificationSession } })
+    if(notificationSession.workspace)router.push("/workspace")
+    else if (notificationSession.sessionId) router.push({ pathname: "/session/[id]", params: { id: notificationSession.sessionId } })
     else router.push("/")
   }, [isLoading, notificationSession, router])
   usePhoneBridge()
