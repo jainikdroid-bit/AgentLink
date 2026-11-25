@@ -35,7 +35,7 @@ export default function AgentsScreen() {
 
   const requestId = useRef(0)
   const inFlight = useRef<object|null>(null)
-  useEffect(() => { setHardware(null); setAgents([]); setMissing([]); setRunning([]); setFolder(""); setProblem(null) }, [target])
+  useEffect(() => { setHardware(null); setAgents([]); setMissing([]); setRunning([]); setProblem(null) }, [target])
   const targetRef = useRef(target)
   targetRef.current = target
   const load = useCallback(async (silent = false) => {
@@ -73,13 +73,16 @@ export default function AgentsScreen() {
     }, [load]),
   )
   useEffect(() => {
-    SecureStore.getItemAsync(FOLDER_KEY).then((saved) => saved && setFolder(saved)).catch(() => undefined)
-  }, [])
+    let alive=true
+    setFolder(activeConnection?.directory || "")
+    if(activeConnection?.id)void SecureStore.getItemAsync(FOLDER_KEY+"_"+activeConnection.id).then(saved=>{if(alive&&saved)setFolder(saved)}).catch(()=>undefined)
+    return()=>{alive=false}
+  }, [activeConnection?.id])
 
   const open = (agent: AgentInfo) => {
     if (loading || !target || !activeConnection?.id) return
     const cwd = folder.trim()
-    void SecureStore.setItemAsync(FOLDER_KEY, cwd).catch(() => undefined)
+    void SecureStore.setItemAsync(FOLDER_KEY+"_"+activeConnection.id, cwd).catch(() => undefined)
     router.push({ pathname: "/agent-chat", params: { agent: agent.id, name: agent.name, cwd, connectionId: activeConnection?.id || "" } })
   }
 
