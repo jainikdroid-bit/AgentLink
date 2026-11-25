@@ -97,6 +97,10 @@ export function FloatingCheri({ character = "cheri" }: { character?: "cheri" | "
   }
   // ---- wandering: when the agent is idle she takes a stroll along the bottom of the screen ----
   const walkAnim = useRef<Animated.CompositeAnimation | null>(null)
+  useEffect(() => () => {
+    walkAnim.current?.stop()
+    walkAnim.current = null
+  }, [])
   const lastTouch = useRef(Date.now())
   const stopWalk = () => {
     lastTouch.current = Date.now()
