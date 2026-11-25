@@ -33,6 +33,17 @@ export async function getEditTestPassword(connection: ServerConnection, saved: S
 }
 
 
+// Explicit host selection for workspace/ACP. Never use the global active
+// client's auth for an independently selected connection.
+export async function getConnectionTarget(id: string) {
+  const saved = useConnections.getState().connections.find(c => c.id === id)
+  if (!saved?.launcherPort) return null
+  const secret = await SecureStore.getItemAsync(`${PASSWORDS_PREFIX}${id}`)
+  const current = useConnections.getState().connections.find(c => c.id === id)
+  if (current !== saved) return null
+  return { serverUrl: saved.url, launcherPort: saved.launcherPort, auth: buildAuth(saved.username, secret), tunnel: !!saved.tunnelTopic }
+}
+
 // Cached auth so we can create directory-scoped clients without async SecureStore lookups
 interface ClientBase {
   baseUrl: string
