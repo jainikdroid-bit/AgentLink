@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../theme/useTheme"
 import { useState, useCallback, useMemo, useRef } from "react"
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -28,6 +29,8 @@ interface Props {
 }
 
 export function ModelPicker({ providers, selected, isDark, onSelect, sheetRef }: Props) {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const [source, setSource] = useState<SourceFilter>("all")
@@ -97,7 +100,7 @@ export function ModelPicker({ providers, selected, isDark, onSelect, sheetRef }:
       keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
       backgroundStyle={isDark ? s.sheetDark : s.sheet}
-      handleIndicatorStyle={{ backgroundColor: isDark ? "#8a93a8" : "#cccccc" }}
+      handleIndicatorStyle={{ backgroundColor: isDark ? palette.muted : "#cccccc" }}
       backdropComponent={(props) => (
         <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
       )}
@@ -124,7 +127,7 @@ export function ModelPicker({ providers, selected, isDark, onSelect, sheetRef }:
         <BottomSheetTextInput
           style={[s.search, isDark && s.searchDark]}
           placeholder={t("chat.modelPicker.searchPlaceholder")}
-          placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+          placeholderTextColor={isDark ? palette.muted : palette.muted}
           value={search}
           onChangeText={setSearch}
           autoCorrect={false}
@@ -159,7 +162,7 @@ export function ModelPicker({ providers, selected, isDark, onSelect, sheetRef }:
                 </Text>
                 <Text style={[s.rowProvider, isDark && s.metaDark]}>{item.providerName || item.providerID}</Text>
               </View>
-              {active && <Ionicons name="checkmark-circle" size={20} color="#22d3ee" />}
+              {active && <Ionicons name="checkmark-circle" size={20} color={palette.cyan} />}
             </TouchableOpacity>
           )
         }}
@@ -170,7 +173,7 @@ export function ModelPicker({ providers, selected, isDark, onSelect, sheetRef }:
   )
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   sheet: { backgroundColor: "#ffffff" },
   sheetDark: { backgroundColor: "#0d1018" },
   header: { paddingHorizontal: 16, paddingBottom: 12, gap: 10 },
