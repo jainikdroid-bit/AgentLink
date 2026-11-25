@@ -15,7 +15,8 @@ const CELEBRATE_MS = 6000
 
 // The floating 3D Cheri (three.js + VRM in a transparent WebView, see web/cheri3d). She floats over every
 // screen, can be dragged, reacts to what the agent does, and a long press opens her menu.
-export function FloatingCheri() {
+export function FloatingCheri({ character = "cheri" }: { character?: "cheri" | "byte" | "orbit" }) {
+  const source = character === "cheri" ? SOURCE : { uri: `file:///android_asset/companions3d/${character}.html` }
   const avatar = useSettings((s) => s.avatar)
   const setAvatar = useSettings((s) => s.setAvatar)
   const activity = useAvatar((s) => s.activity)
@@ -162,7 +163,7 @@ export function FloatingCheri() {
       <Animated.View ref={box} pointerEvents="none" onLayout={publishRect} style={[s.window, { width: w, height: h, opacity: avatar.opacity, transform: pos.getTranslateTransform() }]} testID="floating-cheri">
         <WebView
           ref={web}
-          source={SOURCE}
+          source={source}
           originWhitelist={["*"]}
           allowFileAccess
           allowFileAccessFromFileURLs
