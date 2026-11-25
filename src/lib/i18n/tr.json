@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "Nasıl bağlanacaksınız?",
+      "tailscaleTitle": "Her yerden · Tailscale",
+      "tailscaleBody": "Özel ağ; iki cihazda da oturum açın.",
+      "lanTitle": "Aynı Wi-Fi · LAN",
+      "lanBody": "Hesap gerekmez; güvenilir ev ağı kullanın.",
+      "platform": "Bilgisayar işletim sistemi",
+      "details": "Ayrıntılar ve sorun giderme",
+      "computerDetails": "Windows’ta PowerShell, Linux/macOS’ta Terminal açın. Komutu yapıştırın, Enter’a basın ve QR kodunu bekleyin. Eşleştirme bağlantısını gizli tutun.",
+      "tailscaleDetails": "Her iki cihazda aynı Tailscale hesabını kullanın. Bilgisayar uyanık olmalı. Başka VPN açıksa Tailscale bağlantısını kontrol edin.",
+      "scanDetails": "APK değil eşleştirme QR kodunu tarayın. Bilgisayar adını doğrulayın. Olmazsa 10 dakika içinde altı haneli kodu girin. 401 hatasında yeni bağlantı oluşturun.",
+      "manual": "Manuel bağlantı (IP ve parola)",
+      "choosePairing": "Adım adım kurulumu seçin veya hazır bir bilgisayara bağlanın."
+    },
     "computer": {
       "title": "Bilgisayarınızda bir komut çalıştırın",
       "body": "PowerShell (Windows) veya Terminal (macOS / Linux) açın, komutu yapıştırın, Enter'a basın. Eksik olanları kurar, sunucuyu başlatır ve bir QR kodu gösterir.",
