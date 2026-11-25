@@ -18,12 +18,12 @@ function engine():LocalNative {
  if(!n)throw Error("Native local-model module is unavailable in this build")
  return n
 }
-export const phoneStats=()=>engine().stats()
-export const localProgress=()=>engine().progress()
-export const cancelLocal=()=>engine().cancel()
-export const installedModel=(m:HfFile)=>engine().installed(m.sha256)
-export function downloadModel(m:HfFile){if(!validModel(m))throw Error("Invalid GGUF metadata");return engine().download(m.repo,m.revision,m.file,m.sha256,m.bytes)}
-export const removeModel=(m:HfFile)=>engine().remove(m.sha256)
+export const phoneStats=async ()=>engine().stats()
+export const localProgress=async ()=>engine().progress()
+export const cancelLocal=async ()=>engine().cancel()
+export const installedModel=async (m:HfFile)=>engine().installed(m.sha256)
+export async function downloadModel(m:HfFile){if(!validModel(m))throw Error("Invalid GGUF metadata");return engine().download(m.repo,m.revision,m.file,m.sha256,m.bytes)}
+export const removeModel=async (m:HfFile)=>engine().remove(m.sha256)
 export async function generateLocal(m:HfFile,prompt:string,context:number,threads:number){
  if(!validModel(m))throw Error("Invalid GGUF metadata")
  const result=await engine().generate(m.sha256,prompt,context,threads,256)
