@@ -38,7 +38,8 @@ interface Props {
 export function ConnectionStatusChip({ sessionId, busy, compact = false }: Props) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
-  const { info } = useOverallStatus({ sessionId, busy })
+  const { info, retryAttempt } = useOverallStatus({ sessionId, busy })
+  const title = retryAttempt === undefined ? t(info.titleKey) : t("chat.statusIndicator.retrying", { attempt: retryAttempt })
   const color = TONE_COLOR[info.tone]
   return (
     <>
@@ -47,11 +48,11 @@ export function ConnectionStatusChip({ sessionId, busy, compact = false }: Props
         onPress={() => setOpen(true)}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel={t(info.titleKey)}
+        accessibilityLabel={title}
         testID="connection-status-chip"
       >
         <View style={[s.dot, { backgroundColor: color }]} testID="connection-status-dot" />
-        {compact ? null : <Text style={[s.chipText, { color }]} numberOfLines={1}>{t(info.titleKey)}</Text>}
+        {compact ? null : <Text style={[s.chipText, { color }]} numberOfLines={1}>{title}</Text>}
       </TouchableOpacity>
       {open ? <StatusSheet sessionId={sessionId} busy={busy} onClose={() => setOpen(false)} /> : null}
     </>
@@ -60,7 +61,8 @@ export function ConnectionStatusChip({ sessionId, busy, compact = false }: Props
 
 function StatusSheet({ sessionId, busy, onClose }: Props & { onClose: () => void }) {
   const { t } = useTranslation()
-  const { info, links, checkedAt, checking } = useOverallStatus({ sessionId, busy })
+  const { info, links, checkedAt, checking, retryAttempt } = useOverallStatus({ sessionId, busy })
+  const title = retryAttempt === undefined ? t(info.titleKey) : t("chat.statusIndicator.retrying", { attempt: retryAttempt })
   const activeConnection = useConnections((c) => c.activeConnection)
   const clientBase = useConnections((c) => c.clientBase)
   const color = TONE_COLOR[info.tone]
@@ -96,10 +98,10 @@ function StatusSheet({ sessionId, busy, onClose }: Props & { onClose: () => void
         <Pressable style={s.sheet} onPress={() => undefined} testID="connection-status-sheet">
           <View style={s.titleRow}>
             <View style={[s.dot, { backgroundColor: color }]} />
-            <Text style={s.title}>{t(info.titleKey)}</Text>
+            <Text style={s.title}>{title}</Text>
             {checking ? <ActivityIndicator size="small" color={cyber.cyan} /> : null}
           </View>
-          <Text style={s.body}>{t(info.explanationKey)}</Text>
+          {retryAttempt === undefined && <Text style={s.body}>{t(info.explanationKey)}</Text>}
 
           <View style={s.chain}>
             {chain.map((link) => (
