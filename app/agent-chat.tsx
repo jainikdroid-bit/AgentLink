@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../src/theme/useTheme"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Pressable } from "react-native"
 import { Stack, router, useLocalSearchParams } from "expo-router"
@@ -21,6 +22,8 @@ import { useSettings } from "../src/stores/settings"
 // Protocol. Everything shown here is rebuilt from the agent's event stream, so closing the screen leaves the
 // agent running and reopening it from the agents list picks the chat up again.
 export default function AgentChatScreen() {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ agent: string; name?: string; cwd?: string; id?: string }>()
@@ -122,14 +125,14 @@ export default function AgentChatScreen() {
           title: agentName,
           headerRight: () => (
             <TouchableOpacity onPress={confirmStop} hitSlop={12} testID="acp-stop-agent">
-              <Ionicons name="power-outline" size={22} color={cyber.red} />
+              <Ionicons name="power-outline" size={22} color={palette.red} />
             </TouchableOpacity>
           ),
         }}
       />
       {statusLine ? (
         <View style={[s.status, statusLine.tone === "error" && s.statusError]}>
-          {statusLine.tone === "info" ? <ActivityIndicator size="small" color={cyber.cyan} /> : null}
+          {statusLine.tone === "info" ? <ActivityIndicator size="small" color={palette.cyan} /> : null}
           <View style={s.statusTextWrap}>
             <Text style={s.statusText}>{statusLine.text}</Text>
             {"detail" in statusLine && statusLine.detail ? <Text style={s.statusDetail} numberOfLines={6}>{statusLine.detail}</Text> : null}
@@ -138,9 +141,9 @@ export default function AgentChatScreen() {
       ) : null}
       {state.modelConfig || state.modelName ? (
         <Pressable style={s.modelButton} onPress={() => setModelMenu(true)} disabled={!state.modelConfig || !ready || Object.values(state.requests).includes("session/set_config_option")} accessibilityRole="button" accessibilityLabel={t("chat.modelPicker.title")}>
-          <Ionicons name="hardware-chip-outline" size={16} color={cyber.cyan} />
+          <Ionicons name="hardware-chip-outline" size={16} color={palette.cyan} />
           <Text style={s.modelText} numberOfLines={1}>{state.modelName || t("chat.modelPicker.title")}</Text>
-          {state.modelConfig ? <Ionicons name="chevron-down" size={16} color={cyber.cyan} /> : null}
+          {state.modelConfig ? <Ionicons name="chevron-down" size={16} color={palette.cyan} /> : null}
         </Pressable>
       ) : null}
       <Modal visible={modelMenu && !!state.modelConfig} transparent animationType="fade" onRequestClose={() => setModelMenu(false)}>
@@ -153,7 +156,7 @@ export default function AgentChatScreen() {
                 if (item.value !== state.modelConfig?.current) void chat.setModel(item.value).catch(() => Alert.alert(t("common.error")))
               }} accessibilityRole="button" accessibilityState={{ selected: item.value === state.modelConfig?.current }}>
                 <Text style={s.modelText}>{item.name}</Text>
-                {item.value === state.modelConfig?.current ? <Ionicons name="checkmark" size={18} color={cyber.cyan} /> : null}
+                {item.value === state.modelConfig?.current ? <Ionicons name="checkmark" size={18} color={palette.cyan} /> : null}
               </Pressable>
             )} />
             <Pressable style={s.modelButton} onPress={() => setModelMenu(false)} accessibilityRole="button">
@@ -183,7 +186,7 @@ export default function AgentChatScreen() {
           nearBottom.current = contentOffset.y + layoutMeasurement.height > contentSize.height - 120
         }}
         scrollEventThrottle={100}
-        ListFooterComponent={state.busy && lastItem?.type !== "thought" ? <ActivityIndicator style={s.busy} color={cyber.cyan} /> : null}
+        ListFooterComponent={state.busy && lastItem?.type !== "thought" ? <ActivityIndicator style={s.busy} color={palette.cyan} /> : null}
       />
       {state.pendingPermissions.map((request) => (
         <PermissionCard key={String(request.requestId)} request={request} agent={agentName} onAnswer={(optionId) => void chat.answer(request.requestId, optionId).catch(() => undefined)} />
@@ -194,18 +197,18 @@ export default function AgentChatScreen() {
           value={text}
           onChangeText={setText}
           placeholder={t("acp.inputPlaceholder", { agent: agentName })}
-          placeholderTextColor={cyber.muted}
+          placeholderTextColor={palette.muted}
           multiline
           editable={ready}
           testID="acp-input"
         />
         {state.busy ? (
           <TouchableOpacity style={[s.send, s.cancel]} onPress={() => void chat.cancel().catch(() => undefined)} testID="acp-cancel">
-            <Ionicons name="stop" size={20} color={cyber.red} />
+            <Ionicons name="stop" size={20} color={palette.red} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[s.send, (!ready || !text.trim() || sending) && s.sendOff]} onPress={() => void submit()} disabled={!ready || !text.trim() || sending} testID="acp-send">
-            {sending ? <ActivityIndicator size="small" color={cyber.bg} /> : <Ionicons name="arrow-up" size={20} color={cyber.bg} />}
+            {sending ? <ActivityIndicator size="small" color={palette.bg} /> : <Ionicons name="arrow-up" size={20} color={palette.bg} />}
           </TouchableOpacity>
         )}
       </View>
@@ -222,7 +225,7 @@ function noticeText(item: Extract<ChatItem, { type: "notice" }>, t: (key: string
   return code
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: cyber.bg },
   status: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: cyber.surface, borderBottomWidth: 1, borderBottomColor: cyber.border },
   statusError: { backgroundColor: "#2a0f16" },
