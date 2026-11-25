@@ -6,6 +6,7 @@ import { createClient, probeServer, type Client, type Project } from "../lib/sdk
 import type { ServerApi } from "../lib/api-detect"
 import { buildAuth } from "../lib/auth"
 import { isAuthError } from "../lib/api-error"
+import { sameEndpoint, endpointChanged, clearOldRoute } from "../lib/connection-identity"
 import { stripTrailingSlash } from "../lib/path-utils"
 import { setLanRoutes } from "../lib/tailnet"
 
@@ -27,7 +28,7 @@ const CONNECTION_TEST_TIMEOUT_MS = 12_000
 // unchanged endpoint must still use it; never send it to a newly typed URL.
 export async function getEditTestPassword(connection: ServerConnection, saved: ServerConnection | undefined, entered?: string): Promise<string | undefined> {
   if (entered) return entered
-  if (!saved || saved.id !== connection.id || stripTrailingSlash(saved.url.trim()) !== stripTrailingSlash(connection.url.trim())) return undefined
+  if (!saved || saved.id !== connection.id || !sameEndpoint(saved.url, connection.url)) return undefined
   return (await SecureStore.getItemAsync(`${PASSWORDS_PREFIX}${saved.id}`)) || undefined
 }
 
@@ -320,28 +321,16 @@ export const useConnections = create<ConnectionsState>((set, get) => ({
   },
 
   updateConnection: async (id, updates, password) => {
-    const connections = get().connections.map((c) => {
-      if (c.id !== id) return c
-      const merged = { ...c, ...updates }
-      // A different URL is a different server: drop the recorded probe so the
-      // next client build re-detects the transport instead of reusing the
-      // previous server's answer.
-      if (updates.url !== undefined && updates.url !== c.url) {
-        merged.api = undefined
-        merged.serverVersion = undefined
-      }
-      return merged
-    })
-
+    const previous = get().connections.find(c => c.id === id)
+    if (!previous) return
+    const changed = endpointChanged(previous, updates)
+    const connections = get().connections.map(c => c.id === id ? clearOldRoute(c, updates) : c)
+    const secretKey = `${PASSWORDS_PREFIX}${id}`
+    // Clear BEFORE persisting the new address, even for inactive connections.
+    // A failed write must not leave a new address paired with the old secret.
+    if (changed) await SecureStore.deleteItemAsync(secretKey)
     await SecureStore.setItemAsync(CONNECTIONS_KEY, JSON.stringify(connections))
-
-    // Persist a new password only when one was entered. The edit form loads the
-    // password field blank (passwords aren't read back for security), so an
-    // empty value means "keep the existing password", not "clear it". Written
-    // before the active-client rebuild below so the rebuilt client picks it up.
-    if (password) {
-      await SecureStore.setItemAsync(`${PASSWORDS_PREFIX}${id}`, password)
-    }
+    if (password) await SecureStore.setItemAsync(secretKey, password)
 
     // If updating active connection, recreate client
     if (get().activeConnection?.id === id) {
