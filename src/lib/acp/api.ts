@@ -29,6 +29,10 @@ export interface RunningAgent {
   cwd: string
   startedAt: number
   exited: boolean
+  busy?: boolean
+  pendingPermissions?: number
+  lastActivity?: number
+  sessionId?: string | null
 }
 
 /** `status` 0 means the computer did not answer. */
