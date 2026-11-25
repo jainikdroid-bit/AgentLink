@@ -358,6 +358,11 @@ function createAcpBridge(deps = {}) {
     const isRequest = message && message.jsonrpc === '2.0' && typeof message.method === 'string'
     const isResponse = message && message.jsonrpc === '2.0' && message.id !== undefined && message.id !== null && typeof message.method !== 'string' && ('result' in message || 'error' in message)
     if (!isRequest && !isResponse) return send(res, 400, { ok: false, error: 'not a JSON-RPC message' })
+    if(message.method==='session/load'){
+      const saved=message.params?.sessionId
+      if(typeof saved!=='string'||!saved||saved.length>512)return send(res,400,{ok:false,error:'invalid saved session id'})
+      if([...sessions.values()].some(other=>other!==session&&!other.exited&&other.agent===session.agent&&(other.protocolSessionId===saved||[...other.requests.values()].some(r=>r.method==='session/load'&&r.sessionId===saved))))return send(res,409,{ok:false,error:'this session is already open in another agent process'})
+    }
     const text = JSON.stringify(message)
     const key=message.id===undefined||message.id===null?null:keyOf(message.id)
     if(key!==null && (typeof message.id!=='string'&&typeof message.id!=='number'||key.length>512))return send(res,400,{ok:false,error:'invalid RPC id'})
