@@ -45,8 +45,7 @@
 
 A native Android client for coding agents that run on **your own computer**: [opencode](https://github.com/sst/opencode)
 out of the box, and through the open [Agent Client Protocol](https://agentclientprotocol.com) also Claude Code, Codex,
-Gemini CLI and more (table below). It talks only to the computer **you** run, over your own network. Nothing goes
-through a relay or a hosted service.
+Gemini CLI and more (table below). It talks only to the computer **you** run, over your own network. The recommended LAN and Tailscale modes do not require an AgentLink-hosted relay. Optional public tunnels use third-party infrastructure.
 
 > Independent community client; not affiliated with the opencode team or any agent vendor. Android package id: `cc.agentlabs.opencode`.
 
@@ -127,35 +126,55 @@ Design: dark only, blue-black with neon cyan and magenta accents, monospace in t
 license allows redistribution, modification and commercial use; see
 [`web/cheri3d/model/LICENSE.md`](web/cheri3d/model/LICENSE.md).
 
-## Install in three steps (about two minutes)
+## Get started — choose your connection
 
-Full guide with troubleshooting: **[docs/INSTALL.md](docs/INSTALL.md)**. It is also available in
-[Русский](docs/INSTALL.ru.md), [中文](docs/INSTALL.zh-Hans.md), [Español](docs/INSTALL.es.md), [Deutsch](docs/INSTALL.de.md),
-[Français](docs/INSTALL.fr.md), [Português](docs/INSTALL.pt.md), [日本語](docs/INSTALL.ja.md), [한국어](docs/INSTALL.ko.md),
-[Українська](docs/INSTALL.uk.md) and [Türkçe](docs/INSTALL.tr.md).
+[Download Android APK](https://github.com/jainikdroid-bit/AgentLink/releases/latest) · [Full setup guide](docs/INSTALL.md) · [Русская инструкция](docs/INSTALL.ru.md)
 
-**1. Computer: paste one command.** Open PowerShell (Windows) and paste:
+| Where you connect | Setup |
+|---|---|
+| From home or away | Tailscale — private network, same account on both devices |
+| Same trusted Wi-Fi | LAN — no Tailscale account required |
+
+**1. Prepare your computer.** Open PowerShell on Windows or Terminal on macOS/Linux. Run the command for your platform.
+
+<details open>
+<summary>Windows (PowerShell)</summary>
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
-macOS / Linux, in Terminal:
+For trusted home Wi-Fi only, add `-Mode lan` at the end.
+
+</details>
+
+<details>
+<summary>Linux / macOS (Terminal)</summary>
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
-It installs what is missing (Node.js, opencode, Tailscale), asks you to sign in to Tailscale once, starts the server and
-opens a page with two QR codes.
+For trusted home Wi-Fi only, replace the final `sh` with `sh -s -- --mode lan`.
 
-**2. Phone: install.** Scan the first QR code (or open [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)),
-download the APK and open it. Install Tailscale on the phone too and sign in with the same account.
+</details>
 
-**3. Phone: pair.** Open the app, tap **Scan QR to pair**, point it at the second QR code, tap **Connect**.
+**2. Install AgentLink on Android.** Get the APK from this project's [GitHub Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest). In Tailscale mode, sign into the same account on both devices; LAN skips this step.
 
-Re-running the command is safe (it repairs instead of duplicating). No Tailscale wanted? `-Mode lan` (same Wi-Fi) or
-`-Mode tunnel` (free Cloudflare tunnel, see the guide for the trade-off).
+**3. Pair.** Scan the pairing QR (not the APK QR), enter the six-digit code, or paste the pairing link. Verify the computer name and tap Connect. The installer creates the server password; no manual password entry is needed for pairing.
+
+<details>
+<summary>HTTP 401, no computer found, or no model response?</summary>
+
+- HTTP 401: the server rejected credentials. Run the installer again and pair using fresh details. Installer-managed username: `opencode`.
+- Computer not found: check that it is awake and on the same trusted LAN or Tailscale network; enter the address printed next to the code if necessary.
+- Session error or retries: server access and AI provider login are separate. Configure the provider or sign into the agent on the computer. Never publish passwords, API keys or pairing links.
+
+</details>
+
+### Upcoming update: 0.26.6
+
+The [development branch](https://github.com/jainikdroid-bit/AgentLink/tree/fix/agentlink-auth-guide) adds an in-app setup wizard with expandable explanations, two-step LAN / three-step Tailscale routes, improved credential checks and clearer retry states. Cheri's drag, pinch and animation behavior is unchanged. These changes are not yet a published APK; check Releases for installable builds.
 
 ### Let an AI agent do it
 
