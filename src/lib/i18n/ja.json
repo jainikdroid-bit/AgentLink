@@ -88,11 +88,21 @@
         "other": "不明"
       }
     },
+    "appearance": {
+      "title": "外観",
+      "character3d": "フローティング3Dキャラクター",
+      "cyber": "Cyber",
+      "aurora": "Aurora",
+      "nebula": "Nebula",
+      "ember": "Ember"
+    },
     "mascot": {
       "label": "マスコット",
       "title": "マスコットを選択",
       "cheri": "チェリー",
-      "rig": "RIG"
+      "rig": "RIG",
+      "byte": "Byte",
+      "orbit": "Orbit"
     },
     "chat": {
       "showThinking": {
