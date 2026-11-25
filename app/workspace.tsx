@@ -4,14 +4,14 @@ import {router,useFocusEffect,useLocalSearchParams} from "expo-router"
 import {useTranslation} from "react-i18next"
 import {useTheme} from "../src/theme/useTheme"
 import {getConnectionTarget,useConnections} from "../src/stores/connections"
-import {call,getHostHardware,listAgents,type HostHardware,type RunningAgent,type AgentInfo,type AcpTarget} from "../src/lib/acp/api"
+import {call,getHostHardware,listAgents,listSavedSessions,type SavedAgentSession,type HostHardware,type RunningAgent,type AgentInfo,type AcpTarget} from "../src/lib/acp/api"
 import {routeUrl} from "../src/lib/tailnet"
 import {highlightLine,parseGitStatus,previewAddress} from "../src/lib/workspace-pure"
 
 type Inventory={root:string;statusPorcelain:string;branches:string[];worktrees:{path:string;branch:string|null;head:string|null;locked:boolean}[]}
 type InboxEvent={id:string;at:number;category:string;agent:string;bridgeId:string}
 type BenchModel={engine:string;id:string;state:string}
-type Host={id:string;hardware?:HostHardware;running?:RunningAgent[];agents?:AgentInfo[];events?:InboxEvent[];pushConfigured?:boolean;error?:string}
+type Host={id:string;hardware?:HostHardware;running?:RunningAgent[];agents?:AgentInfo[];events?:InboxEvent[];saved?:SavedAgentSession[];pushConfigured?:boolean;error?:string}
 type Edit={file:string;text:string;revision:string;dirty:boolean}
 const describe=(e:unknown)=>e instanceof Error?e.message:String(e)
 
@@ -20,7 +20,7 @@ export default function Workspace(){
  const params=useLocalSearchParams<{draft?:string;connectionId?:string}>()
  const connections=useConnections(s=>s.connections),active=useConnections(s=>s.activeConnection)
  const [selected,setSelected]=useState(params.connectionId||active?.id||"")
- const [cwd,setCwd]=useState(active?.directory||"")
+ const [cwd,setCwd]=useState(connections.find(c=>c.id===(params.connectionId||active?.id))?.directory||"")
  const [hosts,setHosts]=useState<Host[]>([])
  const [inventory,setInventory]=useState<Inventory|null>(null)
  const [file,setFile]=useState(""),[branch,setBranch]=useState(""),[message,setMessage]=useState("")
@@ -44,8 +44,8 @@ export default function Workspace(){
     try{
      const target=await getConnectionTarget(c.id)
      if(!target)throw Error("Unavailable")
-     const [hw,agents,inbox]=await Promise.allSettled([getHostHardware(target),listAgents(target),call<{events:InboxEvent[];pushConfigured:boolean}>(target,"/acp/inbox",{},8000)])
-     values.push({id:c.id,hardware:hw.status==="fulfilled"?hw.value:undefined,running:agents.status==="fulfilled"?agents.value.running:undefined,agents:agents.status==="fulfilled"?agents.value.agents:undefined,events:inbox.status==="fulfilled"?inbox.value.events:undefined,pushConfigured:inbox.status==="fulfilled"?inbox.value.pushConfigured:undefined,error:agents.status==="rejected"?describe(agents.reason):undefined})
+     const [hw,agents,inbox,saved]=await Promise.allSettled([getHostHardware(target),listAgents(target),call<{events:InboxEvent[];pushConfigured:boolean}>(target,"/acp/inbox",{},8000),listSavedSessions(target)])
+     values.push({id:c.id,hardware:hw.status==="fulfilled"?hw.value:undefined,running:agents.status==="fulfilled"?agents.value.running:undefined,agents:agents.status==="fulfilled"?agents.value.agents:undefined,saved:saved.status==="fulfilled"?saved.value:undefined,events:inbox.status==="fulfilled"?inbox.value.events:undefined,pushConfigured:inbox.status==="fulfilled"?inbox.value.pushConfigured:undefined,error:agents.status==="rejected"?describe(agents.reason):undefined})
     }catch(e){values.push({id:c.id,error:describe(e)})}
    }
    if(seq===generation.current)setHosts(values)
@@ -93,9 +93,9 @@ export default function Workspace(){
   const routed=await routeUrl(url)
   await Linking.openURL(routed)
  })
- const start=(agent:AgentInfo,existingId?:string,folder=cwd)=>{
+ const start=(agent:AgentInfo,existingId?:string,folder=cwd,savedId?:string)=>{
   if(busy||!selected)return
-  router.push({pathname:"/agent-chat",params:{agent:agent.id,name:agent.name,cwd:folder,connectionId:selected,...(existingId?{id:existingId}:resume.trim()?{resumeId:resume.trim()}:{}),...(handoff.trim()?{draft:handoff.trim().slice(0,8000)}:{})}})
+  router.push({pathname:"/agent-chat",params:{agent:agent.id,name:agent.name,cwd:folder,connectionId:selected,...(existingId?{id:existingId}:(savedId||resume.trim())?{resumeId:savedId||resume.trim()}:{}),...(handoff.trim()?{draft:handoff.trim().slice(0,8000)}:{})}})
  }
  const box={backgroundColor:p.surface,borderRadius:12,borderWidth:1,borderColor:p.border,padding:12,gap:8} as const
  const input={backgroundColor:p.surface2,color:p.text,borderWidth:1,borderColor:p.border,borderRadius:8,padding:10,fontSize:14} as const
@@ -114,7 +114,7 @@ export default function Workspace(){
   </View>
   {edit&&<View style={box}><Text style={title}>{edit.file}{edit.dirty?" *":""}</Text><TextInput style={[input,{minHeight:180,textAlignVertical:"top",fontFamily:p.mono}]} multiline editable={!busy} value={edit.text} onChangeText={text=>setEdit({...edit,text,dirty:true})} autoCapitalize="none" autoCorrect={false}/>{btn(w("save"),save,!edit.dirty)}{btn(w("highlight"),()=>setHighlight(!highlight))}{highlight&&<View>{edit.text.split("\n").slice(0,250).map((line,i)=><Text key={i} style={{fontFamily:p.mono,fontSize:12,color:p.text}}>{i+1}  {highlightLine(line).map((token,j)=><Text key={j} style={{color:token.kind==="keyword"?p.magenta:token.kind==="string"?p.green:token.kind==="comment"?p.muted:token.kind==="number"?p.cyan:p.text}}>{token.text}</Text>)}</Text>)}</View>}</View>}
   <View style={box}><Text style={title}>{w("preview")}</Text><Text style={{color:p.muted}}>{w("previewHelp")}</Text>{field(port,setPort,"3000")}{btn(w("openPreview"),openPreview,!chosen?.launcherPort)}</View>
-  <View style={box}><Text style={title}>{w("agents")}</Text>{field(resume,setResume,w("resumeId"))}<TextInput style={[input,{minHeight:100}]} multiline value={handoff} onChangeText={setHandoff} placeholder={w("handoff")} placeholderTextColor={p.muted} maxLength={8000}/><Text style={{color:p.muted}}>{w("handoffHelp")}</Text>{host?.running?.filter(r=>!r.exited).map(r=>btn(r.name+" · "+r.cwd,()=>start({id:r.agent,name:r.name,installed:true},r.id,r.cwd)))}{host?.agents?.filter(a=>a.installed).map(a=>btn(a.name,()=>start(a)))}</View>
+  <View style={box}><Text style={title}>{w("agents")}</Text>{field(resume,setResume,w("resumeId"))}{host?.saved?.filter(r=>r.loadSession).map(r=>btn(r.agent+" · "+r.cwd+" · "+new Date(r.at).toLocaleString(),()=>start({id:r.agent,name:r.agent,installed:true},undefined,r.cwd,r.sessionId)))}<TextInput style={[input,{minHeight:100}]} multiline value={handoff} onChangeText={setHandoff} placeholder={w("handoff")} placeholderTextColor={p.muted} maxLength={8000}/><Text style={{color:p.muted}}>{w("handoffHelp")}</Text>{host?.running?.filter(r=>!r.exited).map(r=>btn(r.name+" · "+r.cwd,()=>start({id:r.agent,name:r.name,installed:true},r.id,r.cwd)))}{host?.agents?.filter(a=>a.installed).map(a=>btn(a.name,()=>start(a)))}</View>
   <View style={box}><Text style={title}>{w("benchmark")}</Text>{btn(w("refresh"),refreshBench,!chosen?.launcherPort)}{benchModels.map(m=>btn(m.engine+" · "+m.id,()=>benchmark(m)))}{benchResult?<Text selectable style={txt}>{benchResult}</Text>:null}<Text style={txt}>{w("quota")}: {w("quotaUnknown")}</Text></View>
   <View style={box}><Text style={title}>{w("inbox")}</Text><Text style={{color:p.muted}}>{host?.pushConfigured?w("pushOn"):w("pushOff")}</Text>{!host?.events?.length?<Text style={txt}>{w("inboxEmpty")}</Text>:host.events.slice(-30).reverse().map(e=><Text key={e.id} style={txt}>{new Date(e.at).toLocaleString()} · {e.agent} · {w(e.category)}</Text>)}</View>
   {btn(w("phoneModels"),()=>router.push("/phone-models"))}
