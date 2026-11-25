@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../theme/useTheme"
 import { useState } from "react"
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Pressable, ActivityIndicator } from "react-native"
 import { router } from "expo-router"
@@ -36,6 +37,7 @@ interface Props {
 
 /** Coloured dot + short title for the overall state; tap for the explanation, the chain and what to do about it. */
 export function ConnectionStatusChip({ sessionId, busy, compact = false }: Props) {
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const { info, retryAttempt } = useOverallStatus({ sessionId, busy })
@@ -60,6 +62,8 @@ export function ConnectionStatusChip({ sessionId, busy, compact = false }: Props
 }
 
 function StatusSheet({ sessionId, busy, onClose }: Props & { onClose: () => void }) {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const { info, links, checkedAt, checking, retryAttempt } = useOverallStatus({ sessionId, busy })
   const title = retryAttempt === undefined ? t(info.titleKey) : t("chat.statusIndicator.retrying", { attempt: retryAttempt })
@@ -99,7 +103,7 @@ function StatusSheet({ sessionId, busy, onClose }: Props & { onClose: () => void
           <View style={s.titleRow}>
             <View style={[s.dot, { backgroundColor: color }]} />
             <Text style={s.title}>{title}</Text>
-            {checking ? <ActivityIndicator size="small" color={cyber.cyan} /> : null}
+            {checking ? <ActivityIndicator size="small" color={palette.cyan} /> : null}
           </View>
           {retryAttempt === undefined && <Text style={s.body}>{t(info.explanationKey)}</Text>}
 
@@ -147,7 +151,7 @@ function StatusSheet({ sessionId, busy, onClose }: Props & { onClose: () => void
   )
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   chip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, borderWidth: 1, flexShrink: 1 },
   chipText: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: 4 },
