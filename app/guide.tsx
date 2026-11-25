@@ -16,6 +16,7 @@ import {
   commandFor,
   isLastStep,
   type GuideOs,
+  type GuideMode,
 } from "../src/lib/guide"
 
 const MOOD: MascotState[] = ["working", "thinking", "idle"]
@@ -28,7 +29,10 @@ export default function GuideScreen() {
   const [index, setIndex] = useState(0)
   const [os, setOs] = useState<GuideOs>("windows")
   const [copied, setCopied] = useState(false)
+  const [mode, setMode] = useState<GuideMode>("tailscale")
+  const [expanded, setExpanded] = useState(false)
   const step = GUIDE_STEPS[clampStep(index)]
+  const visibleSteps = mode === "lan" ? GUIDE_STEPS.filter((name) => name !== "tailscale") : GUIDE_STEPS
 
   const finish = async (then?: () => void) => {
     await AsyncStorage.setItem(GUIDE_DONE_KEY, "1").catch(() => {})
@@ -37,30 +41,31 @@ export default function GuideScreen() {
   }
 
   const copyCommand = async () => {
-    await Clipboard.setStringAsync(commandFor(os))
+    await Clipboard.setStringAsync(commandFor(os, mode))
     setCopied(true)
     setTimeout(() => setCopied(false), 1600)
   }
 
   const next = () => {
+    setExpanded(false)
     if (step === "scan") void finish(() => router.replace("/scan"))
-    else setIndex((i) => clampStep(i + 1))
+    else setIndex((i) => clampStep(i + (step === "computer" && mode === "lan" ? 2 : 1)))
   }
 
   return (
     <View style={s.container} testID="guide-screen">
       <View style={s.top}>
-        <Text style={s.counter}>{`${index + 1} / ${GUIDE_STEPS.length}`}</Text>
+        <Text style={s.counter}>{`${visibleSteps.indexOf(step) + 1} / ${visibleSteps.length}`}</Text>
         <TouchableOpacity onPress={() => void finish()} hitSlop={10} testID="guide-skip">
           <Text style={s.skip}>{t("guide.skip")}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Mascot state={MOOD[clampStep(index)]} size={104} interactive />
         <View style={s.dots}>
-          {GUIDE_STEPS.map((name, i) => (
-            <View key={name} style={[s.dot, i === index && s.dotActive]} />
+          {visibleSteps.map((name) => (
+            <View key={name} style={[s.dot, name === step && s.dotActive]} />
           ))}
         </View>
         <Text style={s.title}>{t(`guide.${step}.title`)}</Text>
@@ -68,9 +73,20 @@ export default function GuideScreen() {
 
         {step === "computer" ? (
           <View style={s.commandBox}>
+            <Text style={s.sectionLabel}>{t("guide.easy.network")}</Text>
+            {(["tailscale", "lan"] as const).map((key) => (
+              <TouchableOpacity key={key} onPress={() => { setMode(key); setCopied(false) }} accessibilityRole="radio" accessibilityState={{ selected: mode === key }} style={[s.network, mode === key && s.networkActive]} testID={`guide-network-${key}`}>
+                <Ionicons name={mode === key ? "radio-button-on" : "radio-button-off"} color={cyber.cyan} size={20} />
+                <View style={s.networkText}>
+                  <Text style={s.sectionLabel}>{t(`guide.easy.${key}Title`)}</Text>
+                  <Text style={s.tip}>{t(`guide.easy.${key}Body`)}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            <Text style={s.sectionLabel}>{t("guide.easy.platform")}</Text>
             <View style={s.tabs}>
               {(["windows", "unix"] as const).map((key) => (
-                <TouchableOpacity key={key} onPress={() => setOs(key)} style={[s.tab, os === key && s.tabActive]} testID={`guide-os-${key}`}>
+                <TouchableOpacity key={key} onPress={() => { setOs(key); setCopied(false) }} style={[s.tab, os === key && s.tabActive]} testID={`guide-os-${key}`}>
                   <Text style={[s.tabText, os === key && s.tabTextActive]}>{t(`guide.os.${key}`)}</Text>
                 </TouchableOpacity>
               ))}
@@ -93,6 +109,20 @@ export default function GuideScreen() {
           </TouchableOpacity>
         ) : null}
 
+        {step === "scan" && (
+          <TouchableOpacity style={s.secondary} onPress={() => void finish(() => router.replace("/pair-code"))} testID="guide-pair-code">
+            <Ionicons name="keypad-outline" size={18} color={cyber.cyan} />
+            <Text style={s.secondaryText}>{t("pairCode.button")}</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={s.details}>
+          <TouchableOpacity style={s.detailsHeader} onPress={() => setExpanded(!expanded)} accessibilityRole="button" accessibilityState={{ expanded }} testID="guide-details">
+            <Text style={s.sectionLabel}>{t("guide.easy.details")}</Text>
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={cyber.cyan} />
+          </TouchableOpacity>
+          {expanded && <Text style={s.detailsBody}>{t(`guide.easy.${step}Details`)}</Text>}
+        </View>
         <TouchableOpacity onPress={() => void Linking.openURL(GUIDE_DOC_URL)} style={s.docLink}>
           <Text style={s.docLinkText}>{t("guide.fullGuide")}</Text>
         </TouchableOpacity>
@@ -100,7 +130,7 @@ export default function GuideScreen() {
 
       <View style={s.bottom}>
         {index > 0 ? (
-          <TouchableOpacity style={s.back} onPress={() => setIndex((i) => clampStep(i - 1))} testID="guide-back">
+          <TouchableOpacity style={s.back} onPress={() => { setExpanded(false); setIndex((i) => clampStep(i - (step === "scan" && mode === "lan" ? 2 : 1))) }} testID="guide-back">
             <Text style={s.backText}>{t("guide.back")}</Text>
           </TouchableOpacity>
         ) : (
@@ -125,6 +155,13 @@ const s = StyleSheet.create({
   dotActive: { backgroundColor: cyber.cyan, width: 22 },
   title: { color: cyber.text, fontSize: 22, fontWeight: "700", textAlign: "center", marginTop: 8 },
   body: { color: cyber.muted, fontSize: 15, lineHeight: 22, textAlign: "center" },
+  sectionLabel: { color: cyber.text, fontSize: 15, fontWeight: "600", flexShrink: 1 },
+  network: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderColor: cyber.border, borderRadius: 10, padding: 12 },
+  networkActive: { borderColor: cyber.cyan, backgroundColor: cyber.surface2 },
+  networkText: { flex: 1, gap: 4 },
+  details: { alignSelf: "stretch", borderWidth: 1, borderColor: cyber.border, borderRadius: 12, backgroundColor: cyber.surface },
+  detailsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 14, gap: 12 },
+  detailsBody: { color: cyber.text, paddingHorizontal: 14, paddingBottom: 14, fontSize: 14, lineHeight: 22 },
   commandBox: { alignSelf: "stretch", backgroundColor: cyber.surface, borderRadius: 8, borderWidth: 1, borderColor: cyber.borderGlow, padding: 12, gap: 10, marginTop: 6 },
   tabs: { flexDirection: "row", gap: 6 },
   tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: cyber.border },
