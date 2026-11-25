@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "연결 방법 선택",
+      "tailscaleTitle": "어디서나 · Tailscale",
+      "tailscaleBody": "개인 네트워크. 두 기기에서 로그인하세요.",
+      "lanTitle": "같은 Wi-Fi · LAN",
+      "lanBody": "계정 없이 신뢰할 수 있는 홈 네트워크를 사용하세요.",
+      "platform": "컴퓨터 운영 체제",
+      "details": "자세히 및 문제 해결",
+      "computerDetails": "Windows에서 PowerShell, Linux/macOS에서 터미널을 여세요. 명령을 붙여넣고 Enter를 누른 뒤 QR을 기다리세요. 연결 링크를 공개하지 마세요.",
+      "tailscaleDetails": "두 기기에 같은 Tailscale 계정을 사용하세요. 컴퓨터는 켜져 있어야 합니다. 다른 VPN이 켜져 있으면 Tailscale 연결을 확인하세요.",
+      "scanDetails": "APK QR이 아닌 연결 QR을 스캔하고 컴퓨터 이름을 확인하세요. 실패하면 10분 안에 6자리 코드를 입력하세요. 401 오류 시 새 링크를 생성하세요.",
+      "manual": "수동 연결 (IP 및 비밀번호)",
+      "choosePairing": "단계별 설정 또는 이미 설정된 컴퓨터에 연결하세요."
+    },
     "computer": {
       "title": "컴퓨터에서 명령어 하나 실행",
       "body": "PowerShell(Windows) 또는 터미널(macOS/Linux)을 열고 명령어를 붙여넣은 후 Enter를 누르세요. 필요한 것을 설치하고, 서버를 시작하고, QR 코드를 표시합니다.",
