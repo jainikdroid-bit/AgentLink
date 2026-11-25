@@ -88,6 +88,12 @@ export function getHostHardware(target: AcpTarget): Promise<HostHardware> {
   return call(target, "/hardware", {}, 8000)
 }
 
+export interface SavedAgentSession {agent:string;cwd:string;sessionId:string;at:number;loadSession:boolean}
+export async function listSavedSessions(target:AcpTarget):Promise<SavedAgentSession[]> {
+  const body=await call<{sessions?:SavedAgentSession[]}>(target,"/acp/saved",{},8000)
+  return Array.isArray(body?.sessions)?body.sessions:[]
+}
+
 export async function listAgents(target: AcpTarget): Promise<{ agents: AgentInfo[]; running: RunningAgent[] }> {
   const body = await call<{ agents?: AgentInfo[]; running?: RunningAgent[] }>(target, "/acp/agents")
   return { agents: body.agents ?? [], running: body.running ?? [] }
@@ -139,6 +145,8 @@ export async function* streamEvents(target: AcpTarget, id: string, from: number,
       for (const event of parser.push(decoder.decode(chunk.value, { stream: true }))) yield event
     }
   } finally {
+    // Closing the consumer (including a replay gap) must also close the HTTP stream.
+    await reader.cancel().catch(() => undefined)
     reader.releaseLock()
   }
 }
