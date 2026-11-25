@@ -88,6 +88,7 @@ export interface AcpState {
   agentName: string
   agentVersion: string
   imagesAllowed: boolean
+  loadSession?: boolean
   authMethods: { id: string; name: string; type: string }[]
   sessionId: string | null
   modelName: string
@@ -265,15 +266,16 @@ function onResponse(state: AcpState, msg: RpcMessage): AcpState {
       agentName: str(r.agentInfo?.name),
       agentVersion: str(r.agentInfo?.version),
       imagesAllowed: !!r.agentCapabilities?.promptCapabilities?.image,
+      loadSession: r.agentCapabilities?.loadSession === true,
       authMethods: Array.isArray(r.authMethods) ? r.authMethods.filter(isObject).map((m) => ({ id: str(m.id), name: str(m.name), type: str(m.type) })) : [],
     }
   }
-  if (method === "session/new") {
+  if (method === "session/new" || method === "session/load") {
     if (msg.error?.code === AUTH_REQUIRED) return { ...next, handshake: "auth-required" }
     if (failed) return { ...next, handshake: "failed", error: errorText(msg.error) }
     const r = isObject(msg.result) ? msg.result : {}
     const { modes, modeId } = modesFrom(r.modes)
-    next = { ...next, handshake: "done", sessionId: str(r.sessionId) || null, ...modelFrom(r.configOptions), modes, modeId }
+    next = { ...next, handshake: "done", sessionId: str(r.sessionId) || next.sessionId || null, ...modelFrom(r.configOptions), modes, modeId }
     const safe = RISKY_MODES.has(modeId.toLowerCase()) ? SAFE_MODES.map((id) => modes.find((m) => m.id === id)).find(Boolean) : undefined
     if (!safe) return next
     const from = modes.find((m) => m.id === modeId)
@@ -364,7 +366,7 @@ export function reduce(state: AcpState, event: StreamEvent): AcpState {
       if (typeof msg.method === "string" && msg.id !== undefined && msg.id !== null) {
         next = { ...next, requests: { ...next.requests, [String(msg.id)]: msg.method } }
         if (msg.method === "initialize") next = { ...next, handshake: "initializing" }
-        else if (msg.method === "session/new") next = { ...next, handshake: "creating" }
+        else if (msg.method === "session/new" || msg.method === "session/load") next = { ...next, handshake: "creating", ...(msg.method === "session/load" ? { sessionId: str(msg.params?.sessionId) || null } : {}) }
         else if (msg.method === "authenticate") next = { ...next, handshake: "authenticating" }
         else if (msg.method === "session/set_mode") next = { ...next, safeSwitch: null, modeId: str(msg.params?.modeId) || next.modeId }
         else if (msg.method === "session/prompt") {
@@ -441,14 +443,14 @@ export function unsupportedRequestReply(msg: RpcMessage): RpcMessage | null {
 }
 
 /** The next handshake message to send once the backlog has been read (null: nothing to send now). */
-export function nextHandshakeStep(state: AcpState, cwd: string, version: string): RpcMessage | null {
+export function nextHandshakeStep(state: AcpState, cwd: string, version: string, resumeId?: string): RpcMessage | null {
   if (state.replaying || state.exit) return null
   const id = state.nextId
   switch (state.handshake) {
     case "none":
       return initializeRequest(id, version)
     case "initialized":
-      return newSessionRequest(id, cwd)
+      return resumeId ? (state.loadSession ? { jsonrpc: "2.0", id, method: "session/load", params: { sessionId: resumeId, cwd, mcpServers: [] } } : null) : newSessionRequest(id, cwd)
     case "auth-required": {
       const method = state.authMethods.find((m) => m.type !== "terminal" && m.id)
       return method ? authenticateRequest(id, method.id) : null
