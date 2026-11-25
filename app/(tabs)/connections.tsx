@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, useColorScheme, Alert } from "react-native"
 import { router } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
@@ -24,6 +25,8 @@ function ConnectionItem({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const typeIcon = connection.type === "local" ? "wifi" : connection.type === "tunnel" ? "globe" : "cloud"
 
@@ -47,7 +50,7 @@ function ConnectionItem({
       onLongPress={handleLongPress}
     >
       <View style={styles.connectionIcon}>
-        <Ionicons name={typeIcon} size={24} color={isActive ? "#34f5a5" : isDark ? "#8a93a8" : "#8a93a8"} />
+        <Ionicons name={typeIcon} size={24} color={isActive ? "#34f5a5" : isDark ? palette.muted : palette.muted} />
       </View>
       <View style={styles.connectionContent}>
         <View style={styles.connectionHeader}>
@@ -82,13 +85,15 @@ function ConnectionItem({
         )}
       </View>
       <TouchableOpacity onPress={onEdit} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="ellipsis-vertical" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
+        <Ionicons name="ellipsis-vertical" size={20} color={isDark ? palette.muted : palette.muted} />
       </TouchableOpacity>
     </TouchableOpacity>
   )
 }
 
 export default function ConnectionsScreen() {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -147,7 +152,7 @@ export default function ConnectionsScreen() {
             </Text>
             <View style={styles.settingRow}>
               <View style={styles.settingLabel}>
-                <Ionicons name="layers-outline" size={18} color={isDark ? "#8a93a8" : "#8a93a8"} />
+                <Ionicons name="layers-outline" size={18} color={isDark ? palette.muted : palette.muted} />
                 <Text style={[styles.settingText, isDark && styles.textDark]}>
                   {t("connectionsList.preferences.pageSizeLabel")}
                 </Text>
@@ -187,13 +192,13 @@ export default function ConnectionsScreen() {
 
       {/* FAB to add connection */}
       <TouchableOpacity style={[styles.fab, isDark && styles.fabDark]} onPress={() => router.push("/connection/add")}>
-        <Ionicons name="add" size={28} color={isDark ? "#07080c" : "#ffffff"} />
+        <Ionicons name="add" size={28} color={isDark ? palette.bg : "#ffffff"} />
       </TouchableOpacity>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
