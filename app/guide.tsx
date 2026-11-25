@@ -92,7 +92,7 @@ export default function GuideScreen() {
               ))}
             </View>
             <Text style={s.command} selectable>
-              {commandFor(os)}
+              {commandFor(os, mode)}
             </Text>
             <TouchableOpacity style={s.copy} onPress={() => void copyCommand()} testID="guide-copy">
               <Ionicons name={copied ? "checkmark" : "copy-outline"} size={16} color={cyber.bg} />
