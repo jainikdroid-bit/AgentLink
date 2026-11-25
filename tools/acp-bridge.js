@@ -251,8 +251,8 @@ function createAcpBridge(deps = {}) {
     add(session, 'out', text, isRequest ? keyOf(message.id) : null)
     if(isRequest){
       const key=keyOf(message.id)
-      session.pending.add(key);session.answered.delete(key)
-      if(message.method==='session/request_permission')notify('permissions',session)
+      session.pending.add(key);session.answered.delete(key);session.permissions.delete(key)
+      if(message.method==='session/request_permission'){session.permissions.add(key);notify('permissions',session)}
     }
     if(!message.method&&message.id!==undefined){
       const key=keyOf(message.id),request=session.requests.get(key)
@@ -281,7 +281,7 @@ function createAcpBridge(deps = {}) {
     const child = WIN && !agent.direct ? spawn('cmd.exe', ['/c', agent.cmd, ...agent.args], options) : spawn(agent.cmd, agent.args, options)
     const session = {
       id: crypto.randomBytes(9).toString('base64url'), agent: agent.id, name: agent.name, cwd, startedAt: now(), lastActivity: now(),
-      child, prompts: new Set(), pending: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
+      child, prompts: new Set(), pending: new Set(), permissions: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
     }
     let partial = ''
     child.stdout.setEncoding('utf8')
@@ -314,7 +314,7 @@ function createAcpBridge(deps = {}) {
     send(res, 200, {
       ok: true,
       agents: agents.map((a) => ({ id: a.id, name: a.name, installed: installed.has(a.id) })),
-      running: [...sessions.values()].map((s) => ({ id: s.id, agent: s.agent, name: s.name, cwd: s.cwd, startedAt: s.startedAt, exited: !!s.exited })),
+      running: [...sessions.values()].map((s) => ({ id: s.id, agent: s.agent, name: s.name, cwd: s.cwd, startedAt: s.startedAt, exited: !!s.exited, busy: s.prompts.size > 0, pendingPermissions: s.permissions.size, lastActivity: s.lastActivity, sessionId: s.protocolSessionId })),
     })
   }
 
@@ -376,7 +376,7 @@ function createAcpBridge(deps = {}) {
       session.sentIds.set(key,hash)
       session.requests.set(key,{method:message.method,sessionId:message.method==='session/load'?message.params?.sessionId:undefined})
     }
-    if (isResponse) {session.answered.add(key);session.pending.delete(key)}
+    if (isResponse) {session.answered.add(key);session.pending.delete(key);session.permissions.delete(key)}
     if(message.method==='session/prompt'&&key!==null)session.prompts.add(key)
     // The agent gets the phone's MCP server on session/new|load; the replay log keeps what the phone sent.
     add(session, 'sent', text)
