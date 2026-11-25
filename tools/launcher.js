@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 7 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 8 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -37,6 +37,34 @@ const MAX_FAILS = 6 // wrong passwords per minute per address before answering 4
 // served without the password, so it is one-time, short-lived and dies after a few wrong guesses.
 const PAIR_MAX_FAILS = 5
 const PAIR_BODY_LIMIT = 1024
+
+// Lightweight host metrics. CPU is measured between two samples (not loadavg).
+// Unknown sensor values remain null rather than inventing hardware readings.
+function createHardwareSampler({ system = os, clock = Date.now, disk = () => fs.promises.statfs(system.homedir()) } = {}) {
+  let previous = null
+  return async function sample() {
+    const at = clock()
+    const cores = system.cpus()
+    const ticks = cores.reduce((sum, core) => {
+      const values = Object.values(core.times)
+      return { total: sum.total + values.reduce((a,b)=>a+b,0), idle: sum.idle + core.times.idle }
+    }, {total:0,idle:0})
+    let cpuPercent = null
+    if (previous && previous.count === cores.length && at > previous.at) {
+      const total = ticks.total - previous.total, idle = ticks.idle - previous.idle
+      if (total > 0 && idle >= 0 && idle <= total) cpuPercent = Math.round((1-idle/total)*1000)/10
+    }
+    previous = {...ticks,at,count:cores.length}
+    const total = system.totalmem(), free = system.freemem()
+    let storage = null
+    try {
+      const d = await disk()
+      storage = { totalBytes: Number(d.blocks)*Number(d.bsize), availableBytes: Number(d.bavail)*Number(d.bsize) }
+    } catch { /* not supported by this host */ }
+    return { at, platform: system.platform(), arch: system.arch(), cpu: { model: cores[0]?.model || null, logicalCores: cores.length, percent:cpuPercent }, memory: { totalBytes:total, availableBytes:free, source:"os.freemem" }, storage, gpu:null, temperatureC:null, uptimeSeconds:system.uptime() }
+  }
+}
+const sampleHardware = createHardwareSampler()
 
 function defaultDir() {
   if (process.env.OPENCODE_CONNECT_DIR) return process.env.OPENCODE_CONNECT_DIR
@@ -192,6 +220,7 @@ function createLauncher(deps) {
     // Other coding agents (ACP): the bridge answers its own routes, once the password has been checked above.
     if (route.startsWith('/acp/') && deps.acp) { await deps.acp.handle(req, res, route); return }
     try {
+      if (route === '/hardware' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.hardware || sampleHardware)()) })
       if (route === '/status' && req.method === 'GET') return send(res, 200, { ok: true, launcher: VERSION, acp: !!deps.acp, server: await status(), ...addresses(deps.readState() || {}) })
       // Local model (llama.cpp router): state, and load/unload it from the computer's memory.
       if (route === '/llm' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.llm || llm()).llmStatus()) })
@@ -425,5 +454,5 @@ function main() {
   })
 }
 
-module.exports = { VERSION, writePairFile, createLauncher, passwordMatches, parseBasic, listenerPids, stopPort, realDeps, bindHostOf, lanAddresses, startLanForward, helloProof }
+module.exports = { createHardwareSampler, VERSION, writePairFile, createLauncher, passwordMatches, parseBasic, listenerPids, stopPort, realDeps, bindHostOf, lanAddresses, startLanForward, helloProof }
 if (require.main === module) main()
