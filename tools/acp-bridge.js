@@ -256,6 +256,7 @@ function createAcpBridge(deps = {}) {
     if(req.method!=='POST')return send(res,405,{ok:false,error:'wrong method'})
     if(session.exited)return send(res,409,{ok:false,error:'agent stopped'})
     const body=await readBody(req,65536)
+    if(!body||typeof body!=='object')return send(res,400,{ok:false,error:'invalid queue action'})
     if(body.action==='enqueue'){
       if(!session.protocolSessionId)return send(res,409,{ok:false,error:'session not ready'})
       if(typeof body.id!=='string'||!(/^[a-f0-9-]{36}$/i).test(body.id)||typeof body.text!=='string'||!body.text.trim()||body.text.length>8000)return send(res,400,{ok:false,error:'invalid queue item'})
@@ -399,6 +400,7 @@ function createAcpBridge(deps = {}) {
     const text = JSON.stringify(message)
     const key=message.id===undefined||message.id===null?null:keyOf(message.id)
     if(key!==null && (typeof message.id!=='string'&&typeof message.id!=='number'||key.length>512))return send(res,400,{ok:false,error:'invalid RPC id'})
+    if(!isResponse&&typeof message.id==='string'&&message.id.startsWith('agentlink-queue-'))return send(res,400,{ok:false,error:'reserved RPC id'})
     if(isResponse){
       if(session.answered.has(key))return send(res,200,{ok:true,duplicate:true})
       if(!session.pending.has(key))return send(res,409,{ok:false,error:'request no longer pending'})
