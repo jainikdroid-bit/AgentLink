@@ -18,6 +18,7 @@ import {
   isLastStep,
   type GuideOs,
   type GuideMode,
+  type GuideStep,
 } from "../src/lib/guide"
 
 const MOOD: MascotState[] = ["working", "thinking", "idle"]
@@ -35,7 +36,7 @@ export default function GuideScreen() {
   const [mode, setMode] = useState<GuideMode>("tailscale")
   const [expanded, setExpanded] = useState(false)
   const step = GUIDE_STEPS[clampStep(index)]
-  const visibleSteps = mode === "lan" ? GUIDE_STEPS.filter((name) => name !== "tailscale") : GUIDE_STEPS
+  const visibleSteps: readonly GuideStep[] = mode === "lan" ? GUIDE_STEPS.filter((name) => name !== "tailscale") : GUIDE_STEPS
 
   const finish = async (then?: () => void) => {
     await AsyncStorage.setItem(GUIDE_DONE_KEY, "1").catch(() => {})

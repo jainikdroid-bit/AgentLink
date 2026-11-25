@@ -84,7 +84,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>
       // Merge stored settings with defaults so new fields/categories get their default
-      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), theme: resolveTheme(parsed.theme), avatarCharacter: parsed.avatarCharacter === "byte" || parsed.avatarCharacter === "orbit" ? parsed.avatarCharacter : "cheri", avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
+      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), theme: resolveTheme(parsed.theme), avatarCharacter: (parsed.avatarCharacter === "byte" || parsed.avatarCharacter === "orbit" ? parsed.avatarCharacter : "cheri") as Settings["avatarCharacter"], avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
       set({ ...merged, loaded: true })
       setAppLocale(merged.locale)
       return

@@ -27,6 +27,7 @@ const ALLOWED_PERSISTED_KEYS = new Map<string, string>([
   ["SETTINGS_KEY", "user's app settings (theme, notification prefs)"],
   ["CONNECTIONS_KEY", "user-entered server connections"],
   ["`${PASSWORDS_PREFIX}${id}`", "user-entered server password, per connection"],
+  ["secretKey", "the same per-connection password key (`${PASSWORDS_PREFIX}${id}`), rewritten when the endpoint changes"],
   ["RECENT_DIRS_KEY", "directories the user picked, for the recents list"],
   ["AUTH_SETTINGS_KEY", "biometric/app-lock preference"],
   ["PHONE_TOOLS_KEY", "which phone functions the user allowed the agent to use (all off by default)"],
