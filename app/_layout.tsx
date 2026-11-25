@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Stack, router } from "expo-router"
+import { Stack, router, usePathname } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { Appearance, useColorScheme, View, ActivityIndicator, AppState } from "react-native"
 import { cyber } from "../src/theme/cyber"
@@ -32,6 +32,7 @@ Appearance.setColorScheme("dark")
 const queryClient = new QueryClient()
 
 function RootLayout() {
+  const pathname = usePathname()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -174,7 +175,7 @@ function RootLayout() {
               screenOptions={{
                 headerStyle: { backgroundColor: cyber.bg },
                 headerTintColor: cyber.cyan,
-                headerTitleStyle: { color: cyber.text, fontFamily: cyber.mono, fontSize: 15 },
+                headerTitleStyle: { color: cyber.text, fontSize: 17, fontWeight: "600" },
                 headerShadowVisible: false,
                 contentStyle: { backgroundColor: cyber.bg },
               }}
@@ -219,7 +220,7 @@ function RootLayout() {
               />
             </Stack>
               <PermissionBanner />
-              <FloatingCheri />
+              {(pathname === "/" || pathname === "/settings") && <FloatingCheri />}
               <StatusBar style={isDark ? "light" : "dark"} />
             </AuthGate>
           </QueryClientProvider>
