@@ -139,12 +139,12 @@ function createLauncher(deps) {
     return pair
   }
 
-  function readBody(req) {
+  function readBody(req, limit = PAIR_BODY_LIMIT) {
     return new Promise((resolve) => {
       let text = ''
       req.on('data', (chunk) => {
         text += chunk
-        if (text.length > PAIR_BODY_LIMIT) { text = ''; req.destroy() }
+        if (Buffer.byteLength(text) > limit) { text = ''; req.destroy() }
       })
       req.on('end', () => { try { resolve(JSON.parse(text)) } catch { resolve({}) } })
       req.on('error', () => resolve({}))
@@ -220,11 +220,24 @@ function createLauncher(deps) {
     // Other coding agents (ACP): the bridge answers its own routes, once the password has been checked above.
     if (route.startsWith('/acp/') && deps.acp) { await deps.acp.handle(req, res, route); return }
     try {
-      if (route === '/git/inventory' && req.method === 'GET') {
+      if (['/git/inventory','/git/action','/git/file'].includes(route)) {
+        if ((route==='/git/inventory' && req.method!=='GET') || (route==='/git/action' && req.method!=='POST') || (route==='/git/file' && !['GET','PUT'].includes(req.method))) return send(res,405,{ok:false,error:'wrong method'})
         if (!process.env.AGENTLINK_GIT_ROOTS) return send(res, 403, {ok:false,error:'Git workspace access is not enabled'})
         let workspace
         try { workspace = require('./git-workspace.js') } catch { return send(res, 501, {ok:false,error:'update the installer to enable Git inventory'}) }
-        try { return send(res, 200, {ok:true,...await workspace.inventory(new URL(req.url,'http://local').searchParams.get('cwd'))}) }
+        try {
+          const query=new URL(req.url,'http://local').searchParams, cwd=query.get('cwd'), file=query.get('file')
+          let result
+          if(route==='/git/inventory')result=await workspace.inventory(cwd)
+          else if(route==='/git/file'&&req.method==='GET')result=await workspace.readText(cwd,file)
+          else {
+            const body=await readBody(req,2*1024*1024)
+            const readOnly=route==='/git/action'&&['diff','log'].includes(body?.action)
+            if(!readOnly&&process.env.AGENTLINK_GIT_WRITE!=='1')return send(res,403,{ok:false,error:'workspace write access is disabled on the computer'})
+            result=route==='/git/action'?await workspace.gitAction(cwd,body):await workspace.writeText(cwd,file,body.text,body.revision)
+          }
+          return send(res,200,{ok:true,...result})
+        }
         catch (e) { return send(res, e.status || 500, {ok:false,error:e.status ? e.message : 'Git inventory failed'}) }
       }
       if (route === '/hardware' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.hardware || sampleHardware)()) })
@@ -239,10 +252,12 @@ function createLauncher(deps) {
         return send(res, result.ok ? 200 : 400, result)
       }
       const name = route.slice(1)
-      if (actions[name]) {
+      if (Object.hasOwn(actions,name)) {
         if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'use POST' })
-        working = (working || Promise.resolve()).then(() => actions[name]()).finally(() => { working = null })
-        const result = await working
+        const pending = (working || Promise.resolve()).catch(() => undefined).then(() => actions[name]())
+        working = pending
+        let result
+        try { result = await pending } finally { if (working === pending) working = null }
         return send(res, result.error ? 500 : 200, { ok: !result.error, launcher: VERSION, server: result, ...(result.error ? { error: result.error } : {}) })
       }
       return send(res, 404, { ok: false, error: 'not found' })
