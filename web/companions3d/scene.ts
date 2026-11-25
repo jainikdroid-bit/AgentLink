@@ -66,36 +66,75 @@ const tablet=pivot(root,0,.77,.34)
 const panel=new THREE.Mesh(new THREE.BoxGeometry(.36,.24,.035),dark);tablet.add(panel)
 for(let i=0;i<3;i++){const bar=new THREE.Mesh(new THREE.BoxGeometry(.22-i*.03,.012,.012),glow);bar.position.set(0,.06-i*.055,.022);tablet.add(bar)}
 const spark=pivot(root,.43,1.88,0);ell(spark,glow,0,0,0,.043,.085,.043);ell(spark,glow,0,0,0,.085,.043,.043)
+// Additional props: a tool for work, a message tablet for writing, and a visible error marker.
+const tool=pivot(root,0,.88,.37)
+if(fox){
+  const keyboard=new THREE.Mesh(new THREE.BoxGeometry(.43,.055,.22),dark);tool.add(keyboard)
+  for(let row=0;row<2;row++)for(let col=0;col<5;col++){
+    const k=new THREE.Mesh(new THREE.BoxGeometry(.047,.018,.05),cream);k.position.set((col-2)*.07,.035,(row-.5)*.08);tool.add(k)
+  }
+}else{
+  const gear=new THREE.Mesh(new THREE.TorusGeometry(.105,.035,10,24),glow);tool.add(gear)
+  for(let i=0;i<8;i++){
+    const tooth=new THREE.Mesh(new THREE.BoxGeometry(.055,.075,.05),clothes)
+    const a=i*Math.PI/4;tooth.position.set(Math.sin(a)*.13,Math.cos(a)*.13,0);tooth.rotation.z=-a;tool.add(tooth)
+  }
+}
+const errorMark=pivot(root,.35,1.86,0)
+ell(errorMark,glow,0,.035,0,.035,.085,.028)
+ell(errorMark,glow,0,-.08,0,.028,.028,.028)
 const moods=["idle","thinking","working","writing","loading","success","error","offline"]
 const colors:Record<string,number>={idle:0x93e4ff,thinking:0xffc36c,working:0x79eaff,writing:0x8eecc5,loading:0xc2aeff,success:0x68ef9e,error:0xff7188,offline:0x9ba1b3}
-let mood="idle", walkDir=0, walkAt=0, playUntil=0
-function setMood(m:string){if(moods.includes(m))mood=m;glow.color.setHex(colors[mood]);glow.emissive.setHex(colors[mood])}
-function play(_id:string){playUntil=performance.now()+1000}
-;(window as any).cheri={setMood,play,tap:()=>play("tap"),pet:()=>play("pet"),walk:(dir:number,startAt?:number)=>{walkDir=dir;walkAt=startAt||Date.now()},debug:{}}
-function resize(){const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+let mood="idle", walkDir=0, walkAt=0, playUntil=0, previousFrame=-1
+function setMood(m:string){
+ if(!moods.includes(m))return
+ if(m!==mood){playUntil=0}
+ mood=m
+ if(m!=="idle"){walkDir=0;walkAt=0}
+ glow.color.setHex(colors[mood]);glow.emissive.setHex(colors[mood])
+}
+function play(_id:string){if(mood==="idle")playUntil=performance.now()+1000}
+function walk(dir:number,startAt?:number){
+ if(!Number.isFinite(dir)||dir===0||mood!=="idle"){walkDir=0;walkAt=0;return}
+ walkDir=Math.sign(dir);walkAt=typeof startAt==="number"&&Number.isFinite(startAt)?startAt:Date.now()
+}
+;(window as any).cheri={setMood,play,tap:()=>play("tap"),pet:()=>play("pet"),walk,debug:{}}
+function resize(){
+ const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight)
+ renderer.setSize(w,h,false);camera.aspect=w/h
+ // Fit extended arms and tail even in the tall/narrow native avatar window.
+ const vfov=35*Math.PI/180
+ camera.position.z=Math.max(4.8, .82/(Math.tan(vfov/2)*camera.aspect)+.6)
+ camera.updateProjectionMatrix()
+}
 window.addEventListener("resize",resize);resize()
 function frame(now:number){
  requestAnimationFrame(frame)
- const t=now/1000, walking=walkDir!==0&&Date.now()>=walkAt, playful=now<playUntil
- const sleeping=mood==="offline", busy=mood==="working"||mood==="writing", success=mood==="success"
- const pace=walking?Math.sin(t*10):Math.sin(t*(busy?8:2.3))
- root.position.y=sleeping?-.035:Math.abs(pace)*(walking?.045:success?.09:.025)
- root.rotation.y=walking?walkDir*.75:Math.sin(t*.8)*.10
- hips.rotation.z=sleeping?-.10:Math.sin(t*1.5)*.035
- head.rotation.z=sleeping?-.22:mood==="thinking"?.18:playful?Math.sin(t*11)*.14:Math.sin(t*1.6)*.045
- head.rotation.x=sleeping?.22:busy?.07:0
+ const dt=previousFrame<0?1/60:Math.max(0,Math.min(.1,(now-previousFrame)/1000))
+ previousFrame=now
+ const smooth=(a:number,b:number)=>a+(b-a)*(1-Math.exp(-dt*14))
+ const t=now/1000, walking=mood==="idle"&&walkDir!==0&&Date.now()>=walkAt, playful=mood==="idle"&&now<playUntil
+ const sleeping=mood==="offline", working=mood==="working", writing=mood==="writing", busy=working||writing, success=mood==="success", error=mood==="error", thinking=mood==="thinking"
+ const pace=walking?Math.sin(t*10):Math.sin(t*(working?8:writing?5:2.3))
+ root.position.y=smooth(root.position.y,sleeping?-.035:Math.abs(pace)*(walking?.045:success?.09:fox?.025:.045))
+ root.rotation.y=smooth(root.rotation.y,walking?walkDir*.85:thinking&&!fox?Math.sin(t*2.2)*.27:Math.sin(t*.8)*.10)
+ hips.rotation.z=smooth(hips.rotation.z,sleeping?-.10:Math.sin(t*1.5)*.035)
+ head.rotation.z=smooth(head.rotation.z,sleeping?-.22:error?-.16:thinking?(fox?.23:Math.sin(t*2)*.12):playful?Math.sin(t*11)*.14:Math.sin(t*1.6)*.045)
+ head.rotation.x=smooth(head.rotation.x,sleeping?.22:error?.20:busy?.09:0)
  for(let i=0;i<2;i++){
   const side=i===0?-1:1
-  legs[i].rotation.x=walking?side*pace*.48:0
-  arms[i].rotation.z=success?side*(1.8+Math.sin(t*8)*.2):busy?side*.35:side*.12
-  arms[i].rotation.x=walking?-side*pace*.45:busy?-.9+Math.sin(t*10+i)*.15:0
-  eyes[i].scale.y=sleeping?.009:(Math.sin(t*.9)>.995?.008:.065)
+  legs[i].rotation.x=smooth(legs[i].rotation.x,walking?side*pace*.48:0)
+  arms[i].rotation.z=smooth(arms[i].rotation.z,success?side*(1.6+Math.sin(t*(fox?8:5))*.18):thinking&&fox&&i===1?.65:busy?side*.25:side*.12)
+  arms[i].rotation.x=smooth(arms[i].rotation.x,walking?-side*pace*.45:working?-.95+Math.sin(t*11+i)*.16:writing?-.72+Math.sin(t*5+i)*.08:thinking&&fox&&i===1?-1.45:0)
+  eyes[i].scale.y=smooth(eyes[i].scale.y,sleeping?.009:error?.032:(t%4.7>.0&&t%4.7<.14?.008:.065))
  }
- mouth.scale.y=mood==="error"?.045:success||playful?.035:.018
- tail.rotation.y=Math.sin(t*(busy?5:2.2))*.35
+ mouth.scale.y=smooth(mouth.scale.y,error?.045:success||playful?.035:.018)
+ tail.rotation.y=smooth(tail.rotation.y,sleeping?0:Math.sin(t*(working?5:success?8:2.2))*(fox?.4:.18))
  ring.visible=mood==="loading";ring.rotation.z=t*3;ring.scale.setScalar(1+Math.sin(t*4)*.08)
- tablet.visible=busy;tablet.rotation.x=-.18
- spark.visible=mood==="thinking"||success||mood==="error"||playful;spark.rotation.z=t*1.5;spark.scale.setScalar(.8+Math.sin(t*5)*.25)
+ tablet.visible=writing;tablet.rotation.x=-.18
+ tool.visible=working;tool.rotation.z=fox?0:t*2
+ spark.visible=thinking||success||playful;spark.rotation.z=t*1.5;spark.scale.setScalar(.8+Math.sin(t*5)*.25)
+ errorMark.visible=error
  renderer.render(scene,camera)
 }
 requestAnimationFrame(frame);post({type:"ready"})
