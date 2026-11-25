@@ -74,6 +74,11 @@ export default function AgentChatScreen() {
     }
   }
 
+  const transfer = () => {
+    const visible = state.items.filter((item): item is Extract<ChatItem,{type:"user"|"agent"}> => item.type==="user"||item.type==="agent")
+    const draft = visible.slice(-8).map(item=>`${item.type}: ${item.text}`).join("\n\n").slice(-7500)
+    Alert.alert(t("workspace.handoffFrom"),t("workspace.handoffHelp"),[{text:t("common.cancel"),style:"cancel"},{text:t("workspace.confirm"),onPress:()=>router.push({pathname:"/workspace",params:{draft,connectionId:params.connectionId||activeConnection?.id||""}})}])
+  }
   const confirmStop = () =>
     Alert.alert(t("acp.stopTitle"), t("acp.stopBody"), [
       { text: t("common.cancel"), style: "cancel" },
@@ -128,12 +133,14 @@ export default function AgentChatScreen() {
         options={{
           title: agentName,
           headerRight: () => (
+            <View style={{flexDirection:"row",gap:16}}><TouchableOpacity onPress={transfer} accessibilityLabel={t("workspace.handoffFrom")}><Ionicons name="swap-horizontal-outline" size={22} color={palette.cyan}/></TouchableOpacity>
             <TouchableOpacity onPress={confirmStop} hitSlop={12} testID="acp-stop-agent">
               <Ionicons name="power-outline" size={22} color={palette.red} />
-            </TouchableOpacity>
+            </TouchableOpacity></View>
           ),
         }}
       />
+      {state.usage&&<Text style={{color:palette.muted,paddingHorizontal:12,fontSize:12}}>{t("workspace.contextUsed")}: {state.usage.used} / {state.usage.size} · {t("workspace.quotaUnknown")}</Text>}
       {statusLine ? (
         <View style={[s.status, statusLine.tone === "error" && s.statusError]}>
           {statusLine.tone === "info" ? <ActivityIndicator size="small" color={palette.cyan} /> : null}
