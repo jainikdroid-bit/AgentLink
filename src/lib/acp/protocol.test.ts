@@ -188,3 +188,12 @@ test("the reply-language preface goes to the agent but not into the user's bubbl
   const user = state.items.find((i) => i.type === "user")
   assert.ok(user && user.type === "user" && user.text === "Hello")
 })
+
+test("resume requires advertised capability and keeps existing protocol session ID",()=>{
+ let state=run([{kind:"live"},sent({id:1,method:"initialize"}),out({id:1,result:{agentCapabilities:{loadSession:true}}})])
+ const request=nextHandshakeStep(state,"/w","0.26.6","saved")!
+ assert.equal(request.method,"session/load")
+ state=run([sent(request),out({id:request.id,result:{}})],state)
+ assert.equal(state.sessionId,"saved");assert.equal(state.handshake,"done")
+ assert.equal(nextHandshakeStep({...initialState,replaying:false,handshake:"initialized"},"/w","0.26.6","saved"),null)
+})
