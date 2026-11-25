@@ -35,7 +35,10 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
   const stateRef = useRef<AcpState>(state)
   stateRef.current = state
   const targetRef = useRef(target)
-  targetRef.current = target
+  // A chat belongs to the computer that started it, not the current global selection.
+  // Never send an existing session ID or its messages to a different host.
+  if (!targetRef.current && target) targetRef.current = target
+  const targetAvailable = !!targetRef.current
   const lastSeq = useRef(0) // updated as events are read, ahead of the render
   const idFloor = useRef(1)
   const stepSent = useRef<string | null>(null)
@@ -54,7 +57,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
       .catch((error: unknown) => { if (!cancelled) setFatal(error instanceof Error ? error.message : String(error)) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.agent, params.cwd, params.existingId])
+  }, [params.agent, params.cwd, params.existingId, targetAvailable])
 
   // 2. Keep the event stream connected; after a drop, read on from the last event seen.
   useEffect(() => {
@@ -91,7 +94,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
           }
         } catch (error) {
           if (controller.signal.aborted) return
-          if (error instanceof AcpApiError && error.status === 404) {
+          if (error instanceof AcpApiError && [401, 403, 404].includes(error.status)) {
             setFatal(error.message)
             return
           }
