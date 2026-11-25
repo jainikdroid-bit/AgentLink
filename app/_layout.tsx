@@ -32,6 +32,7 @@ Appearance.setColorScheme("dark")
 const queryClient = new QueryClient()
 
 function RootLayout() {
+  const avatarCharacter = useSettings(s => s.avatarCharacter)
   const palette = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
@@ -220,7 +221,7 @@ function RootLayout() {
               />
             </Stack>
               <PermissionBanner />
-              <FloatingCheri />
+              <FloatingCheri key={avatarCharacter} character={avatarCharacter} />
               <StatusBar style={isDark ? "light" : "dark"} />
             </AuthGate>
           </QueryClientProvider>
