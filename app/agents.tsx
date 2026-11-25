@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from "react-native"
 import { router, useFocusEffect } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
@@ -29,19 +29,26 @@ export default function AgentsScreen() {
   const [problem, setProblem] = useState<string | null>(null)
   const [folder, setFolder] = useState("")
 
-  const load = useCallback(async () => {
-    if (!target) return
-    setLoading(true)
-    setProblem(null)
+  const requestId = useRef(0)
+  const targetRef = useRef(target)
+  targetRef.current = target
+  const load = useCallback(async (silent = false) => {
+    if (!target) { setAgents([]); setMissing([]); setRunning([]); setLoading(false); return }
+    const id = ++requestId.current
+    const current = () => id === requestId.current && targetRef.current === target
+    if (!silent) { setLoading(true); setProblem(null) }
     try {
       const result = await listAgents(target)
+      if (!current()) return
+      setProblem(null)
       setAgents(result.agents.filter((a) => a.installed))
       setMissing(result.agents.filter((a) => !a.installed))
       setRunning(result.running.filter((r) => !r.exited))
     } catch (error) {
+      if (!current()) return
       setProblem(error instanceof AcpApiError && error.outdated ? t("acp.outdated") : t("acp.unreachable"))
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }, [target, t])
 
@@ -49,6 +56,8 @@ export default function AgentsScreen() {
   useFocusEffect(
     useCallback(() => {
       void load()
+      const timer = setInterval(() => void load(true), 15_000)
+      return () => { clearInterval(timer); requestId.current++ }
     }, [load]),
   )
   useEffect(() => {
