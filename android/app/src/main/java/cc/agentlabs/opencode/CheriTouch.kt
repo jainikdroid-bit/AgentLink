@@ -156,6 +156,8 @@ object CheriTouch {
       MotionEvent.ACTION_POINTER_DOWN -> return mode == Mode.ACTIVE || mode == Mode.MENU
       MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
         val mine = mode == Mode.ACTIVE || mode == Mode.MENU
+        // a short tap: she reacts, and the touch still reaches whatever is under her
+        if (mode == Mode.PENDING && ev.actionMasked == MotionEvent.ACTION_UP) emit("tap")
         if (mode == Mode.ACTIVE) {
           if (pinchStart > 0f) emit("pinchEnd") { it.putDouble("scale", pinchScale.toDouble()) }
           emit("drop")
