@@ -1,5 +1,5 @@
 'use strict'
-// Read-only Git inventory. Opt-in on the computer via AGENTLINK_GIT_ROOTS
+// Git workspace for locally trusted repositories. Opt-in on the computer via AGENTLINK_GIT_ROOTS
 // (path.delimiter-separated absolute roots). No arbitrary shell or remote URL.
 const fs=require('node:fs/promises')
 const crypto=require('node:crypto')
@@ -27,7 +27,9 @@ async function resolveWorkspace(requested,{roots=allowedRoots(),execute=git}={})
  let top
  try{top=await fs.realpath((await execute(actual,['rev-parse','--show-toplevel'])).trim())}catch{throw problem(400,'not a Git working tree')}
  if(!permitted.some(r=>inside(r,top)))throw problem(403,'repository outside configured roots')
- return {top,permitted,execute}
+ const common=await fs.realpath((await execute(top,['rev-parse','--path-format=absolute','--git-common-dir'])).trim()).catch(()=>{throw problem(400,'Git common directory unavailable')})
+ if(!permitted.some(r=>inside(r,common)))throw problem(403,'Git metadata outside configured roots')
+ return {top,permitted,execute,common}
 }
 async function inventory(requested,options={}){
  const {top,permitted,execute}=await resolveWorkspace(requested,options)
@@ -51,7 +53,7 @@ async function inventory(requested,options={}){
 const MAX_FILE_BYTES=256*1024
 const digest=buffer=>crypto.createHash('sha256').update(buffer).digest('hex')
 function safeRelative(value){
- if(typeof value!=='string'||!value||value.length>4096||path.isAbsolute(value)||/^[A-Za-z]:/.test(value)||value.includes('\0')||value.includes('\\')||/[\x00-\x1f:]/.test(value)||value.split('/').some(x=>!x||x==='.'||x==='..'||x.toLowerCase()==='.git'))throw problem(400,'invalid relative file path')
+ if(typeof value!=='string'||!value||value.length>4096||path.isAbsolute(value)||/^[A-Za-z]:/.test(value)||value.includes('\0')||value.includes('\\')||/[\x00-\x1f:]/.test(value)||value.split('/').some(x=>!x||x==='.'||x==='..'||x.toLowerCase()==='.git'||/[. ]$/.test(x)||/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(x)))throw problem(400,'invalid relative file path')
  return value
 }
 async function resolveFile(cwd,relative,options){
@@ -67,7 +69,7 @@ async function resolveFile(cwd,relative,options){
  }
  if(await fs.realpath(file)!==file||!inside(top,file))throw problem(403,'file outside workspace')
  const stat=await fs.stat(file)
- if(!stat.isFile()||stat.size>MAX_FILE_BYTES)throw problem(400,'file is not an editable small text file')
+ if(!stat.isFile()||stat.nlink!==1||stat.size>MAX_FILE_BYTES)throw problem(400,'file is not an editable small text file')
  return {file,stat}
 }
 async function readText(cwd,relative,options={}){
@@ -106,8 +108,8 @@ function safeBranch(name){
  return name
 }
 async function gitAction(cwd,body,options={}){
- const {top,permitted,execute}=await resolveWorkspace(cwd,options)
- return exclusive(top,async()=>{
+ const {top,permitted,execute,common}=await resolveWorkspace(cwd,options)
+ return exclusive(common,async()=>{
   switch(body?.action){
    case 'diff':return {text:await execute(top,['--literal-pathspecs','diff','--no-ext-diff','--no-textconv',...(body.staged===true?['--cached']:[]),'--',...(body.file?[safeRelative(body.file)]:[])])}
    case 'log':return {text:await execute(top,['log','-30','--format=%h %s','--'])}
@@ -124,12 +126,15 @@ async function gitAction(cwd,body,options={}){
    case 'switch':{
     const branch=safeBranch(body.branch)
     if((await execute(top,['status','--porcelain=v1','-z'])).length)throw problem(409,'working tree has changes')
+    const branches=(await execute(top,['for-each-ref','--format=%(refname:short)','refs/heads'])).split(/\r?\n/)
+    if(!branches.includes(branch))throw problem(404,'local branch not found')
     await execute(top,['switch','--',branch]);return {}
    }
    case 'worktree':{
     const branch=safeBranch(body.branch)
     // Locally configured root, generated path: the caller cannot choose arbitrary destination.
-    const parent=permitted.find(r=>inside(r,top))
+    const parent=permitted.find(r=>r!==top&&inside(r,top)&&!inside(top,r))
+    if(!parent)throw problem(403,'allow the parent folder of this repository to create an isolated worktree outside it')
     const container=path.join(parent,'.agentlink-worktrees')
     await fs.mkdir(container,{recursive:true})
     if(await fs.realpath(container)!==container)throw problem(403,'invalid worktree directory')
