@@ -24,11 +24,13 @@ import { useSettings } from "../src/stores/settings"
 // agent running and reopening it from the agents list picks the chat up again.
 export default function AgentChatScreen() {
   const palette = useTheme()
+  const isDark = true
   const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ agent: string; name?: string; cwd?: string; id?: string; connectionId?: string; resumeId?: string; draft?: string }>()
   const { activeConnection, clientBase } = useConnections()
+  const originalConnectionId = useRef(params.connectionId || activeConnection?.id || "")
   const activeTarget = useMemo(
     () =>
       activeConnection?.launcherPort
@@ -56,7 +58,7 @@ export default function AgentChatScreen() {
     if (nearBottom.current) list.current?.scrollToEnd({ animated: true })
   }, [state.items, state.pendingPermissions.length])
 
-  const ready = state.handshake === "done" && !state.exit && !chat.fatal && chat.link === "live"
+  const ready = state.handshake === "done" && !!state.sessionId && !state.exit && !chat.fatal && chat.link === "live"
   const hint = loginHint(state)
   const lastItem = state.items.at(-1)
 
@@ -77,7 +79,7 @@ export default function AgentChatScreen() {
   const transfer = () => {
     const visible = state.items.filter((item): item is Extract<ChatItem,{type:"user"|"agent"}> => item.type==="user"||item.type==="agent")
     const draft = visible.slice(-8).map(item=>`${item.type}: ${item.text}`).join("\n\n").slice(-7500)
-    Alert.alert(t("workspace.handoffFrom"),t("workspace.handoffHelp"),[{text:t("common.cancel"),style:"cancel"},{text:t("workspace.confirm"),onPress:()=>router.push({pathname:"/workspace",params:{draft,connectionId:params.connectionId||activeConnection?.id||""}})}])
+    Alert.alert(t("workspace.handoffFrom"),t("workspace.handoffHelp"),[{text:t("common.cancel"),style:"cancel"},{text:t("workspace.confirm"),onPress:()=>router.push({pathname:"/workspace",params:{draft,connectionId:originalConnectionId.current}})}])
   }
   const confirmStop = () =>
     Alert.alert(t("acp.stopTitle"), t("acp.stopBody"), [
