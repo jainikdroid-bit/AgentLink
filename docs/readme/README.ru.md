@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../brand/rig.svg" width="140" alt="RIG" />
+  <img src="../brand/cheri.png" width="160" alt="Cheri" />
 </p>
 
 <h1 align="center">AgentLink</h1>
@@ -34,7 +34,7 @@
   <img src="../screens/files.png" width="13%" alt="" />
 </p>
 
-Нативный клиент Android для агента [opencode](https://github.com/sst/opencode). Он общается только с сервером, который запускаете **вы**, по вашей собственной сети. Никаких ретрансляторов и облачных сервисов.
+Нативный клиент Android для [opencode](https://github.com/sst/opencode), а также Claude Code, Codex, Gemini CLI и других агентов через ACP. Он общается только с сервером, который запускаете **вы**, по вашей собственной сети. Никаких ретрансляторов и облачных сервисов.
 
 > Независимый клиент сообщества; не связан с командой opencode.
 
@@ -56,33 +56,60 @@
 
 **Терминал, файлы, MCP-коннекторы,** диффы, вложения-изображения, несколько серверов, биометрическая блокировка, ключи в Android Keystore.
 
-## Установка в три шага (около двух минут)
+## Быстрый старт — выберите способ подключения
 
-**[Полное руководство с решением проблем](../INSTALL.ru.md)**
+[Скачать APK для Android](https://github.com/jainikdroid-bit/AgentLink/releases/latest) · [Подробная инструкция](../INSTALL.ru.md)
 
-**1. Компьютер: вставьте одну команду.** В PowerShell (Windows):
+| Где будете пользоваться | Что выбрать |
+|---|---|
+| Дома и из других сетей | Tailscale — один аккаунт на двух устройствах |
+| Только в одной доверенной Wi-Fi сети | LAN — без аккаунта Tailscale |
+
+**1. Подготовьте компьютер.** Откройте PowerShell или Терминал и выполните команду.
+
+<details open>
+<summary>Windows — PowerShell</summary>
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.ps1)))
 ```
 
-macOS / Linux, в Терминале:
+Для домашней сети добавьте в конце `-Mode lan`.
+
+</details>
+
+<details>
+<summary>Linux / macOS — Терминал</summary>
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jainikdroid-bit/AgentLink/main/tools/opencode-connect.sh | sh
 ```
 
-Команда ставит недостающее (Node.js, opencode, Tailscale), один раз просит войти в Tailscale, запускает сервер и открывает страницу с двумя QR-кодами.
+Для домашней сети замените последний `sh` на `sh -s -- --mode lan`.
 
-**2. Телефон: установите.** Отсканируйте первый QR-код (или откройте [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest)), скачайте APK и откройте его. Установите Tailscale и войдите в тот же аккаунт.
+</details>
 
-**3. Телефон: подключитесь.** Откройте приложение, нажмите **Сканировать QR для подключения**, наведите на второй QR-код, нажмите **Подключиться**.
+**2. Установите приложение** из [Releases](https://github.com/jainikdroid-bit/AgentLink/releases/latest). В режиме Tailscale войдите в один аккаунт на компьютере и телефоне. В режиме LAN вход не нужен.
 
-Команду можно запускать повторно (она чинит, а не дублирует). Не нужен Tailscale? `-Mode lan` (одна Wi-Fi сеть) или `-Mode tunnel` (бесплатный туннель Cloudflare; компромиссы — в руководстве).
+**3. Подключитесь.** Сканируйте QR подключения (не QR скачивания APK), введите 6 цифр или вставьте ссылку сопряжения. Проверьте имя компьютера и подтвердите. Пароль создаётся автоматически.
+
+<details>
+<summary>Если что-то не получается</summary>
+
+- **401:** сервер не принял учётные данные. Повторите установку и сопряжение. Имя пользователя установщика — `opencode`.
+- **Компьютер не найден:** проверьте сеть, питание и адрес рядом с кодом.
+- **Модель не отвечает:** вход в AgentLink и вход в OpenCode/Codex/Claude Code — разные вещи. Настройте агента на компьютере.
+- Не публикуйте ссылки сопряжения, пароли и токены.
+
+</details>
+
+### В разработке: версия 0.26.6
+
+В [ветке обновления](https://github.com/jainikdroid-bit/AgentLink/tree/fix/agentlink-auth-guide) добавлены пошаговый мастер, раскрывающиеся пояснения, исправления проверки пароля и индикации ошибок. Cheri по-прежнему перемещается пальцем и масштабируется. Новый APK ещё не опубликован; доступные сборки — в Releases.
 
 ### Пусть всё сделает ИИ-агент
 
-Скажите агенту (Claude Code, opencode, Codex, ...): *«Настрой для меня OpenCode Mobile по инструкции https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md»*.
+Скажите агенту (Claude Code, opencode, Codex, ...): *«Настрой для меня AgentLink по инструкции https://github.com/jainikdroid-bit/AgentLink/blob/main/docs/AI-SETUP.md»*.
 
 Дизайн, инструменты телефона для агента и сборка из исходников описаны в [английском README](../../README.md).
 
