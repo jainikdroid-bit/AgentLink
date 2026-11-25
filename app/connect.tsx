@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../src/theme/useTheme"
 import { useState } from "react"
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, ActivityIndicator, Alert } from "react-native"
 import { router, useLocalSearchParams } from "expo-router"
@@ -20,6 +21,8 @@ const TAILNET_SIGN_IN_WAIT_MS = 5 * 60_000
 // A deep link can be triggered by any web page or app, so nothing is added
 // until the user explicitly confirms the server shown here.
 export default function ConnectScreen() {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const isDark = useColorScheme() === "dark"
   const { t } = useTranslation()
   const params = useLocalSearchParams<{ url?: string; password?: string; name?: string; launcher?: string; topic?: string; lan?: string }>()
@@ -121,7 +124,7 @@ export default function ConnectScreen() {
   if (waitingTailnet) {
     return (
       <View style={[styles.container, isDark && styles.containerDark]} testID="connect-tailnet-wait">
-        <ActivityIndicator size="large" color="#22d3ee" />
+        <ActivityIndicator size="large" color={palette.cyan} />
         <Text style={[styles.title, isDark && styles.textDark]}>{t("tailnet.waitTitle")}</Text>
         <Text style={[styles.body, isDark && styles.hintDark]}>{t("tailnet.waitBody")}</Text>
         <TouchableOpacity style={styles.secondary} onPress={() => void useTailnet.getState().signIn()}>
@@ -170,7 +173,7 @@ export default function ConnectScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16, backgroundColor: "#ffffff" },
   containerDark: { backgroundColor: "#07080c" },
   title: { fontSize: 20, fontWeight: "700", textAlign: "center", color: "#0a0d14" },
