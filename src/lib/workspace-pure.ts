@@ -33,3 +33,11 @@ export function highlightLine(line:string):HighlightToken[]{
  if(last<line.length)tokens.push({text:line.slice(last),kind:"plain"})
  return tokens
 }
+
+/** For a trusted development server only: restrict top-level navigation to its origin. */
+export function previewNavigationAllowed(initial:string,next:string):boolean{
+ try{
+  const a=new URL(initial),b=new URL(next)
+  return ["http:","https:"].includes(a.protocol)&&!a.username&&!a.password&&!b.username&&!b.password&&a.origin===b.origin
+ }catch{return false}
+}
