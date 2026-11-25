@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 8 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 9 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -441,7 +441,7 @@ function main() {
   const deps = realDeps(dir)
   const state = deps.readState()
   const port = Number(process.env.OPENCODE_LAUNCHER_PORT) || Number(state.launcherPort) || (Number(state.port) || 4096) - 1
-  try { deps.acp = require('./acp-bridge.js').createAcpBridge() } catch { /* an older install without the file: no other agents */ }
+  try { const acp = require('./acp-bridge.js'); deps.acp = acp.createAcpBridge({inboxFile:path.join(dir,'acp-inbox.json'),push:acp.createPushSender()}) } catch { /* an older install without the file: no other agents */ }
   if (deps.acp) process.on('exit', () => deps.acp.stopAll())
   const launcher = createLauncher(deps)
   const server = http.createServer((req, res) => { launcher.handle(req, res) })
