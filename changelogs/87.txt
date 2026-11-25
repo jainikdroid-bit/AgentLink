@@ -1,0 +1,1 @@
+v0.26.8 — each tap on Cheri plays the next scene of all her scenes, round and round.

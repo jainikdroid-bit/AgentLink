@@ -6,7 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { VRMLoaderPlugin, VRMUtils, type VRM } from "@pixiv/three-vrm"
 import { createLegRig } from "./legs"
 import { CHERI_CAMERA_DISTANCE, CHERI_CAMERA_FOV } from "../../src/lib/cheri/walk"
-import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, TAP_ORDER, WALK, activeProps, sample, type Bone, type BonePose, type Pose, type PropKind, type Scene } from "./poses"
+import { BASE, ENTER_SKIT, MOOD_SKITS, REST, SKITS, WALK, activeProps, sample, type Bone, type BonePose, type Pose, type PropKind, type Scene } from "./poses"
 
 declare global {
   interface Window {
@@ -582,7 +582,7 @@ let moodSince = nowMs()
 const LONG_THINK_MS = 10_000
 /** Next skit index per mood: skits go round in order. */
 const cycle: Record<string, number> = {}
-const taps = { count: 0, at: 0 }
+const taps = { at: 0 }
 
 function play(id: string) {
   const s = SKITS[id]
@@ -601,11 +601,14 @@ function setMood(m: string) {
   nextSkitAt = nowMs() + 5000 + Math.random() * 5000
 }
 
+/** Every tap plays the next skit of the whole catalogue (a carousel that wraps around). */
+const CAROUSEL = Object.keys(SKITS)
+let carouselAt = 0
 function tap() {
   const now = nowMs()
-  taps.count = now - taps.at < 1800 ? taps.count + 1 : 1
   taps.at = now
-  play(TAP_ORDER[Math.min(TAP_ORDER.length - 1, taps.count - 1)])
+  play(CAROUSEL[carouselAt % CAROUSEL.length])
+  carouselAt += 1
 }
 
 window.cheri = {
