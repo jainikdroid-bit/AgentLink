@@ -7,7 +7,7 @@ import { deviceLocaleTags } from "../i18n/config"
 import { resolveLocale } from "../i18n/locale-resolve"
 import { replyLanguageInstruction } from "../reply-language"
 import pkg from "../../../package.json"
-import { AcpApiError, sendMessage, startAgent, stopAgent, streamEvents, type AcpTarget } from "./api"
+import { AcpApiError, getAgentQueue, updateAgentQueue, type QueueAction, sendMessage, startAgent, stopAgent, streamEvents, type AcpTarget } from "./api"
 import {
   cancelNotification, initialState, nextHandshakeStep, permissionResponse, promptRequest, reduce, setModeRequest, setModelRequest, unsupportedRequestReply, type AcpState, type RpcMessage,
 } from "./protocol"
@@ -183,5 +183,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
     await post(setModelRequest(id, sessionId, modelConfig.id, value))
   }, [post])
 
-  return { setModel, state, link, fatal, agentId: handle?.id ?? null, send, cancel, answer, setMode, stop }
+  const readQueue=useCallback(async()=>{const t=targetRef.current;if(!t||!handle)throw Error('not connected');return getAgentQueue(t,handle.id)},[handle])
+  const changeQueue=useCallback(async(action:QueueAction)=>{const t=targetRef.current;if(!t||!handle)throw Error('not connected');return updateAgentQueue(t,handle.id,action)},[handle])
+  return { readQueue, changeQueue, setModel, state, link, fatal, agentId: handle?.id ?? null, send, cancel, answer, setMode, stop }
 }
