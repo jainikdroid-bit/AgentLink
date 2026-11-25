@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 10 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 11 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -248,7 +248,7 @@ function createLauncher(deps) {
           else if(route==='/git/file'&&req.method==='GET')result=await workspace.readText(cwd,file)
           else {
             const body=await readBody(req,2*1024*1024)
-            const readOnly=route==='/git/action'&&['diff','log'].includes(body?.action)
+            const readOnly=route==='/git/action'&&['diff','log','files'].includes(body?.action)
             if(!readOnly&&process.env.AGENTLINK_GIT_WRITE!=='1')return send(res,403,{ok:false,error:'workspace write access is disabled on the computer'})
             result=route==='/git/action'?await workspace.gitAction(cwd,body):await workspace.writeText(cwd,file,body.text,body.revision)
           }
