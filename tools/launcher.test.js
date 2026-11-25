@@ -189,3 +189,22 @@ test('pairing route does not open the other routes', async () => {
     assert.equal((await call('PUT', '/pair')).status, 405)
   })
 })
+
+
+test('pairing does not succeed or consume the code without saved credentials', async () => {
+  const { deps, box } = pairDeps(liveCode())
+  let password = ''
+  deps.readPassword = () => password
+  await withServer(deps, async (call) => {
+    const missing = await call('POST', '/pair', undefined, { code: '482913' })
+    assert.equal(missing.status, 503)
+    assert.equal(missing.json.ok, false)
+    assert.equal(missing.json.password, undefined)
+    assert.ok(box.pair)
+    password = PASSWORD
+    const restored = await call('POST', '/pair', undefined, { code: '482913' })
+    assert.equal(restored.status, 200)
+    assert.equal(restored.json.password, PASSWORD)
+    assert.equal(box.pair, null)
+  })
+})
