@@ -42,7 +42,7 @@ const DEFAULTS: Settings = {
   showThinking: true,
   showActions: false,
   replyInMyLanguage: true,
-  avatar: { enabled: false, opacity: 0.6, size: "s", width: null, pos: null },
+  avatar: { enabled: true, opacity: 0.75, size: "m", width: null, pos: null },
 }
 
 interface SettingsState extends Settings {
