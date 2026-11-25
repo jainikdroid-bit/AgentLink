@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "Wie möchtest du dich verbinden?",
+      "tailscaleTitle": "Von überall · Tailscale",
+      "tailscaleBody": "Privates Netz; auf beiden Geräten anmelden.",
+      "lanTitle": "Gleiches WLAN · LAN",
+      "lanBody": "Ohne Konto; ein vertrauenswürdiges Heimnetz verwenden.",
+      "platform": "Betriebssystem des Computers",
+      "details": "Details und Fehlerbehebung",
+      "computerDetails": "PowerShell unter Windows oder Terminal unter Linux/macOS öffnen. Befehl einfügen, Enter drücken und auf den QR-Code warten. Kopplungslink geheim halten.",
+      "tailscaleDetails": "Auf beiden Geräten dasselbe Tailscale-Konto verwenden. Der Computer muss wach sein. Bei einem anderen VPN die Tailscale-Verbindung prüfen.",
+      "scanDetails": "Kopplungs-QR statt APK-QR scannen. Computernamen bestätigen. Alternativ den sechsstelligen Code innerhalb von 10 Minuten eingeben. Bei 401 einen neuen Kopplungslink erstellen.",
+      "manual": "Manuell (IP und Passwort)",
+      "choosePairing": "Geführte Einrichtung wählen oder einen eingerichteten Computer verbinden."
+    },
     "computer": {
       "title": "Führen Sie einen Befehl auf Ihrem Computer aus",
       "body": "Öffnen Sie PowerShell (Windows) oder Terminal (macOS / Linux), fügen Sie den Befehl ein, drücken Sie Eingabe. Es installiert fehlende Komponenten, startet den Server und zeigt einen QR-Code.",
