@@ -102,12 +102,6 @@ android {
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
-    externalNativeBuild {
-        cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version "3.22.1"
-        }
-    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -196,6 +190,7 @@ android {
 }
 
 dependencies {
+    implementation project(":localmodel")
     // Built-in Tailscale (userspace tsnet). Built by native/tsnet/build.sh.
     implementation(files("libs/tsnetbridge.aar"))
 
