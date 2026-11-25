@@ -107,11 +107,65 @@ function withPhoneMcp(message, phone) {
   return { ...message, params: { ...params, mcpServers: [...servers, entry] } }
 }
 
+// Durable, bounded metadata inbox (not a transcript, no prompt or tool arguments).
+// Optional FCM HTTP v1: administrator configures a local service-account file
+// and the phone's copied registration token. No credentials leave this host
+// other than the signed OAuth assertion to Google's official endpoints.
+function createInbox(file,clock=Date.now){
+ let events=[]
+ if(file)try{const saved=JSON.parse(fs.readFileSync(file,'utf8'));if(Array.isArray(saved))events=saved.filter(e=>e&&typeof e.id==='string'&&typeof e.at==='number').slice(-500)}catch{}
+ function record(category,session){
+  const item={id:crypto.randomUUID(),at:clock(),category,agent:session.agent,bridgeId:session.id}
+  events.push(item);events=events.slice(-500)
+  if(file){
+   const tmp=file+'.'+crypto.randomUUID()+'.tmp'
+   try{fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});fs.writeFileSync(tmp,JSON.stringify(events),{mode:0o600,flag:'wx'});fs.renameSync(tmp,file)}
+   catch{try{fs.rmSync(tmp,{force:true})}catch{}}
+  }
+  return item
+ }
+ return {record,list:()=>events.slice(),}
+}
+function createPushSender({accountPath=process.env.AGENTLINK_FCM_SERVICE_ACCOUNT,registration=process.env.AGENTLINK_FCM_TOKEN,fetchImpl=globalThis.fetch}={}){
+ let access=null,until=0,queue=Promise.resolve(),pending=0
+ const enabled=!!(accountPath&&registration)
+ async function token(){
+  if(access&&Date.now()<until)return access
+  const account=JSON.parse(fs.readFileSync(accountPath,'utf8'))
+  if(!account.client_email||!account.private_key||!account.project_id||!(/^[a-z0-9-]+$/).test(account.project_id))throw Error('invalid push configuration')
+  const at=Math.floor(Date.now()/1000)
+  const enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url')
+  const assertion=enc({alg:'RS256',typ:'JWT'})+'.'+enc({iss:account.client_email,scope:'https://www.googleapis.com/auth/firebase.messaging',aud:'https://oauth2.googleapis.com/token',iat:at,exp:at+3600})
+  const signed=assertion+'.'+crypto.sign('RSA-SHA256',Buffer.from(assertion),account.private_key).toString('base64url')
+  const response=await fetchImpl('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:signed}),signal:AbortSignal.timeout(10000),redirect:'error'})
+  if(!response.ok)throw Error('push OAuth failed')
+  const data=await response.json();if(!data.access_token)throw Error('push token missing')
+  access={value:data.access_token,project:account.project_id};until=Date.now()+Math.max(0,(Number(data.expires_in)||3600)-60)*1000
+  return access
+ }
+ function send(event){
+  if(!enabled||pending>=20)return
+  pending++
+  queue=queue.then(async()=>{
+   try{
+    const auth=await token()
+    const response=await fetchImpl('https://fcm.googleapis.com/v1/projects/'+auth.project+'/messages:send',{method:'POST',headers:{Authorization:'Bearer '+auth.value,'Content-Type':'application/json'},body:JSON.stringify({message:{token:registration,notification:{title:'AgentLink',body:({permissions:'Agent needs approval',completed:'Agent finished a turn',errors:'Agent reported an error',connection:'Agent disconnected'})[event.category]||'Agent activity'},data:{category:event.category,sessionId:'',eventId:event.id},android:{priority:'high',notification:{channel_id:'prompts',tag:event.id}}}}),signal:AbortSignal.timeout(10000),redirect:'error'})
+    if(response.status===401)until=0
+    // Inbox remains available even when push fails. Never log OAuth or FCM responses.
+   }catch{}finally{pending--}
+  })
+ }
+ return {enabled,send}
+}
+
 function createAcpBridge(deps = {}) {
   const agents = deps.agents || AGENTS
   const now = deps.now || (() => Date.now())
   const phoneMcp = deps.phoneMcp || detectPhoneMcp
   const sessions = new Map()
+  const inbox = createInbox(deps.inboxFile,now)
+  const push = deps.push || {enabled:false,send:()=>{}}
+  const notify=(category,session)=>{ const item=inbox.record(category,session); try{push.send(item)}catch{} }
   let detected = { at: 0, ids: new Set() }
 
   function installedIds() {
@@ -172,6 +226,12 @@ function createAcpBridge(deps = {}) {
     }
     const isRequest = typeof message.method === 'string' && message.id !== undefined && message.id !== null
     add(session, 'out', text, isRequest ? keyOf(message.id) : null)
+    if(message.method==='session/request_permission'&&isRequest)notify('permissions',session)
+    if(!message.method&&message.id!==undefined&&session.prompts.has(keyOf(message.id))){
+      session.prompts.delete(keyOf(message.id))
+      if(message.error)notify('errors',session)
+      else if(message.result?.stopReason==='end_turn')notify('completed',session)
+    }
   }
 
   function start(agent, cwd) {
@@ -179,7 +239,7 @@ function createAcpBridge(deps = {}) {
     const child = WIN && !agent.direct ? spawn('cmd.exe', ['/c', agent.cmd, ...agent.args], options) : spawn(agent.cmd, agent.args, options)
     const session = {
       id: crypto.randomBytes(9).toString('base64url'), agent: agent.id, name: agent.name, cwd, startedAt: now(), lastActivity: now(),
-      child, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
+      child, prompts: new Set(), log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
     }
     let partial = ''
     child.stdout.setEncoding('utf8')
@@ -196,6 +256,7 @@ function createAcpBridge(deps = {}) {
     child.on('close', (code, signal) => {
       if (partial.trim()) onLine(session, partial)
       session.exited = { code, signal, stderr: session.stderr, at: now() }
+      if(code!==0&&code!==null)notify('errors',session)
       const text = `event: exit\ndata: ${JSON.stringify({ code, signal, stderr: session.stderr })}\n\n`
       for (const client of session.clients) { client.write(text); client.end() }
       session.clients.clear()
@@ -256,6 +317,7 @@ function createAcpBridge(deps = {}) {
     const isResponse = message && message.jsonrpc === '2.0' && message.id !== undefined && message.id !== null && typeof message.method !== 'string' && ('result' in message || 'error' in message)
     if (!isRequest && !isResponse) return send(res, 400, { ok: false, error: 'not a JSON-RPC message' })
     if (isResponse) session.answered.add(keyOf(message.id))
+    if(message.method==='session/prompt'&&message.id!==undefined)session.prompts.add(keyOf(message.id))
     const text = JSON.stringify(message)
     // The agent gets the phone's MCP server on session/new|load; the replay log keeps what the phone sent.
     session.child.stdin.write(JSON.stringify(withPhoneMcp(message, phoneMcp())) + '\n')
@@ -267,6 +329,7 @@ function createAcpBridge(deps = {}) {
   async function handle(req, res, route) {
     const url = new URL(req.url || '/', 'http://x')
     try {
+      if (route === '/acp/inbox' && req.method === 'GET') return send(res,200,{ok:true,events:inbox.list(),pushConfigured:push.enabled}),true
       if (route === '/acp/agents' && req.method === 'GET') return agentsRoute(res), true
       if (route === '/acp/start' && req.method === 'POST') return await startRoute(req, res), true
       const m = /^\/acp\/([A-Za-z0-9_-]{6,32})\/(events|send|stop)$/.exec(route)
@@ -299,4 +362,4 @@ function createAcpBridge(deps = {}) {
   }
 }
 
-module.exports = { createAcpBridge, AGENTS, onPath, withPhoneMcp }
+module.exports = { createInbox, createPushSender, createAcpBridge, AGENTS, onPath, withPhoneMcp }
