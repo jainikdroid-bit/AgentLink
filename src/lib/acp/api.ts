@@ -80,7 +80,7 @@ export interface HostHardware {
   cpu: { model: string | null; logicalCores: number; percent: number | null }
   memory: { totalBytes: number; availableBytes: number; source: string }
   storage: { totalBytes: number; availableBytes: number } | null
-  gpu: null
+  gpu: {name:string;percent:number|null;memoryUsedMiB:number|null;memoryTotalMiB:number|null;temperatureC:number|null}[] | null
   temperatureC: number | null
   uptimeSeconds: number
 }
