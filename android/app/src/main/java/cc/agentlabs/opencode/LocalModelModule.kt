@@ -25,6 +25,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     @Volatile private var transferred = 0L
     @Volatile private var expected = 0L
     @Volatile private var operation = ""
+    @Volatile private var partialText = ""
     @Volatile private var connection: HttpURLConnection? = null
     private val root get() = File(ctx.filesDir, "agentlink-gguf").apply { mkdirs() }
     private val engine = try { System.loadLibrary("agentlink_local"); nativeAvailable() } catch (_: Throwable) { false }
@@ -32,7 +33,8 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     private external fun nativeAvailable(): Boolean
     private external fun nativeReset()
     private external fun nativeCancel()
-    private external fun nativeGenerate(file: ByteArray, input: ByteArray, context: Int, threads: Int, limit: Int): Array<ByteArray>
+    private external fun nativeGenerate(file: ByteArray, input: ByteArray, context: Int, threads: Int, limit: Int, memoryBudget: Long): Array<ByteArray>
+    @Suppress("unused") private fun nativePreview(bytes: ByteArray) { partialText = bytes.toString(Charsets.UTF_8) }
     override fun getName() = "AgentLinkLocalModels"
 
     private fun key(hash: String): String {
@@ -70,6 +72,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
         map.putString("operation", operation)
         map.putDouble("bytes", transferred.toDouble())
         map.putDouble("total", expected.toDouble())
+        map.putString("text", if (operation == "generate") partialText else "")
         promise.resolve(map)
     }
     @ReactMethod fun cancel(promise: Promise) {
@@ -83,7 +86,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
         if (!busy.compareAndSet(false, true)) { promise.reject("busy", "Another local operation is running"); return }
         cancelled.set(false)
         if (engine) nativeReset()
-        operation = name; transferred = 0; expected = 0
+        operation = name; transferred = 0; expected = 0; partialText = ""
         worker.execute {
             try { promise.resolve(block()) }
             catch (e: Throwable) { promise.reject(if (cancelled.get()) "cancelled" else "local_model", if (cancelled.get()) "Cancelled" else (e.message ?: "Local operation failed")) }
@@ -197,9 +200,19 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
             check(digest(model).equals(hash, true)) { "Model integrity check failed" }
             val mem = memory()
             check(!mem.lowMemory && mem.availMem > model.length() + 768L * 1024 * 1024) { "Insufficient available RAM" }
-            check(thermal() < 4) { "Device is too hot" }
+            check(thermal() < 3) { "Device is too hot" }
             checkCancelled()
-            val result = nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), prompt.toByteArray(Charsets.UTF_8), context, threads, limit)
+            val power=ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+            val result = if (Build.VERSION.SDK_INT >= 29) {
+                val listener=PowerManager.OnThermalStatusChangedListener { value ->
+                    if (value >= PowerManager.THERMAL_STATUS_SEVERE) { cancelled.set(true); nativeCancel() }
+                }
+                power.addThermalStatusListener(listener)
+                try {
+                    checkCancelled()
+                    nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), prompt.toByteArray(Charsets.UTF_8), context, threads, limit, mem.availMem)
+                } finally { power.removeThermalStatusListener(listener) }
+            } else nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), prompt.toByteArray(Charsets.UTF_8), context, threads, limit, mem.availMem)
             val map = Arguments.createMap()
             map.putString("text", result[0].toString(Charsets.UTF_8))
             map.putString("metrics", result[1].toString(Charsets.UTF_8))
