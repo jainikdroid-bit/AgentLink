@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 6 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 7 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -143,9 +143,11 @@ function createLauncher(deps) {
       deps.writePair(left === 0 ? null : { ...current, fails: failed })
       return send(res, 403, { ok: false, error: 'wrong code', left })
     }
+    const password = deps.readPassword()
+    if (!password) return send(res, 503, { ok: false, error: 'no password saved yet: run the installer once' })
     deps.writePair(null)
     const state = deps.readState() || {}
-    return send(res, 200, { ok: true, name, password: deps.readPassword(), port: portOf(), launcherPort: Number(state.launcherPort) || portOf() - 1, ...addresses(state) })
+    return send(res, 200, { ok: true, name, password, port: portOf(), launcherPort: Number(state.launcherPort) || portOf() - 1, ...addresses(state) })
   }
 
   const actions = { start, stop, restart: async () => { await stop(); return start() } }
