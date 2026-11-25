@@ -1,8 +1,8 @@
+import { useTheme } from "../src/theme/useTheme"
 import { useEffect, useRef, useState } from "react"
 import { Stack, router } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { Appearance, useColorScheme, View, ActivityIndicator, AppState } from "react-native"
-import { cyber } from "../src/theme/cyber"
 import { Mascot } from "../src/components/Mascot"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
@@ -32,6 +32,7 @@ Appearance.setColorScheme("dark")
 const queryClient = new QueryClient()
 
 function RootLayout() {
+  const palette = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -155,7 +156,7 @@ function RootLayout() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: isDark ? "#07080c" : "#ffffff",
+          backgroundColor: isDark ? palette.bg : "#ffffff",
         }}
       >
         <Mascot state="loading" size={120} />
@@ -172,11 +173,11 @@ function RootLayout() {
             <AuthGate>
             <Stack
               screenOptions={{
-                headerStyle: { backgroundColor: cyber.bg },
-                headerTintColor: cyber.cyan,
-                headerTitleStyle: { color: cyber.text, fontSize: 17, fontWeight: "600" },
+                headerStyle: { backgroundColor: palette.bg },
+                headerTintColor: palette.cyan,
+                headerTitleStyle: { color: palette.text, fontSize: 17, fontWeight: "600" },
                 headerShadowVisible: false,
-                contentStyle: { backgroundColor: cyber.bg },
+                contentStyle: { backgroundColor: palette.bg },
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
