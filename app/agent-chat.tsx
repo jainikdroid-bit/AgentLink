@@ -7,7 +7,8 @@ import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { cyber } from "../src/theme/cyber"
 import { getConnectionTarget, useConnections } from "../src/stores/connections"
-import type { AcpTarget } from "../src/lib/acp/api"
+import * as Crypto from "expo-crypto"
+import type { AgentQueue, QueueAction, AcpTarget } from "../src/lib/acp/api"
 import { useAcpChat } from "../src/lib/acp/useAcpChat"
 import { loginHint, type ChatItem } from "../src/lib/acp/protocol"
 import { Markdown } from "../src/components/markdown"
@@ -48,6 +49,25 @@ export default function AgentChatScreen() {
   const [modelMenu, setModelMenu] = useState(false)
   const [text, setText] = useState(params.draft || "")
   const [sending, setSending] = useState(false)
+  const [queue,setQueue]=useState<AgentQueue|null>(null)
+  const [queueBusy,setQueueBusy]=useState(false)
+  const queueLock=useRef(false)
+  const queueEpoch=useRef(0)
+  const enqueueId=useRef<{text:string;id:string}|null>(null)
+  useEffect(()=>{
+    if(!chat.agentId||chat.link!=="live"||chat.fatal)return
+    let alive=true,polling=false
+    const poll=async()=>{if(polling||queueLock.current)return;polling=true;const epoch=queueEpoch.current;try{const q=await chat.readQueue();if(alive&&epoch===queueEpoch.current)setQueue(q)}catch{}finally{polling=false}}
+    void poll();const timer=setInterval(()=>void poll(),3000);return()=>{alive=false;clearInterval(timer)}
+  },[chat.agentId,chat.link,chat.fatal,chat.readQueue])
+  const queueAction=async(action:QueueAction)=>{
+    if(queueLock.current)return
+    queueLock.current=true;queueEpoch.current++;setQueueBusy(true)
+    try{await chat.changeQueue(action);if(action.action==="enqueue"){setText("");enqueueId.current=null}setQueue(await chat.readQueue())}
+    catch(e){Alert.alert(t("common.error"),e instanceof Error?e.message:String(e))}
+    finally{queueEpoch.current++;queueLock.current=false;setQueueBusy(false)}
+  }
+  const enqueue=()=>{const value=text.trim();if(!value)return;if(enqueueId.current?.text!==value)enqueueId.current={text:value,id:Crypto.randomUUID()};void queueAction({action:"enqueue",...enqueueId.current})}
   const list = useRef<FlatList<Grouped<ChatItem>>>(null)
   const showActions = useSettings((st) => st.showActions)
   // Runs of tool calls fold into one "Actions (N)" line, like in the opencode chat.
@@ -64,7 +84,7 @@ export default function AgentChatScreen() {
 
   const submit = async () => {
     const message = text.trim()
-    if (!message || sending || !ready || state.busy) return
+    if (!message || sending || !ready || state.busy || queue?.items.length || queue?.paused) return
     setSending(true)
     try {
       await chat.send(message)
@@ -204,6 +224,7 @@ export default function AgentChatScreen() {
       {state.pendingPermissions.map((request) => (
         <PermissionCard key={String(request.requestId)} request={request} agent={agentName} onAnswer={(optionId) => void chat.answer(request.requestId, optionId).catch(() => undefined)} />
       ))}
+      {queue&&<View style={{paddingHorizontal:12,gap:6}}>{queue.items.length>0||queue.paused?<><Text style={{color:palette.text}}>{t("workspace.queue")} · {queue.items.length}{queue.paused?" · "+t("workspace.queuePaused"):""}</Text><ScrollView style={{maxHeight:120}}>{queue.items.map(item=><View key={item.id} style={{flexDirection:"row",alignItems:"center",gap:8}}><Text numberOfLines={2} style={{flex:1,color:palette.text}}>{item.text}</Text><TouchableOpacity disabled={queueBusy||!ready} onPress={()=>void queueAction({action:"remove",id:item.id})}><Ionicons name="close-circle-outline" size={22} color={palette.muted}/></TouchableOpacity></View>)}</ScrollView><TouchableOpacity disabled={queueBusy||!ready} onPress={()=>void queueAction({action:queue.paused?"resume":"pause"})}><Text style={{color:palette.cyan,paddingVertical:6}}>{t(queue.paused?"workspace.queueResume":"workspace.queuePause")}</Text></TouchableOpacity></>:null}{ready&&text.trim()&&(state.busy||queue.items.length>0||queue.paused)?<TouchableOpacity disabled={queueBusy} onPress={enqueue}><Text style={{color:palette.cyan,paddingVertical:8}}>{t("workspace.queueAdd")}</Text></TouchableOpacity>:null}</View>}
       <View style={[s.inputRow, { paddingBottom: Math.max(10, insets.bottom) }]}>
         <TextInput
           style={s.input}
@@ -212,7 +233,7 @@ export default function AgentChatScreen() {
           placeholder={t("acp.inputPlaceholder", { agent: agentName })}
           placeholderTextColor={palette.muted}
           multiline
-          editable={ready}
+          editable={ready&&!queueBusy}
           testID="acp-input"
         />
         {state.busy ? (
@@ -220,7 +241,7 @@ export default function AgentChatScreen() {
             <Ionicons name="stop" size={20} color={palette.red} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[s.send, (!ready || !text.trim() || sending) && s.sendOff]} onPress={() => void submit()} disabled={!ready || !text.trim() || sending} testID="acp-send">
+          <TouchableOpacity style={[s.send, (!ready || !text.trim() || sending) && s.sendOff]} onPress={() => void submit()} disabled={!ready || !text.trim() || sending || !!queue?.items.length || !!queue?.paused} testID="acp-send">
             {sending ? <ActivityIndicator size="small" color={palette.bg} /> : <Ionicons name="arrow-up" size={20} color={palette.bg} />}
           </TouchableOpacity>
         )}
