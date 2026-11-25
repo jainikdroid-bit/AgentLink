@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
 import { useEffect, useReducer, useRef, useState, useCallback, useMemo } from "react"
 import {
   View,
@@ -78,6 +79,8 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
 ]
 
 export default function SessionScreen() {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { id, directory, replyHex } = useLocalSearchParams<{ id: string; directory?: string; replyHex?: string }>()
   const router = useRouter()
   const colorScheme = useColorScheme()
@@ -700,7 +703,7 @@ export default function SessionScreen() {
 
   // Current agent display
   const currentAgent = agents.find((a) => a.name === agent)
-  const agentColor = currentAgent?.color || "#22d3ee"
+  const agentColor = currentAgent?.color || palette.cyan
   const modelLabel = model?.modelID ? model.modelID.split("/").pop() || model.modelID : "default"
 
   // Variants for current model (for reasoning effort picker)
@@ -729,7 +732,7 @@ export default function SessionScreen() {
             accessibilityLabel={t("files.title")}
             testID="header-files"
           >
-            <Ionicons name="folder-open-outline" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="folder-open-outline" size={20} color={isDark ? palette.muted : palette.muted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/terminal", params: { directory: currentSession?.directory ?? "" } })}
@@ -738,13 +741,13 @@ export default function SessionScreen() {
             accessibilityLabel={t("terminal.title")}
             testID="header-terminal"
           >
-            <Ionicons name="terminal-outline" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="terminal-outline" size={20} color={isDark ? palette.muted : palette.muted} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowInfo((v) => !v)} style={s.headerButton} accessibilityRole="button">
             <Ionicons
               name={showInfo ? "stats-chart" : "stats-chart-outline"}
               size={20}
-              color={showInfo ? "#22d3ee" : isDark ? "#8a93a8" : "#8a93a8"}
+              color={showInfo ? palette.cyan : isDark ? palette.muted : palette.muted}
             />
           </TouchableOpacity>
         </View>
@@ -832,7 +835,7 @@ export default function SessionScreen() {
 
         {isLoading ? (
           <View style={s.loading}>
-            <ActivityIndicator size="large" color={isDark ? "#ffffff" : "#07080c"} />
+            <ActivityIndicator size="large" color={isDark ? "#ffffff" : palette.bg} />
           </View>
         ) : (
           <View style={s.listWrap}>
@@ -860,7 +863,7 @@ export default function SessionScreen() {
               ListFooterComponent={
                 loadingMore ? (
                   <View style={s.loadingMore}>
-                    <ActivityIndicator size="small" color={isDark ? "#8a93a8" : "#8a93a8"} />
+                    <ActivityIndicator size="small" color={isDark ? palette.muted : palette.muted} />
                     <Text style={[s.loadingMoreText, isDark && s.metaDark]}>{t("session.loadingOlder")}</Text>
                   </View>
                 ) : null
@@ -873,7 +876,7 @@ export default function SessionScreen() {
             )}
             {showScrollButton && (
               <TouchableOpacity style={[s.scrollBtn, isDark && s.scrollBtnDark]} onPress={() => scrollToBottom(true)}>
-                <Ionicons name="chevron-down" size={24} color={isDark ? "#ffffff" : "#07080c"} />
+                <Ionicons name="chevron-down" size={24} color={isDark ? "#ffffff" : palette.bg} />
               </TouchableOpacity>
             )}
           </View>
@@ -917,7 +920,7 @@ export default function SessionScreen() {
           >
             <View style={[s.agentDot, { backgroundColor: agentColor }]} />
             <Text style={[s.agentLabel, isDark && s.textWhite]}>{agent || "build"}</Text>
-            <Ionicons name="swap-horizontal-outline" size={12} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="swap-horizontal-outline" size={12} color={isDark ? palette.muted : palette.muted} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -927,7 +930,7 @@ export default function SessionScreen() {
             accessibilityLabel={t("chat.modelPicker.title") + " · " + modelLabel}
             testID="model-chip"
           >
-            <Ionicons name="hardware-chip-outline" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="hardware-chip-outline" size={14} color={isDark ? palette.muted : palette.muted} />
             <Text style={[s.modelLabel, isDark && s.metaDark]} numberOfLines={1}>
               {modelLabel}
             </Text>
@@ -939,7 +942,7 @@ export default function SessionScreen() {
               onPress={() => variantSheetRef.current?.expand()}
               testID="variant-chip"
             >
-              <Ionicons name="flash-outline" size={14} color={variant ? "#22d3ee" : isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="flash-outline" size={14} color={variant ? palette.cyan : isDark ? palette.muted : palette.muted} />
               <Text style={[s.variantLabel, isDark && s.metaDark, variant && s.variantLabelActive]} numberOfLines={1}>
                 {variant ? variant.charAt(0).toUpperCase() + variant.slice(1) : t("session.toolbar.auto")}
               </Text>
@@ -967,12 +970,12 @@ export default function SessionScreen() {
           <View style={s.inputRow}>
             {/* Attach button */}
             <TouchableOpacity style={s.attachBtn} onPress={pickFromLibrary} onLongPress={pickFromCamera}>
-              <Ionicons name="add-circle-outline" size={26} color={isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="add-circle-outline" size={26} color={isDark ? palette.muted : palette.muted} />
             </TouchableOpacity>
 
             {/* Clipboard paste button */}
             <TouchableOpacity style={s.attachBtn} onPress={pasteFromClipboard}>
-              <Ionicons name="clipboard-outline" size={22} color={isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="clipboard-outline" size={22} color={isDark ? palette.muted : palette.muted} />
             </TouchableOpacity>
 
             <TextInput
@@ -984,7 +987,7 @@ export default function SessionScreen() {
                     ? t("session.input.placeholderFollowUp")
                     : t("session.input.placeholderDefault")
               }
-              placeholderTextColor={speech.listening ? "#ff4d6d" : isDark ? "#8a93a8" : "#8a93a8"}
+              placeholderTextColor={speech.listening ? "#ff4d6d" : isDark ? palette.muted : palette.muted}
               value={speech.listening ? speech.transcript : input}
               onChangeText={speech.listening ? undefined : setInput}
               editable={!speech.listening}
@@ -1002,10 +1005,10 @@ export default function SessionScreen() {
             {!isSending && !input.trim() && attachments.length === 0 && !speech.listening && voice.phase === "off" && (
               <>
                 <TouchableOpacity style={s.micBtn} onPress={() => void speech.start()}>
-                  <Ionicons name="mic" size={22} color={isDark ? "#8a93a8" : "#8a93a8"} />
+                  <Ionicons name="mic" size={22} color={isDark ? palette.muted : palette.muted} />
                 </TouchableOpacity>
                 <TouchableOpacity style={s.micBtn} onPress={() => dispatchVoice({ type: "start" })} testID="voice-start">
-                  <Ionicons name="headset" size={22} color="#22d3ee" />
+                  <Ionicons name="headset" size={22} color={palette.cyan} />
                 </TouchableOpacity>
               </>
             )}
@@ -1046,7 +1049,7 @@ export default function SessionScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
   containerDark: { backgroundColor: "#07080c" },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
