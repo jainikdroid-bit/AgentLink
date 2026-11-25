@@ -1,5 +1,7 @@
 import {useCallback,useRef,useState} from "react"
-import {Alert,Linking,ScrollView,Text,TextInput,TouchableOpacity,View} from "react-native"
+import {Alert,Linking,Modal,ScrollView,Text,TextInput,TouchableOpacity,View} from "react-native"
+import {WebView} from "react-native-webview"
+import {useSafeAreaInsets} from "react-native-safe-area-context"
 import {router,useFocusEffect,useLocalSearchParams} from "expo-router"
 import {useTranslation} from "react-i18next"
 import {useTheme} from "../src/theme/useTheme"
@@ -7,7 +9,7 @@ import {getConnectionTarget,useConnections} from "../src/stores/connections"
 import {call,getHostHardware,listAgents,listSavedSessions,type SavedAgentSession,type HostHardware,type RunningAgent,type AgentInfo,type AcpTarget} from "../src/lib/acp/api"
 import {attentionRows} from "../src/lib/attention"
 import {routeUrl} from "../src/lib/tailnet"
-import {highlightLine,parseGitStatus,previewAddress} from "../src/lib/workspace-pure"
+import {highlightLine,parseGitStatus,previewAddress,previewNavigationAllowed} from "../src/lib/workspace-pure"
 
 type Inventory={root:string;statusPorcelain:string;branches:string[];worktrees:{path:string;branch:string|null;head:string|null;locked:boolean}[]}
 type InboxEvent={id:string;at:number;category:string;agent:string;bridgeId:string}
@@ -17,7 +19,8 @@ type Edit={file:string;text:string;revision:string;dirty:boolean}
 const describe=(e:unknown)=>e instanceof Error?e.message:String(e)
 
 export default function Workspace(){
- const p=useTheme(),{t}=useTranslation()
+ const p=useTheme(),{t}=useTranslation(),insets=useSafeAreaInsets()
+ const [preview,setPreview]=useState<string|null>(null),[previewJs,setPreviewJs]=useState(false),[previewEpoch,setPreviewEpoch]=useState(0)
  const params=useLocalSearchParams<{draft?:string;connectionId?:string}>()
  const connections=useConnections(s=>s.connections),active=useConnections(s=>s.activeConnection)
  const [selected,setSelected]=useState(params.connectionId||active?.id||"")
@@ -100,7 +103,8 @@ export default function Workspace(){
   const url=previewAddress(target.serverUrl,Number(port))
   if(!url||target.tunnel)throw Error(w("previewPrivate"))
   const routed=await routeUrl(url)
-  await Linking.openURL(routed)
+  if(!previewNavigationAllowed(routed,routed))throw Error(w("previewPrivate"))
+  setPreviewJs(false);setPreview(routed)
  })
  const start=(agent:AgentInfo,existingId?:string,folder=cwd,savedId?:string)=>{
   if(busy||!selected||selection.current!==selected)return
@@ -129,5 +133,6 @@ export default function Workspace(){
   <View style={box}><Text style={title}>{w("benchmark")}</Text>{btn(w("refresh"),refreshBench,!chosen?.launcherPort)}{benchModels.map(m=>btn(m.engine+" · "+m.id,()=>benchmark(m)))}{benchResult?<Text selectable style={txt}>{benchResult}</Text>:null}<Text style={txt}>{w("quota")}: {w("quotaUnknown")}</Text></View>
   <View style={box}><Text style={title}>{w("inbox")}</Text><Text style={{color:p.muted}}>{host?.pushConfigured?w("pushOn"):w("pushOff")}</Text>{!host?.events?.length?<Text style={txt}>{w("inboxEmpty")}</Text>:host.events.slice(-30).reverse().map(e=><Text key={e.id} style={txt}>{new Date(e.at).toLocaleString()} · {e.agent} · {w(e.category)}</Text>)}</View>
   {btn(w("phoneModels"),()=>router.push("/phone-models"))}
+  <Modal visible={!!preview} onRequestClose={()=>setPreview(null)} animationType="slide"><View style={{flex:1,backgroundColor:p.bg,paddingTop:insets.top,paddingBottom:insets.bottom}}><View style={{padding:10,gap:8}}><Text style={title}>{w("preview")}</Text><Text selectable numberOfLines={2} style={{color:p.muted}}>{preview}</Text><View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>{btn(t("common.close"),()=>setPreview(null))}{btn(w("refresh"),()=>setPreviewEpoch(v=>v+1))}{btn(w("browser"),()=>{if(preview)void Linking.openURL(preview).catch(e=>setError(describe(e)))})}{btn(w("previewScripts")+(previewJs?" ✓":""),()=>{if(previewJs)setPreviewJs(false);else Alert.alert(w("previewScripts"),w("previewScriptHelp"),[{text:t("common.cancel"),style:"cancel"},{text:w("confirm"),onPress:()=>setPreviewJs(true)}])})}</View></View>{preview&&<WebView key={preview+":"+previewEpoch+":"+previewJs} source={{uri:preview}} style={{flex:1,backgroundColor:p.bg}} originWhitelist={["*"]} onShouldStartLoadWithRequest={r=>previewNavigationAllowed(preview,r.url)} javaScriptEnabled={previewJs} domStorageEnabled={previewJs} incognito sharedCookiesEnabled={false} thirdPartyCookiesEnabled={false} allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false} mixedContentMode="never" setSupportMultipleWindows={false} geolocationEnabled={false} mediaPlaybackRequiresUserAction onOpenWindow={()=>{}}/>}</View></Modal>
  </ScrollView>
 }
