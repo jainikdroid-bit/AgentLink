@@ -24,9 +24,9 @@ export const cancelLocal=async ()=>engine().cancel()
 export const installedModel=async (m:HfFile)=>engine().installed(m.sha256)
 export async function downloadModel(m:HfFile){if(!validModel(m))throw Error("Invalid GGUF metadata");return engine().download(m.repo,m.revision,m.file,m.sha256,m.bytes)}
 export const removeModel=async (m:HfFile)=>engine().remove(m.sha256)
-export async function generateLocal(m:HfFile,prompt:string,context:number,threads:number){
+export async function generateLocal(m:HfFile,prompt:string,context:number,threads:number,limit=256){
  if(!validModel(m))throw Error("Invalid GGUF metadata")
- const result=await engine().generate(m.sha256,prompt,context,threads,256)
+ const result=await engine().generate(m.sha256,prompt,context,threads,limit)
  const raw=JSON.parse(result.metrics)
  const rate=(v:unknown)=>typeof v==="number"&&Number.isFinite(v)&&v>=0?v:null
  return {text:result.text,promptPerSecond:rate(raw.promptPerSecond),generationPerSecond:rate(raw.generationPerSecond),cancelled:raw.cancelled===true}
