@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "How will you connect?",
+      "tailscaleTitle": "From anywhere · Tailscale",
+      "tailscaleBody": "Private network; sign in on both devices.",
+      "lanTitle": "Same Wi-Fi · LAN",
+      "lanBody": "No account needed; use a trusted home network.",
+      "platform": "Computer operating system",
+      "details": "Details and troubleshooting",
+      "computerDetails": "Open PowerShell from Start on Windows, or Terminal on Linux/macOS. Paste the command and press Enter. Wait for the QR code. Keep the pairing link private.",
+      "tailscaleDetails": "Use the same Tailscale account on both devices. The computer must be awake. If another VPN is active, check that Tailscale can connect.",
+      "scanDetails": "Scan the pairing QR, not the APK QR. Confirm the computer name. If scanning fails, use the six-digit code within 10 minutes. A 401 means credentials were rejected; create a fresh pairing link.",
+      "manual": "Manual connection (IP and password)",
+      "choosePairing": "Choose guided setup or pair with a computer that is already configured."
+    },
     "computer": {
       "title": "Run one command on your computer",
       "body": "Open PowerShell (Windows) or Terminal (macOS / Linux), paste the command, press Enter. It installs what is missing, starts the server and shows a QR code.",
