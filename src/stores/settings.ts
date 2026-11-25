@@ -68,7 +68,7 @@ interface SettingsState extends Settings {
 
 function snapshot(get: () => SettingsState): Settings {
   const { pageSize, notifications, locale, mascot, theme, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar } = get()
-  return { pageSize, notifications, locale, mascot, theme, showThinking, showActions, replyInMyLanguage, avatar }
+  return { pageSize, notifications, locale, mascot, theme, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar }
 }
 
 async function persist(settings: Settings) {
