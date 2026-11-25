@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../src/theme/useTheme"
 import { useState } from "react"
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Linking } from "react-native"
 import { router } from "expo-router"
@@ -25,6 +26,8 @@ const MOOD: MascotState[] = ["working", "thinking", "idle"]
 // someone with no server (see app/(tabs)/index.tsx) and can be skipped at any moment; "Skip guide" and
 // finishing both remember the choice so it never nags again. It stays reachable from the empty screen.
 export default function GuideScreen() {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const [index, setIndex] = useState(0)
   const [os, setOs] = useState<GuideOs>("windows")
@@ -76,7 +79,7 @@ export default function GuideScreen() {
             <Text style={s.sectionLabel}>{t("guide.easy.network")}</Text>
             {(["tailscale", "lan"] as const).map((key) => (
               <TouchableOpacity key={key} onPress={() => { setMode(key); setCopied(false) }} accessibilityRole="radio" accessibilityState={{ selected: mode === key }} style={[s.network, mode === key && s.networkActive]} testID={`guide-network-${key}`}>
-                <Ionicons name={mode === key ? "radio-button-on" : "radio-button-off"} color={cyber.cyan} size={20} />
+                <Ionicons name={mode === key ? "radio-button-on" : "radio-button-off"} color={palette.cyan} size={20} />
                 <View style={s.networkText}>
                   <Text style={s.sectionLabel}>{t(`guide.easy.${key}Title`)}</Text>
                   <Text style={s.tip}>{t(`guide.easy.${key}Body`)}</Text>
@@ -95,7 +98,7 @@ export default function GuideScreen() {
               {commandFor(os, mode)}
             </Text>
             <TouchableOpacity style={s.copy} onPress={() => void copyCommand()} testID="guide-copy">
-              <Ionicons name={copied ? "checkmark" : "copy-outline"} size={16} color={cyber.bg} />
+              <Ionicons name={copied ? "checkmark" : "copy-outline"} size={16} color={palette.bg} />
               <Text style={s.copyText}>{copied ? t("guide.copied") : t("guide.copy")}</Text>
             </TouchableOpacity>
             <Text style={s.tip}>{t("guide.computer.tip")}</Text>
@@ -104,14 +107,14 @@ export default function GuideScreen() {
 
         {step === "tailscale" ? (
           <TouchableOpacity style={s.secondary} onPress={() => void Linking.openURL(TAILSCALE_STORE_URL)} testID="guide-play">
-            <Ionicons name="logo-google-playstore" size={18} color={cyber.cyan} />
+            <Ionicons name="logo-google-playstore" size={18} color={palette.cyan} />
             <Text style={s.secondaryText}>{t("guide.tailscale.open")}</Text>
           </TouchableOpacity>
         ) : null}
 
         {step === "scan" && (
           <TouchableOpacity style={s.secondary} onPress={() => void finish(() => router.replace("/pair-code"))} testID="guide-pair-code">
-            <Ionicons name="keypad-outline" size={18} color={cyber.cyan} />
+            <Ionicons name="keypad-outline" size={18} color={palette.cyan} />
             <Text style={s.secondaryText}>{t("pairCode.button")}</Text>
           </TouchableOpacity>
         )}
@@ -119,7 +122,7 @@ export default function GuideScreen() {
         <View style={s.details}>
           <TouchableOpacity style={s.detailsHeader} onPress={() => setExpanded(!expanded)} accessibilityRole="button" accessibilityState={{ expanded }} testID="guide-details">
             <Text style={s.sectionLabel}>{t("guide.easy.details")}</Text>
-            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={cyber.cyan} />
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={20} color={palette.cyan} />
           </TouchableOpacity>
           {expanded && <Text style={s.detailsBody}>{t(`guide.easy.${step}Details`)}</Text>}
         </View>
@@ -144,7 +147,7 @@ export default function GuideScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: cyber.bg },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 14 },
   counter: { color: cyber.muted, fontFamily: cyber.mono, fontSize: 13 },
