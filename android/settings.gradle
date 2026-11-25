@@ -36,4 +36,5 @@ rootProject.name = 'OpenCode'
 expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
+include ':localmodel'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)
