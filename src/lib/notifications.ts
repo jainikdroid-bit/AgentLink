@@ -156,10 +156,12 @@ async function ensureChannel() {
 // ---------------------------------------------------------------------------
 
 export async function send(payload: Payload) {
+  const host=useConnections.getState().activeConnection
   const prefs = preferences()
   if (!prefs[payload.category]) return
   if (AppState.currentState === "active") return
   if (!(await granted())) return
+  if(useConnections.getState().activeConnection?.id!==host?.id || useConnections.getState().activeConnection?.url!==host?.url)return
 
   if (payload.dedupeKey) {
     const now = Date.now()
@@ -176,7 +178,7 @@ export async function send(payload: Payload) {
       data: {
         category: payload.category,
         sessionId: payload.sessionId,
-        connectionId: useConnections.getState().activeConnection?.id,
+        connectionId: host?.id,
         ...(payload.requestId ? { requestId: payload.requestId } : {}),
       } satisfies NotificationData as Record<string, unknown>,
       ...(payload.requestId ? { categoryIdentifier: PERMISSION_CATEGORY_ID } : {}),
