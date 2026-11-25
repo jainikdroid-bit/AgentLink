@@ -1,6 +1,6 @@
 import {useCallback,useRef,useState} from "react"
 import {Alert,Linking,ScrollView,Text,TextInput,TouchableOpacity,View} from "react-native"
-import {router,useFocusEffect} from "expo-router"
+import {router,useFocusEffect,useLocalSearchParams} from "expo-router"
 import {useTranslation} from "react-i18next"
 import {useTheme} from "../src/theme/useTheme"
 import {getConnectionTarget,useConnections} from "../src/stores/connections"
@@ -17,14 +17,15 @@ const describe=(e:unknown)=>e instanceof Error?e.message:String(e)
 
 export default function Workspace(){
  const p=useTheme(),{t}=useTranslation()
+ const params=useLocalSearchParams<{draft?:string;connectionId?:string}>()
  const connections=useConnections(s=>s.connections),active=useConnections(s=>s.activeConnection)
- const [selected,setSelected]=useState(active?.id||"")
+ const [selected,setSelected]=useState(params.connectionId||active?.id||"")
  const [cwd,setCwd]=useState(active?.directory||"")
  const [hosts,setHosts]=useState<Host[]>([])
  const [inventory,setInventory]=useState<Inventory|null>(null)
  const [file,setFile]=useState(""),[branch,setBranch]=useState(""),[message,setMessage]=useState("")
  const [output,setOutput]=useState(""),[edit,setEdit]=useState<Edit|null>(null),[highlight,setHighlight]=useState(true)
- const [port,setPort]=useState("3000"),[resume,setResume]=useState(""),[handoff,setHandoff]=useState("")
+ const [port,setPort]=useState("3000"),[resume,setResume]=useState(""),[handoff,setHandoff]=useState(typeof params.draft==="string"?params.draft.slice(0,8000):"")
  const [benchModels,setBenchModels]=useState<BenchModel[]>([]),[benchResult,setBenchResult]=useState("")
  const [busy,setBusy]=useState(false),[error,setError]=useState("")
  const generation=useRef(0),polling=useRef(false),operation=useRef(false),selection=useRef(selected)
@@ -54,7 +55,7 @@ export default function Workspace(){
  const reset=(id:string)=>{
   if(operation.current)return
   const c=connections.find(c=>c.id===id)
-  setSelected(id);setCwd(c?.directory||"");setInventory(null);setEdit(null);setOutput("");setError("");setFile("");setBranch("");setMessage("");setResume("");setHandoff("");setBenchModels([]);setBenchResult("")
+  setSelected(id);setCwd(c?.directory||"");setInventory(null);setEdit(null);setOutput("");setError("");setFile("");setBranch("");setMessage("");setResume("");setBenchModels([]);setBenchResult("")
  }
  const select=(id:string)=>{if(edit?.dirty)Alert.alert(w("discard"),w("discardBody"),[{text:t("common.cancel"),style:"cancel"},{text:w("discard"),style:"destructive",onPress:()=>reset(id)}]);else reset(id)}
  const run=async(fn:(target:AcpTarget,query:string)=>Promise<void>)=>{
