@@ -7,6 +7,8 @@ import type { LocalePreference } from "../lib/i18n/locale-resolve"
 import type { AvatarSize } from "../lib/avatar-mood"
 import { DEFAULT_MASCOT, type MascotKind, resolveMascot } from "../lib/mascot-choice"
 
+import { resolveTheme, type ThemeId } from "../theme/palettes"
+
 const SETTINGS_KEY = "opencode_settings"
 
 interface Settings {
@@ -14,6 +16,7 @@ interface Settings {
   notifications: Record<Category, boolean>
   locale: LocalePreference
   mascot: MascotKind
+  theme: ThemeId
   /** Show the agent's reasoning open instead of folded. */
   showThinking: boolean
   /** Show the agent's actions (commands, edits) open instead of folded. */
@@ -39,6 +42,7 @@ const DEFAULTS: Settings = {
   notifications: { ...defaultPreferences },
   locale: "system",
   mascot: DEFAULT_MASCOT,
+  theme: "cyber",
   showThinking: true,
   showActions: false,
   replyInMyLanguage: true,
@@ -51,6 +55,7 @@ interface SettingsState extends Settings {
   setPageSize: (size: number) => Promise<void>
   setNotification: (category: Category, enabled: boolean) => Promise<void>
   setLocale: (locale: LocalePreference) => Promise<void>
+  setTheme: (theme: ThemeId) => Promise<void>
   setMascot: (mascot: MascotKind) => Promise<void>
   setShowThinking: (value: boolean) => Promise<void>
   setShowActions: (value: boolean) => Promise<void>
@@ -59,7 +64,7 @@ interface SettingsState extends Settings {
 }
 
 function snapshot(get: () => SettingsState): Settings {
-  const { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage, avatar } = get()
+  const { pageSize, notifications, locale, mascot, theme, showThinking, showActions, replyInMyLanguage, avatar } = get()
   return { pageSize, notifications, locale, mascot, showThinking, showActions, replyInMyLanguage, avatar }
 }
 
@@ -76,7 +81,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<Settings>
       // Merge stored settings with defaults so new fields/categories get their default
-      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
+      const merged = { ...mergeStoredSettings(DEFAULTS, parsed), mascot: resolveMascot(parsed.mascot), theme: resolveTheme(parsed.theme), avatar: { ...DEFAULTS.avatar, ...(parsed.avatar ?? {}) } }
       set({ ...merged, loaded: true })
       setAppLocale(merged.locale)
       return
@@ -100,6 +105,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
     set({ locale })
     setAppLocale(locale) // applies immediately
     await persist({ ...snapshot(get), locale })
+  },
+
+  setTheme: async (theme) => {
+    set({ theme })
+    await persist(snapshot(get))
   },
 
   setMascot: async (mascot) => {
