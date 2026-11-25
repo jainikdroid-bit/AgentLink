@@ -88,11 +88,21 @@
         "other": "Bilinmiyor"
       }
     },
+    "appearance": {
+      "title": "Görünüm",
+      "character3d": "Yüzen 3D karakter",
+      "cyber": "Cyber",
+      "aurora": "Aurora",
+      "nebula": "Nebula",
+      "ember": "Ember"
+    },
     "mascot": {
       "label": "Maskot",
       "title": "Maskot seçin",
       "cheri": "Cheri",
-      "rig": "RIG"
+      "rig": "RIG",
+      "byte": "Byte",
+      "orbit": "Orbit"
     },
     "chat": {
       "showThinking": {
