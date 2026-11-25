@@ -143,6 +143,8 @@ export default function ConnectionsScreen() {
         ListHeaderComponent={
           <View style={[styles.header, isDark && styles.headerDark]}>
             <Text style={[styles.headerText, isDark && styles.metaDark]}>{t("connectionsList.header")}</Text>
+            <TouchableOpacity onPress={()=>router.push("/workspace")} style={{paddingVertical:12}}><Text style={{color:palette.cyan,fontSize:16}}>AgentLink Workspace</Text></TouchableOpacity>
+            <TouchableOpacity onPress={()=>router.push("/phone-models")} style={{paddingVertical:12}}><Text style={{color:palette.cyan,fontSize:16}}>{t("workspace.phoneModels")}</Text></TouchableOpacity>
           </View>
         }
         ListFooterComponent={
