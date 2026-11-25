@@ -5,9 +5,10 @@ import {useTheme} from "../theme/useTheme"
 
 const MAX_CHARS=256*1024
 // Local-only editor document. Source text is serialized as data, never markup.
-function literal(value:unknown){return JSON.stringify(value).replace(/</g,"\\u003c").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029")}
+function literal(value:string){return JSON.stringify(value).replace(/</g,"\\u003c").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029")}
 export function LiveCodeEditor({value,onChange,disabled}:{value:string;onChange:(value:string)=>void;disabled:boolean}){
- const p=useTheme(),web=useRef<WebView>(null),[fallback,setFallback]=useState(false)
+ const p=useTheme(),web=useRef<WebView>(null),[fallback,setFallback]=useState(()=>value.length>65536||/\r(?!\n)/.test(value)||(/\r\n/.test(value)&&/(^|[^\r])\n/.test(value)))
+ const [crlf]=useState(()=>value.includes("\r\n"))
  const [source]=useState(()=>({html:String.raw`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'"><style>
  html,body{margin:0;height:100%;overflow:hidden;background:${p.surface2};color:${p.text};}
  #wrap{height:100%;position:relative;overflow:hidden}
@@ -44,6 +45,6 @@ export function LiveCodeEditor({value,onChange,disabled}:{value:string;onChange:
  useEffect(()=>{web.current?.injectJavaScript(`window.agentlinkReadOnly&&window.agentlinkReadOnly(${disabled});true;`)},[disabled])
  return <View style={{height:320,borderWidth:1,borderColor:p.border,borderRadius:8,overflow:"hidden"}}>
  {fallback?<TextInput value={value} onChangeText={onChange} editable={!disabled} multiline autoCorrect={false} autoCapitalize="none" maxLength={MAX_CHARS} style={{flex:1,textAlignVertical:"top",fontFamily:p.mono,color:p.text,backgroundColor:p.surface2,padding:12}}/>:
- <WebView ref={web} source={source} originWhitelist={["*"]} onShouldStartLoadWithRequest={r=>r.url==="about:blank"||r.url.startsWith("data:text/html,")} javaScriptEnabled domStorageEnabled={false} allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false} mixedContentMode="never" setSupportMultipleWindows={false} incognito onError={()=>setFallback(true)} onLoadEnd={()=>web.current?.injectJavaScript(`window.agentlinkReadOnly&&window.agentlinkReadOnly(${disabled});true;`)} onMessage={event=>{try{const msg=JSON.parse(event.nativeEvent.data);if(!disabled&&msg?.type==="change"&&typeof msg.text==="string"&&msg.text.length<=MAX_CHARS)onChange(msg.text)}catch{}}} style={{flex:1}}/>}
+ <WebView ref={web} source={source} originWhitelist={["*"]} onShouldStartLoadWithRequest={r=>r.url==="about:blank"||r.url.startsWith("data:text/html,")} javaScriptEnabled domStorageEnabled={false} allowFileAccess={false} allowFileAccessFromFileURLs={false} allowUniversalAccessFromFileURLs={false} mixedContentMode="never" setSupportMultipleWindows={false} incognito onError={()=>setFallback(true)} onLoadEnd={()=>web.current?.injectJavaScript(`window.agentlinkReadOnly&&window.agentlinkReadOnly(${disabled});true;`)} onMessage={event=>{try{const msg=JSON.parse(event.nativeEvent.data);if(!disabled&&msg?.type==="change"&&typeof msg.text==="string"&&msg.text.length<=MAX_CHARS)onChange(crlf?msg.text.replace(/\r?\n/g,"\r\n"):msg.text)}catch{}}} style={{flex:1}}/>}
  </View>
 }
