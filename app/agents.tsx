@@ -6,7 +6,7 @@ import * as SecureStore from "expo-secure-store"
 import { useTranslation } from "react-i18next"
 import { cyber } from "../src/theme/cyber"
 import { useConnections } from "../src/stores/connections"
-import { AcpApiError, listAgents, type AgentInfo, type RunningAgent } from "../src/lib/acp/api"
+import { AcpApiError, listAgents, getHostHardware, type HostHardware, type AgentInfo, type RunningAgent } from "../src/lib/acp/api"
 
 const FOLDER_KEY = "acp_last_folder"
 
@@ -24,12 +24,14 @@ export default function AgentsScreen() {
   )
   const [agents, setAgents] = useState<AgentInfo[]>([])
   const [missing, setMissing] = useState<AgentInfo[]>([])
+  const [hardware, setHardware] = useState<HostHardware | null>(null)
   const [running, setRunning] = useState<RunningAgent[]>([])
   const [loading, setLoading] = useState(true)
   const [problem, setProblem] = useState<string | null>(null)
   const [folder, setFolder] = useState("")
 
   const requestId = useRef(0)
+  useEffect(() => { setHardware(null) }, [target])
   const targetRef = useRef(target)
   targetRef.current = target
   const load = useCallback(async (silent = false) => {
@@ -38,6 +40,7 @@ export default function AgentsScreen() {
     const current = () => id === requestId.current && targetRef.current === target
     if (!silent) { setLoading(true); setProblem(null) }
     try {
+      void getHostHardware(target).then(value => { if (current()) setHardware(value) }).catch(() => { if (current()) setHardware(null) })
       const result = await listAgents(target)
       if (!current()) return
       setProblem(null)
@@ -73,6 +76,17 @@ export default function AgentsScreen() {
   return (
     <ScrollView style={s.container} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" testID="agents-screen">
       <Text style={s.body}>{t("acp.intro")}</Text>
+      {hardware && <View style={s.card}>
+        <Ionicons name="hardware-chip-outline" size={24} color={cyber.cyan} />
+        <View style={s.cardText}>
+          <Text style={s.cardTitle}>{hardware.cpu.model || hardware.arch} · {hardware.platform}</Text>
+          <Text style={s.cardSub}>CPU {hardware.cpu.percent === null ? "—" : `${hardware.cpu.percent.toFixed(1)}%`} · {hardware.cpu.logicalCores}×</Text>
+          <Text style={s.cardSub}>RAM {((hardware.memory.totalBytes - hardware.memory.availableBytes) / 1024 ** 3).toFixed(1)} / {(hardware.memory.totalBytes / 1024 ** 3).toFixed(1)} GiB</Text>
+          {hardware.storage && <Text style={s.cardSub}>SSD/HDD {((hardware.storage.totalBytes - hardware.storage.availableBytes) / 1024 ** 3).toFixed(1)} / {(hardware.storage.totalBytes / 1024 ** 3).toFixed(1)} GiB</Text>}
+          <Text style={s.cardSub}>GPU — · °C —</Text>
+          <Text style={s.cardSub}>{new Date(hardware.at).toLocaleTimeString()}</Text>
+        </View>
+      </View>}
 
       {running.length > 0 ? (
         <>
