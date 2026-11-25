@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "Comment vous connecter ?",
+      "tailscaleTitle": "De partout · Tailscale",
+      "tailscaleBody": "Réseau privé ; connectez-vous sur les deux appareils.",
+      "lanTitle": "Même Wi-Fi · LAN",
+      "lanBody": "Sans compte ; utilisez un réseau domestique fiable.",
+      "platform": "Système du ordinateur",
+      "details": "Détails et dépannage",
+      "computerDetails": "Ouvrez PowerShell sous Windows ou Terminal sous Linux/macOS. Collez la commande, validez et attendez le QR. Gardez le lien d’association secret.",
+      "tailscaleDetails": "Utilisez le même compte Tailscale sur les deux appareils. L’ordinateur doit rester actif. Si un autre VPN est actif, vérifiez Tailscale.",
+      "scanDetails": "Scannez le QR d’association, pas celui de téléchargement. Confirmez le nom. Sinon, utilisez le code à six chiffres sous 10 minutes. En cas de 401, recréez le lien.",
+      "manual": "Connexion manuelle (IP et mot de passe)",
+      "choosePairing": "Choisissez la configuration guidée ou associez un ordinateur déjà configuré."
+    },
     "computer": {
       "title": "Exécutez une commande sur votre ordinateur",
       "body": "Ouvrez PowerShell (Windows) ou Terminal (macOS / Linux), collez la commande, appuyez sur Entrée. Cela installe ce qui manque, démarre le serveur et affiche un code QR.",
