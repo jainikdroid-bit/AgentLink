@@ -128,7 +128,11 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
     const key = `${state.handshake}:${state.nextId}`
     if (stepSent.current === key) return
     stepSent.current = key
-    sendMessage(t, handle.id, step).catch(() => { stepSent.current = null })
+    sendMessage(t, handle.id, step).catch((error:unknown) => {
+      // Permanent HTTP errors must be shown instead of silently stalling the handshake.
+      if(error instanceof AcpApiError && [400,401,403,404,409,429].includes(error.status))setFatal(error.message)
+      else stepSent.current=null
+    })
   }, [state, handle, params.resumeId, fatal, link])
 
   const post = useCallback(async (message: RpcMessage) => {
