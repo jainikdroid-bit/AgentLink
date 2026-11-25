@@ -82,6 +82,12 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
               if (event.seq <= lastSeq.current) continue // already read before the drop
               lastSeq.current = event.seq
             }
+            if (event.kind === "gap") {
+              // An incomplete replay cannot safely reconstruct requests or permissions.
+              dispatch(event)
+              setFatal("Session history is incomplete. Reopen the saved session instead.")
+              return
+            }
             if (event.kind === "live") {
               setLink("live")
               delay = RECONNECT_FIRST_MS
@@ -115,7 +121,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
   // 3. The handshake, once the backlog has been read (the chat may already exist).
   useEffect(() => {
     const t = targetRef.current
-    if (!t || !handle) return
+    if (!t || !handle || fatal || link !== "live") return
     if (params.resumeId && state.handshake === "initialized" && !state.loadSession) { setFatal("ACP session/load is not supported by this agent"); return }
     const step = nextHandshakeStep(state, handle.cwd, pkg.version, params.resumeId)
     if (!step) return
@@ -123,7 +129,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
     if (stepSent.current === key) return
     stepSent.current = key
     sendMessage(t, handle.id, step).catch(() => { stepSent.current = null })
-  }, [state, handle, params.resumeId])
+  }, [state, handle, params.resumeId, fatal, link])
 
   const post = useCallback(async (message: RpcMessage) => {
     const t = targetRef.current
