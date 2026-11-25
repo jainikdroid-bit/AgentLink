@@ -2,7 +2,7 @@
 // The floating host uses the same mood/play/walk bridge as Cheri. Native touches remain in CheriTouch.
 import * as THREE from "three"
 const canvas = document.getElementById("c") as HTMLCanvasElement
-const kind = new URLSearchParams(location.search).get("character") === "orbit" ? "orbit" : "byte"
+const kind = (window as any).__companionKind === "orbit" ? "orbit" : "byte"
 const fox = kind === "byte"
 const post = (data: object) => (window as any).ReactNativeWebView?.postMessage(JSON.stringify(data))
 const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
