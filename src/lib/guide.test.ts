@@ -28,3 +28,9 @@ test("the guide auto-opens once, only for people without a server", () => {
   assert.equal(shouldAutoShowGuide({ loaded: true, done: true, hasConnection: false }), false) // skipped or finished
   assert.equal(shouldAutoShowGuide({ loaded: true, done: false, hasConnection: true }), false) // already set up
 })
+
+test("LAN setup uses the installer flags on both platforms", () => {
+  assert.equal(commandFor("windows", "lan"), WINDOWS_COMMAND + " -Mode lan")
+  assert.equal(commandFor("unix", "lan"), UNIX_COMMAND + " -s -- --mode lan")
+  assert.equal(commandFor("unix", "tailscale"), UNIX_COMMAND)
+})
