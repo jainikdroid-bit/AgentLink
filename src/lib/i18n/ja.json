@@ -590,6 +590,20 @@
       "windows": "Windows",
       "unix": "macOS / Linux"
     },
+    "easy": {
+      "network": "接続方法を選択",
+      "tailscaleTitle": "外出先から · Tailscale",
+      "tailscaleBody": "プライベートネットワーク。両端末でログイン。",
+      "lanTitle": "同じ Wi-Fi · LAN",
+      "lanBody": "アカウント不要。信頼できる家庭内ネットワークを使用。",
+      "platform": "パソコンの OS",
+      "details": "詳細とトラブル対処",
+      "computerDetails": "Windows は PowerShell、Linux/macOS はターミナルを開きます。コマンドを貼り付け、Enter を押して QR を待ちます。ペアリングリンクは秘密にしてください。",
+      "tailscaleDetails": "両端末で同じ Tailscale アカウントを使います。パソコンを起動したままにし、他の VPN 使用時は Tailscale の接続を確認します。",
+      "scanDetails": "APK 用ではなく接続用 QR を読み取り、パソコン名を確認します。代わりに10分以内に6桁のコードを入力できます。401 の場合は新しいリンクを生成します。",
+      "manual": "手動接続（IP とパスワード）",
+      "choosePairing": "ガイド付き設定か、設定済みのパソコンとの接続を選びます。"
+    },
     "computer": {
       "title": "パソコンで 1 つのコマンドを実行",
       "body": "PowerShell（Windows）または Terminal（macOS / Linux）を開き、コマンドを貼り付けて Enter を押してください。不足しているものをインストールし、サーバーを開始、QR コードを表示します。",
