@@ -190,6 +190,8 @@ android {
 }
 
 dependencies {
+    // on-device llama.cpp engine (libagentlink_local.so), built from app/src/main/cpp
+    implementation project(':localmodel')
     // Built-in Tailscale (userspace tsnet). Built by native/tsnet/build.sh.
     implementation(files("libs/tsnetbridge.aar"))
 
