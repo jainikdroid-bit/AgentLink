@@ -35,7 +35,7 @@ export default function AgentsScreen() {
 
   const requestId = useRef(0)
   const inFlight = useRef<object|null>(null)
-  useEffect(() => { setHardware(null) }, [target])
+  useEffect(() => { setHardware(null); setAgents([]); setMissing([]); setRunning([]); setFolder(""); setProblem(null) }, [target])
   const targetRef = useRef(target)
   targetRef.current = target
   const load = useCallback(async (silent = false) => {
@@ -56,6 +56,7 @@ export default function AgentsScreen() {
       setRunning(result.running.filter((r) => !r.exited))
     } catch (error) {
       if (!current()) return
+      setAgents([]); setRunning([]); setMissing([])
       setProblem(error instanceof AcpApiError && error.outdated ? t("acp.outdated") : t("acp.unreachable"))
     } finally {
       if (inFlight.current===ticket) inFlight.current=null
@@ -76,6 +77,7 @@ export default function AgentsScreen() {
   }, [])
 
   const open = (agent: AgentInfo) => {
+    if (loading || !target || !activeConnection?.id) return
     const cwd = folder.trim()
     void SecureStore.setItemAsync(FOLDER_KEY, cwd).catch(() => undefined)
     router.push({ pathname: "/agent-chat", params: { agent: agent.id, name: agent.name, cwd, connectionId: activeConnection?.id || "" } })
@@ -103,7 +105,7 @@ export default function AgentsScreen() {
         <>
           <Text style={s.section}>{t("acp.running")}</Text>
           {running.map((r) => (
-            <TouchableOpacity key={r.id} style={s.card} onPress={() => router.push({ pathname: "/agent-chat", params: { agent: r.agent, name: r.name, cwd: r.cwd, id: r.id, connectionId: activeConnection?.id || "" } })} testID="acp-running">
+            <TouchableOpacity key={r.id} disabled={loading||!target} style={s.card} onPress={() => router.push({ pathname: "/agent-chat", params: { agent: r.agent, name: r.name, cwd: r.cwd, id: r.id, connectionId: activeConnection?.id || "" } })} testID="acp-running">
               <Ionicons name="pulse-outline" size={20} color={palette.green} />
               <View style={s.cardText}>
                 <Text style={s.cardTitle}>{r.name}</Text>
