@@ -1,0 +1,1 @@
+v0.26.6 — simplify pairing with guided LAN/Tailscale setup, expandable troubleshooting and credential recovery; improve chat readability and retry status. Preserve Cheri's existing behavior.
