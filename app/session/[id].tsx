@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
 import { useEffect, useReducer, useRef, useState, useCallback, useMemo } from "react"
 import {
   View,
@@ -77,13 +78,9 @@ const BUILTIN_COMMANDS: SlashCommand[] = [
   },
 ]
 
-function getShortDir(dir?: string): string | null {
-  if (!dir) return null
-  const parts = dir.split("/").filter(Boolean)
-  return parts[parts.length - 1] || null
-}
-
 export default function SessionScreen() {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { id, directory, replyHex } = useLocalSearchParams<{ id: string; directory?: string; replyHex?: string }>()
   const router = useRouter()
   const colorScheme = useColorScheme()
@@ -153,7 +150,6 @@ export default function SessionScreen() {
   const permissions = useEvents((s) => (sessionID ? s.permissions[sessionID] : undefined)) || []
   const questions = useEvents((s) => (sessionID ? s.questions[sessionID] : undefined)) || []
 
-  const shortDir = getShortDir(currentSession?.directory)
   const [showScrollButton, setShowScrollButton] = useState(false)
 
   // SSE reconnect banner
@@ -707,7 +703,7 @@ export default function SessionScreen() {
 
   // Current agent display
   const currentAgent = agents.find((a) => a.name === agent)
-  const agentColor = currentAgent?.color || "#22d3ee"
+  const agentColor = currentAgent?.color || palette.cyan
   const modelLabel = model?.modelID ? model.modelID.split("/").pop() || model.modelID : "default"
 
   // Variants for current model (for reasoning effort picker)
@@ -729,37 +725,35 @@ export default function SessionScreen() {
       title: currentSession?.title || t("session.titleFallback"),
       headerRight: () => (
         <View style={s.headerRight}>
-          {shortDir && (
-            <View style={[s.dirBadge, isDark && s.dirBadgeDark]}>
-              <Ionicons name="folder-outline" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
-              <Text style={[s.dirText, isDark && s.dirTextDark]}>{shortDir}</Text>
-            </View>
-          )}
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/files", params: { directory: currentSession?.directory ?? "" } })}
-            hitSlop={8}
+            style={s.headerButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("files.title")}
             testID="header-files"
           >
-            <Ionicons name="folder-open-outline" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="folder-open-outline" size={20} color={isDark ? palette.muted : palette.muted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/terminal", params: { directory: currentSession?.directory ?? "" } })}
-            hitSlop={8}
+            style={s.headerButton}
+            accessibilityRole="button"
+            accessibilityLabel={t("terminal.title")}
             testID="header-terminal"
           >
-            <Ionicons name="terminal-outline" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="terminal-outline" size={20} color={isDark ? palette.muted : palette.muted} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowInfo((v) => !v)} hitSlop={8}>
+          <TouchableOpacity onPress={() => setShowInfo((v) => !v)} style={s.headerButton} accessibilityRole="button">
             <Ionicons
               name={showInfo ? "stats-chart" : "stats-chart-outline"}
               size={20}
-              color={showInfo ? "#22d3ee" : isDark ? "#8a93a8" : "#8a93a8"}
+              color={showInfo ? palette.cyan : isDark ? palette.muted : palette.muted}
             />
           </TouchableOpacity>
         </View>
       ),
     })
-  }, [navigation, currentSession?.title, currentSession?.directory, shortDir, showInfo, isDark, t, router])
+  }, [navigation, currentSession?.title, currentSession?.directory, showInfo, isDark, t, router])
 
   return (
     <>
@@ -797,7 +791,7 @@ export default function SessionScreen() {
             cleared by the next send. */}
         {error && (
           <View style={[s.banner, s.bannerError]}>
-            <Text style={[s.bannerText, s.bannerErrorText]} numberOfLines={3}>
+            <Text style={[s.bannerText, s.bannerErrorText]} selectable>
               {error}
             </Text>
             <TouchableOpacity onPress={() => useSessions.setState({ error: null })} hitSlop={8}>
@@ -841,7 +835,7 @@ export default function SessionScreen() {
 
         {isLoading ? (
           <View style={s.loading}>
-            <ActivityIndicator size="large" color={isDark ? "#ffffff" : "#07080c"} />
+            <ActivityIndicator size="large" color={isDark ? "#ffffff" : palette.bg} />
           </View>
         ) : (
           <View style={s.listWrap}>
@@ -869,7 +863,7 @@ export default function SessionScreen() {
               ListFooterComponent={
                 loadingMore ? (
                   <View style={s.loadingMore}>
-                    <ActivityIndicator size="small" color={isDark ? "#8a93a8" : "#8a93a8"} />
+                    <ActivityIndicator size="small" color={isDark ? palette.muted : palette.muted} />
                     <Text style={[s.loadingMoreText, isDark && s.metaDark]}>{t("session.loadingOlder")}</Text>
                   </View>
                 ) : null
@@ -882,7 +876,7 @@ export default function SessionScreen() {
             )}
             {showScrollButton && (
               <TouchableOpacity style={[s.scrollBtn, isDark && s.scrollBtnDark]} onPress={() => scrollToBottom(true)}>
-                <Ionicons name="chevron-down" size={24} color={isDark ? "#ffffff" : "#07080c"} />
+                <Ionicons name="chevron-down" size={24} color={isDark ? "#ffffff" : palette.bg} />
               </TouchableOpacity>
             )}
           </View>
@@ -926,17 +920,19 @@ export default function SessionScreen() {
           >
             <View style={[s.agentDot, { backgroundColor: agentColor }]} />
             <Text style={[s.agentLabel, isDark && s.textWhite]}>{agent || "build"}</Text>
-            <Ionicons name="swap-horizontal-outline" size={12} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="swap-horizontal-outline" size={12} color={isDark ? palette.muted : palette.muted} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[s.modelChip, isDark && s.modelChipDark]}
             onPress={() => modelSheetRef.current?.expand()}
+            accessibilityRole="button"
+            accessibilityLabel={t("chat.modelPicker.title") + " · " + modelLabel}
             testID="model-chip"
           >
-            <Ionicons name="hardware-chip-outline" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
+            <Ionicons name="hardware-chip-outline" size={14} color={isDark ? palette.muted : palette.muted} />
             <Text style={[s.modelLabel, isDark && s.metaDark]} numberOfLines={1}>
-              {t("chat.modelPicker.title") + " · " + modelLabel}
+              {modelLabel}
             </Text>
           </TouchableOpacity>
 
@@ -946,7 +942,7 @@ export default function SessionScreen() {
               onPress={() => variantSheetRef.current?.expand()}
               testID="variant-chip"
             >
-              <Ionicons name="flash-outline" size={14} color={variant ? "#22d3ee" : isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="flash-outline" size={14} color={variant ? palette.cyan : isDark ? palette.muted : palette.muted} />
               <Text style={[s.variantLabel, isDark && s.metaDark, variant && s.variantLabelActive]} numberOfLines={1}>
                 {variant ? variant.charAt(0).toUpperCase() + variant.slice(1) : t("session.toolbar.auto")}
               </Text>
@@ -974,12 +970,12 @@ export default function SessionScreen() {
           <View style={s.inputRow}>
             {/* Attach button */}
             <TouchableOpacity style={s.attachBtn} onPress={pickFromLibrary} onLongPress={pickFromCamera}>
-              <Ionicons name="add-circle-outline" size={26} color={isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="add-circle-outline" size={26} color={isDark ? palette.muted : palette.muted} />
             </TouchableOpacity>
 
             {/* Clipboard paste button */}
             <TouchableOpacity style={s.attachBtn} onPress={pasteFromClipboard}>
-              <Ionicons name="clipboard-outline" size={22} color={isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="clipboard-outline" size={22} color={isDark ? palette.muted : palette.muted} />
             </TouchableOpacity>
 
             <TextInput
@@ -991,7 +987,7 @@ export default function SessionScreen() {
                     ? t("session.input.placeholderFollowUp")
                     : t("session.input.placeholderDefault")
               }
-              placeholderTextColor={speech.listening ? "#ff4d6d" : isDark ? "#8a93a8" : "#8a93a8"}
+              placeholderTextColor={speech.listening ? "#ff4d6d" : isDark ? palette.muted : palette.muted}
               value={speech.listening ? speech.transcript : input}
               onChangeText={speech.listening ? undefined : setInput}
               editable={!speech.listening}
@@ -1009,10 +1005,10 @@ export default function SessionScreen() {
             {!isSending && !input.trim() && attachments.length === 0 && !speech.listening && voice.phase === "off" && (
               <>
                 <TouchableOpacity style={s.micBtn} onPress={() => void speech.start()}>
-                  <Ionicons name="mic" size={22} color={isDark ? "#8a93a8" : "#8a93a8"} />
+                  <Ionicons name="mic" size={22} color={isDark ? palette.muted : palette.muted} />
                 </TouchableOpacity>
                 <TouchableOpacity style={s.micBtn} onPress={() => dispatchVoice({ type: "start" })} testID="voice-start">
-                  <Ionicons name="headset" size={22} color="#22d3ee" />
+                  <Ionicons name="headset" size={22} color={palette.cyan} />
                 </TouchableOpacity>
               </>
             )}
@@ -1053,7 +1049,7 @@ export default function SessionScreen() {
   )
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#ffffff" },
   containerDark: { backgroundColor: "#07080c" },
   loading: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -1126,7 +1122,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
   agentDot: { width: 8, height: 8, borderRadius: 4 },
   agentLabel: { fontSize: 12, fontWeight: "600", color: "#07080c" },
@@ -1137,10 +1133,12 @@ const s = StyleSheet.create({
     backgroundColor: "#141926",
     borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 8,
+    flex: 1,
+    minWidth: 0,
   },
   modelChipDark: { backgroundColor: "#0d1018" },
-  modelLabel: { fontSize: 12, color: "#8a93a8", maxWidth: 160 },
+  modelLabel: { fontSize: 12, color: "#8a93a8", flexShrink: 1 },
 
   // Variant (reasoning effort) chip
   variantChip: {
@@ -1170,8 +1168,8 @@ const s = StyleSheet.create({
     alignItems: "flex-end",
   },
   attachBtn: {
-    width: 36,
-    height: 40,
+    width: 32,
+    height: 44,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1182,7 +1180,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
-    maxHeight: 120,
+    minHeight: 48,
+    maxHeight: 160,
     color: "#07080c",
   },
   inputDark: { backgroundColor: "#0d1018", color: "#ffffff" },
@@ -1191,7 +1190,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#07080c",
+    backgroundColor: "#0891b2",
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 8,
@@ -1229,7 +1228,8 @@ const s = StyleSheet.create({
   },
 
   // Header
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 2 },
+  headerButton: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
   dirBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -1255,14 +1255,20 @@ const s = StyleSheet.create({
 
   // Session error banner (agent run failed)
   bannerError: {
-    backgroundColor: "#991b1b",
+    backgroundColor: "#30151e",
+    borderLeftWidth: 3,
+    borderLeftColor: "#ff4d6d",
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 8,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     gap: 12,
   },
   bannerErrorAction: { color: "#fecaca", fontSize: 13, fontWeight: "700" },
-  bannerErrorText: { flex: 1 },
+  bannerErrorText: { flex: 1, lineHeight: 19 },
 
   // Pending revert (edit message) banner
   bannerRevert: {

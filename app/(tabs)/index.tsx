@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
 import { useCallback, useMemo, useState, useRef, useEffect, useReducer } from "react"
 import {
   View,
@@ -73,6 +74,8 @@ function SessionItem({
   onToggleSelect: () => void
   onEnterSelect: () => void
 }) {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const { t } = useTranslation()
 
   const onPress = () => {
@@ -106,14 +109,14 @@ function SessionItem({
         <Ionicons
           name={selected ? "checkbox" : "square-outline"}
           size={24}
-          color={selected ? "#22d3ee" : "#8a93a8"}
+          color={selected ? palette.cyan : palette.muted}
           style={{ marginRight: 12 }}
           testID={`session-check-${session.id}`}
         />
       ) : null}
       <View style={styles.sessionContent}>
         <View style={styles.sessionHeader}>
-          {pinned ? <Ionicons name="pin" size={13} color="#22d3ee" style={{ marginRight: 6 }} /> : null}
+          {pinned ? <Ionicons name="pin" size={13} color={palette.cyan} style={{ marginRight: 6 }} /> : null}
           <Text style={[styles.sessionTitle, isDark && styles.textDark]} numberOfLines={1}>
             {session.title || t("sessionsList.untitledSession")}
           </Text>
@@ -129,13 +132,13 @@ function SessionItem({
           </Text>
           {shortDir && (
             <View style={styles.sessionDirBadge}>
-              <Ionicons name="folder-outline" size={12} color={isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="folder-outline" size={12} color={isDark ? palette.muted : palette.muted} />
               <Text style={[styles.sessionDirText, isDark && styles.metaDark]}>{shortDir}</Text>
             </View>
           )}
         </View>
       </View>
-      {selecting ? null : <Ionicons name="chevron-forward" size={20} color={isDark ? "#8a93a8" : "#8a93a8"} />}
+      {selecting ? null : <Ionicons name="chevron-forward" size={20} color={isDark ? palette.muted : palette.muted} />}
     </TouchableOpacity>
   )
 }
@@ -157,13 +160,15 @@ function GroupHeader({
   isDark: boolean
   onToggle: () => void
 }) {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   return (
     <TouchableOpacity
       style={[styles.groupHeader, isDark && styles.groupHeaderDark]}
       onPress={onToggle}
       activeOpacity={0.7}
     >
-      <Ionicons name="folder-outline" size={16} color={isDark ? "#22d3ee" : "#0891b2"} />
+      <Ionicons name="folder-outline" size={16} color={isDark ? palette.cyan : palette.cyanDim} />
       <Text style={[styles.groupHeaderText, isDark && styles.textDark]} numberOfLines={1}>
         {row.shortName}
       </Text>
@@ -171,7 +176,7 @@ function GroupHeader({
       <Ionicons
         name={row.collapsed ? "chevron-forward" : "chevron-down"}
         size={16}
-        color={isDark ? "#8a93a8" : "#8a93a8"}
+        color={isDark ? palette.muted : palette.muted}
       />
     </TouchableOpacity>
   )
@@ -189,6 +194,8 @@ function getShortPath(
 }
 
 export default function SessionsScreen() {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -581,7 +588,7 @@ export default function SessionsScreen() {
           onPress={() => router.push("/scan")}
           testID="scan-qr-button"
         >
-          <Ionicons name="qr-code-outline" size={20} color="#07080c" />
+          <Ionicons name="qr-code-outline" size={20} color={palette.bg} />
           <Text style={[styles.addButtonText, isDark && styles.addButtonTextDark]}>{t("scan.button")}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -608,7 +615,7 @@ export default function SessionsScreen() {
           onPress={() => router.push("/demo")}
           testID="try-demo-button"
         >
-          <Ionicons name="play-circle-outline" size={16} color={isDark ? "#22d3ee" : "#0891b2"} />
+          <Ionicons name="play-circle-outline" size={16} color={isDark ? palette.cyan : palette.cyanDim} />
           <Text style={[styles.tryDemoButtonText, isDark && styles.tryDemoButtonTextDark]}>
             {t("sessionsList.empty.tryDemoButton")}
           </Text>
@@ -675,22 +682,22 @@ export default function SessionsScreen() {
           </Text>
           {shortPath && (
             <>
-              <Ionicons name="folder" size={14} color={isDark ? "#8a93a8" : "#8a93a8"} />
+              <Ionicons name="folder" size={14} color={isDark ? palette.muted : palette.muted} />
               <Text style={[styles.projectPath, isDark && styles.metaDark]} numberOfLines={1}>
                 {shortPath}
               </Text>
             </>
           )}
         </View>
-        <Ionicons name="swap-horizontal-outline" size={16} color={isDark ? "#8a93a8" : "#8a93a8"} />
+        <Ionicons name="swap-horizontal-outline" size={16} color={isDark ? palette.muted : palette.muted} />
       </TouchableOpacity>
 
       {/* Other coding agents on the computer (Claude Code, Codex, Gemini CLI, ...) through the launcher */}
       {canStartFromPhone(activeConnection) ? (
         <TouchableOpacity style={styles.agentsRow} onPress={() => router.push("/agents")} activeOpacity={0.7} testID="open-agents">
-          <Ionicons name="sparkles-outline" size={16} color="#22d3ee" />
+          <Ionicons name="sparkles-outline" size={16} color={palette.cyan} />
           <Text style={styles.agentsText} numberOfLines={1}>{t("acp.entry")}</Text>
-          <Ionicons name="chevron-forward" size={16} color="#8a93a8" />
+          <Ionicons name="chevron-forward" size={16} color={palette.muted} />
         </TouchableOpacity>
       ) : null}
 
@@ -714,26 +721,26 @@ export default function SessionsScreen() {
       <LocalModelBar />
 
       {selection.active ? (
-        <View style={[styles.selectionBar, isDark && { borderBottomColor: "#1c2333", backgroundColor: "#0d1018" }]} testID="selection-bar">
+        <View style={[styles.selectionBar, isDark && { borderBottomColor: palette.border, backgroundColor: palette.surface }]} testID="selection-bar">
           <TouchableOpacity style={styles.selectionBtn} onPress={() => dispatchSelection({ type: "clear" })} accessibilityLabel={t("common.cancel")}>
-            <Ionicons name="close" size={20} color="#22d3ee" />
+            <Ionicons name="close" size={20} color={palette.cyan} />
           </TouchableOpacity>
           <Text style={[styles.selectionCount, isDark && styles.textDark]}>{t("sessionsList.selection.count", { count: selection.ids.length })}</Text>
           <TouchableOpacity style={styles.selectionBtn} onPress={() => dispatchSelection({ type: "selectAll", ids: sessions.map((s) => s.id) })}>
-            <Ionicons name="checkmark-done" size={18} color="#22d3ee" />
+            <Ionicons name="checkmark-done" size={18} color={palette.cyan} />
           </TouchableOpacity>
           {selectedSessions.length === 1 ? (
             <>
               <TouchableOpacity style={styles.selectionBtn} onPress={() => onTogglePin(selectedSessions[0].id)} accessibilityLabel={t("sessionsList.selection.pin")}>
-                <Ionicons name="pin" size={18} color="#22d3ee" />
+                <Ionicons name="pin" size={18} color={palette.cyan} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.selectionBtn} onPress={() => { const s = selectedSessions[0]; dispatchSelection({ type: "clear" }); handleRename(s) }} accessibilityLabel={t("sessionsList.selection.rename")}>
-                <Ionicons name="create-outline" size={18} color="#22d3ee" />
+                <Ionicons name="create-outline" size={18} color={palette.cyan} />
               </TouchableOpacity>
             </>
           ) : null}
           <TouchableOpacity style={[styles.selectionBtn, selection.ids.length < 2 && styles.selectionBtnDisabled]} disabled={selection.ids.length < 2 || merging} onPress={() => void mergeSelected()} testID="selection-merge">
-            <Ionicons name="git-merge-outline" size={18} color="#22d3ee" />
+            <Ionicons name="git-merge-outline" size={18} color={palette.cyan} />
             <Text style={styles.selectionBtnText}>{t("sessionsList.selection.merge")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.selectionBtn} onPress={deleteSelected} testID="selection-delete" accessibilityLabel={t("common.delete")}>
@@ -743,7 +750,7 @@ export default function SessionsScreen() {
       ) : null}
       {merging ? (
         <View style={styles.mergeOverlay}>
-          <ActivityIndicator color="#22d3ee" />
+          <ActivityIndicator color={palette.cyan} />
           <Text style={[styles.selectionBtnText, { marginTop: 8 }]}>{t("sessionsList.selection.merging")}</Text>
         </View>
       ) : null}
@@ -756,13 +763,13 @@ export default function SessionsScreen() {
         ListHeaderComponent={
           sessions.length > 4 || query ? (
             <View style={[styles.searchBox, isDark && styles.searchBoxDark]}>
-              <Ionicons name="search" size={16} color="#8a93a8" />
+              <Ionicons name="search" size={16} color={palette.muted} />
               <TextInput
                 style={[styles.searchInput, isDark && styles.textDark]}
                 value={query}
                 onChangeText={setQuery}
                 placeholder={t("sessionsList.search")}
-                placeholderTextColor="#8a93a8"
+                placeholderTextColor={palette.muted}
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="search"
@@ -770,7 +777,7 @@ export default function SessionsScreen() {
               />
               {query ? (
                 <TouchableOpacity onPress={() => setQuery("")} hitSlop={10}>
-                  <Ionicons name="close-circle" size={16} color="#8a93a8" />
+                  <Ionicons name="close-circle" size={16} color={palette.muted} />
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -779,7 +786,7 @@ export default function SessionsScreen() {
         renderItem={({ item: row }) =>
           row.type === "pinned-header" ? (
             <View style={styles.pinnedHeader}>
-              <Ionicons name="pin" size={14} color="#22d3ee" />
+              <Ionicons name="pin" size={14} color={palette.cyan} />
               <Text style={[styles.groupHeaderText, isDark && styles.textDark]}>{t("sessionsList.pinned")}</Text>
               <Text style={[styles.groupHeaderCount, isDark && styles.metaDark]}>{row.count}</Text>
             </View>
@@ -798,12 +805,12 @@ export default function SessionsScreen() {
           )
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? "#ffffff" : "#07080c"} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? "#ffffff" : palette.bg} />
         }
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={isDark ? "#ffffff" : "#07080c"} />
+              <ActivityIndicator size="large" color={isDark ? "#ffffff" : palette.bg} />
             </View>
           ) : (
             <View style={styles.emptyList}>
@@ -822,7 +829,7 @@ export default function SessionsScreen() {
         delayLongPress={500}
         testID="new-session-fab"
       >
-        <Ionicons name="add" size={28} color={isDark ? "#07080c" : "#ffffff"} />
+        <Ionicons name="add" size={28} color={isDark ? palette.bg : "#ffffff"} />
       </TouchableOpacity>
 
       {/* New Session Info Modal */}
@@ -833,7 +840,7 @@ export default function SessionsScreen() {
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, isDark && styles.textDark]}>{t("sessionsList.newSessionModal.title")}</Text>
               <TouchableOpacity onPress={() => setShowNewSession(false)}>
-                <Ionicons name="close" size={24} color={isDark ? "#ffffff" : "#07080c"} />
+                <Ionicons name="close" size={24} color={isDark ? "#ffffff" : palette.bg} />
               </TouchableOpacity>
             </View>
 
@@ -847,11 +854,11 @@ export default function SessionsScreen() {
                 onPress={() => onCreateInDirectory()}
                 disabled={isCreating}
               >
-                <Ionicons name="folder" size={20} color={isDark ? "#22d3ee" : "#0891b2"} />
+                <Ionicons name="folder" size={20} color={isDark ? palette.cyan : palette.cyanDim} />
                 <Text style={[styles.modalDirText, isDark && styles.textDark]} numberOfLines={2}>
                   {currentProject?.path?.absolute || activeConnection?.directory || t("sessionsList.newSessionModal.serverDefault")}
                 </Text>
-                <Ionicons name="arrow-forward-circle" size={20} color={isDark ? "#22d3ee" : "#0891b2"} />
+                <Ionicons name="arrow-forward-circle" size={20} color={isDark ? palette.cyan : palette.cyanDim} />
               </TouchableOpacity>
 
               {/* Recent projects */}
@@ -878,7 +885,7 @@ export default function SessionsScreen() {
                         <Ionicons
                           name="folder-outline"
                           size={18}
-                          color={isCurrent ? "#22d3ee" : isDark ? "#8a93a8" : "#8a93a8"}
+                          color={isCurrent ? palette.cyan : isDark ? palette.muted : palette.muted}
                         />
                         <View style={styles.projectRowContent}>
                           <Text
@@ -895,7 +902,7 @@ export default function SessionsScreen() {
                             {dir}
                           </Text>
                         </View>
-                        {isCurrent && <Ionicons name="checkmark-circle" size={18} color="#22d3ee" />}
+                        {isCurrent && <Ionicons name="checkmark-circle" size={18} color={palette.cyan} />}
                       </TouchableOpacity>
                     )
                   })}
@@ -919,7 +926,7 @@ export default function SessionsScreen() {
                           onPress={() => onCreateInDirectory(p.path?.absolute)}
                           disabled={isCreating}
                         >
-                          <Ionicons name="code-slash-outline" size={18} color={isDark ? "#8a93a8" : "#8a93a8"} />
+                          <Ionicons name="code-slash-outline" size={18} color={isDark ? palette.muted : palette.muted} />
                           <View style={styles.projectRowContent}>
                             <Text style={[styles.projectRowName, isDark && styles.textDark]} numberOfLines={1}>
                               {short}
@@ -945,7 +952,7 @@ export default function SessionsScreen() {
                 disabled={isCreating}
                 testID="browse-folders-button"
               >
-                <Ionicons name="folder-open-outline" size={18} color={isDark ? "#22d3ee" : "#0891b2"} />
+                <Ionicons name="folder-open-outline" size={18} color={isDark ? palette.cyan : palette.cyanDim} />
                 <View style={styles.projectRowContent}>
                   <Text style={[styles.projectRowName, isDark && styles.textDark]}>
                     {t("sessionsList.newSessionModal.browseFoldersLabel")}
@@ -954,7 +961,7 @@ export default function SessionsScreen() {
                     {t("sessionsList.newSessionModal.browseFoldersHint")}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={isDark ? "#8a93a8" : "#8a93a8"} />
+                <Ionicons name="chevron-forward" size={16} color={isDark ? palette.muted : palette.muted} />
               </TouchableOpacity>
 
               {/* Manual path input fallback */}
@@ -964,7 +971,7 @@ export default function SessionsScreen() {
               <TextInput
                 style={[styles.modalInput, isDark && styles.modalInputDark]}
                 placeholder={serverHome ? `${serverHome}/...` : "/path/to/project"}
-                placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+                placeholderTextColor={isDark ? palette.muted : palette.muted}
                 value={customDir}
                 onChangeText={(text) => {
                   // Expand ~ to server home directory
@@ -1011,7 +1018,7 @@ export default function SessionsScreen() {
                   disabled={isCreating}
                 >
                   {isCreating ? (
-                    <ActivityIndicator size="small" color={isDark ? "#07080c" : "#ffffff"} />
+                    <ActivityIndicator size="small" color={isDark ? palette.bg : "#ffffff"} />
                   ) : (
                     <Text style={[styles.modalButtonTextPrimary, isDark && styles.modalButtonTextPrimaryDark]}>
                       {t("sessionsList.newSessionModal.createInButton", {
@@ -1032,7 +1039,7 @@ export default function SessionsScreen() {
                   disabled={isCreating}
                 >
                   {isCreating ? (
-                    <ActivityIndicator size="small" color={isDark ? "#07080c" : "#ffffff"} />
+                    <ActivityIndicator size="small" color={isDark ? palette.bg : "#ffffff"} />
                   ) : (
                     <Text style={[styles.modalButtonTextPrimary, isDark && styles.modalButtonTextPrimaryDark]}>
                       {t("sessionsList.newSessionModal.createSessionButton")}
@@ -1111,7 +1118,7 @@ export default function SessionsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",

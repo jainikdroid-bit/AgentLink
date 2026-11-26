@@ -360,7 +360,9 @@ export const useEvents = create<EventsState>((set, get) => ({
             }
 
             case "session.error": {
-              const error = props.error as { message?: string } | undefined
+              const error = props.error as { message?: unknown; data?: { message?: unknown }; name?: unknown } | undefined
+              const detail = [error?.data?.message, error?.message, error?.name].find((value): value is string => typeof value === "string" && !!value.trim())
+              const errorMessage = sanitizeBody(detail, "Session error occurred")
               const sessionID = props.sessionID as string
               if (!sessionID) break
               // Mark so the eventual busy -> idle transition is not counted
@@ -371,7 +373,7 @@ export const useEvents = create<EventsState>((set, get) => ({
                 sending: { ...state.sending, [sessionID]: false },
                 // Surface error only if user is viewing this session
                 ...(state.currentSession?.id === sessionID
-                  ? { error: error?.message || "Session error occurred" }
+                  ? { error: errorMessage }
                   : {}),
               }))
               if (useSessions.getState().currentSession?.id === sessionID) {
@@ -380,7 +382,7 @@ export const useEvents = create<EventsState>((set, get) => ({
               notify({
                 category: "errors",
                 title: "Session error",
-                body: sanitizeBody(error?.message, "Something went wrong"),
+                body: errorMessage,
                 sessionId: sessionID,
               })
               break

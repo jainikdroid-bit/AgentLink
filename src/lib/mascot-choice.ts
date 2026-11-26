@@ -1,7 +1,7 @@
 // Which character the app shows in empty states, the status line and the runner game.
 // Pure module (no React) so the stored value can be validated in unit tests.
 
-export const MASCOT_KINDS = ["cheri", "rig"] as const
+export const MASCOT_KINDS = ["cheri", "rig", "byte", "orbit"] as const
 export type MascotKind = (typeof MASCOT_KINDS)[number]
 
 /** Cheri, the cat-eared girl, is the default since 0.16; RIG stays available in Settings. */

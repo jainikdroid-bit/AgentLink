@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../theme/useTheme"
 import { memo, useEffect, useState } from "react"
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
@@ -39,6 +40,8 @@ interface Props {
 // built-in block-level memoization that eliminates re-renders for stable blocks
 export const MessageBubble = memo(
   function MessageBubble({ message, parts, isDark, onSelectText, onEdit }: Props) {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
     const isUser = message.role === "user"
     const locale = useSettings((st) => st.locale)
     const showActions = useSettings((st) => st.showActions)
@@ -87,7 +90,7 @@ export const MessageBubble = memo(
           <Ionicons
             name={isUser ? "person" : "sparkles"}
             size={14}
-            color={isUser ? (isDark ? "#ffffff" : "#07080c") : "#22d3ee"}
+            color={isUser ? (isDark ? "#ffffff" : palette.bg) : palette.cyan}
           />
           <Text style={[s.role, isUser && s.roleUser, isDark && s.textWhite]}>{isUser ? "You" : "Assistant"}</Text>
           {message.model && <Text style={[s.modelTag, isDark && s.modelTagDark]}>{message.model.modelID}</Text>}
@@ -230,7 +233,7 @@ export const MessageBubble = memo(
   },
 )
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   bubble: { marginBottom: 16, padding: 12, borderRadius: 12, maxWidth: "100%" },
   user: { backgroundColor: "#141926", marginLeft: 32 },
   userDark: { backgroundColor: "#0d1018" },

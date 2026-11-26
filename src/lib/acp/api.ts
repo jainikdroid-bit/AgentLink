@@ -29,6 +29,10 @@ export interface RunningAgent {
   cwd: string
   startedAt: number
   exited: boolean
+  busy?: boolean
+  pendingPermissions?: number
+  lastActivity?: number
+  sessionId?: string | null
 }
 
 /** `status` 0 means the computer did not answer. */
@@ -49,13 +53,13 @@ const CALL_TIMEOUT_MS = 20_000
 const START_TIMEOUT_MS = 30_000
 const STREAM_IDLE_MS = 45_000 // the bridge sends a heartbeat every 15 s
 
-async function call<T>(target: AcpTarget, path: string, init: RequestInit = {}, timeoutMs = CALL_TIMEOUT_MS): Promise<T> {
+export async function call<T>(target: AcpTarget, path: string, init: RequestInit = {}, timeoutMs = CALL_TIMEOUT_MS): Promise<T> {
   const base = launcherUrl(target.serverUrl, target.launcherPort, target.tunnel)
   if (!base) throw new AcpApiError(0, "bad launcher address")
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const response = await fetch(await routeUrl(`${base}${path}`), { ...init, headers: buildRequestHeaders({ auth: target.auth }), signal: controller.signal })
+    const response = await fetch(await routeUrl(`${base}${path}`), { ...init, redirect: "error", headers: buildRequestHeaders({ auth: target.auth }), signal: controller.signal })
     const text = await response.text()
     let body: any = null
     try {
@@ -71,6 +75,27 @@ async function call<T>(target: AcpTarget, path: string, init: RequestInit = {}, 
   } finally {
     clearTimeout(timer)
   }
+}
+
+export interface HostHardware {
+  at: number
+  platform: string
+  arch: string
+  cpu: { model: string | null; logicalCores: number; percent: number | null }
+  memory: { totalBytes: number; availableBytes: number; source: string }
+  storage: { totalBytes: number; availableBytes: number } | null
+  gpu: {name:string;percent:number|null;memoryUsedMiB:number|null;memoryTotalMiB:number|null;temperatureC:number|null}[] | null
+  temperatureC: number | null
+  uptimeSeconds: number
+}
+export function getHostHardware(target: AcpTarget): Promise<HostHardware> {
+  return call(target, "/hardware", {}, 8000)
+}
+
+export interface SavedAgentSession {agent:string;cwd:string;sessionId:string;at:number;loadSession:boolean}
+export async function listSavedSessions(target:AcpTarget):Promise<SavedAgentSession[]> {
+  const body=await call<{sessions?:SavedAgentSession[]}>(target,"/acp/saved",{},8000)
+  return Array.isArray(body?.sessions)?body.sessions:[]
 }
 
 export async function listAgents(target: AcpTarget): Promise<{ agents: AgentInfo[]; running: RunningAgent[] }> {
@@ -99,7 +124,7 @@ export async function* streamEvents(target: AcpTarget, id: string, from: number,
   let response
   try {
     // expo/fetch gives a ReadableStream body on native.
-    response = await expoFetch(await routeUrl(`${base}/acp/${encodeURIComponent(id)}/events?from=${from}`), { headers, signal })
+    response = await expoFetch(await routeUrl(`${base}/acp/${encodeURIComponent(id)}/events?from=${from}`), { headers, signal, redirect: "error" })
   } catch (error) {
     throw new AcpApiError(0, error instanceof Error ? error.message : String(error))
   }
@@ -124,6 +149,17 @@ export async function* streamEvents(target: AcpTarget, id: string, from: number,
       for (const event of parser.push(decoder.decode(chunk.value, { stream: true }))) yield event
     }
   } finally {
+    // Closing the consumer (including a replay gap) must also close the HTTP stream.
+    await reader.cancel().catch(() => undefined)
     reader.releaseLock()
   }
+}
+
+export interface AgentQueue {items:{id:string;text:string}[];paused:boolean}
+export type QueueAction={action:"enqueue";id:string;text:string}|{action:"remove";id:string}|{action:"pause"|"resume"}
+export function getAgentQueue(target:AcpTarget,id:string):Promise<AgentQueue>{
+ return call(target,`/acp/${encodeURIComponent(id)}/queue`,{},8000)
+}
+export function updateAgentQueue(target:AcpTarget,id:string,action:QueueAction):Promise<AgentQueue>{
+ return call(target,`/acp/${encodeURIComponent(id)}/queue`,{method:"POST",body:JSON.stringify(action)},8000)
 }

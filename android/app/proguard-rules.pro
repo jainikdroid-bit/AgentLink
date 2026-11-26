@@ -12,3 +12,6 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
+
+# JNI symbols and React Native local model bridge
+-keep class cc.agentlabs.opencode.LocalModelModule { *; }

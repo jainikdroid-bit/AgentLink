@@ -2,6 +2,7 @@ import { memo } from "react"
 import { useSettings } from "../stores/settings"
 import { CheriMascot } from "./mascots/CheriMascot"
 import { RigMascot } from "./mascots/RigMascot"
+import { CompanionMascot } from "./mascots/CompanionMascot"
 import type { MascotProps } from "./mascots/types"
 import type { MascotKind } from "../lib/mascot-choice"
 
@@ -9,6 +10,7 @@ export type { MascotState } from "./mascots/types"
 
 /** Draws one specific character, regardless of the user's choice (used by the Settings picker). */
 export function MascotOf({ kind, ...props }: MascotProps & { kind: MascotKind }) {
+  if (kind === "byte" || kind === "orbit") return <CompanionMascot kind={kind} {...props} />
   return kind === "rig" ? <RigMascot {...props} /> : <CheriMascot {...props} />
 }
 

@@ -13,8 +13,12 @@ export const GUIDE_STEPS = ["computer", "tailscale", "scan"] as const
 export type GuideStep = (typeof GUIDE_STEPS)[number]
 export type GuideOs = "windows" | "unix"
 
-export function commandFor(os: GuideOs): string {
-  return os === "windows" ? WINDOWS_COMMAND : UNIX_COMMAND
+export type GuideMode = "tailscale" | "lan"
+
+export function commandFor(os: GuideOs, mode: GuideMode = "tailscale"): string {
+  const command = os === "windows" ? WINDOWS_COMMAND : UNIX_COMMAND
+  if (mode === "tailscale") return command
+  return command + (os === "windows" ? " -Mode lan" : " -s -- --mode lan")
 }
 
 export function clampStep(index: number): number {

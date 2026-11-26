@@ -1,8 +1,8 @@
+import { useTheme } from "../src/theme/useTheme"
 import { useEffect, useRef, useState } from "react"
 import { Stack, router } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { Appearance, useColorScheme, View, ActivityIndicator, AppState } from "react-native"
-import { cyber } from "../src/theme/cyber"
 import { Mascot } from "../src/components/Mascot"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
@@ -32,6 +32,8 @@ Appearance.setColorScheme("dark")
 const queryClient = new QueryClient()
 
 function RootLayout() {
+  const avatarCharacter = useSettings(s => s.avatarCharacter)
+  const palette = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -40,7 +42,7 @@ function RootLayout() {
   const { loadConnections, isLoading: connectionsLoading, client } = useConnections()
   const sseStarted = useRef(false)
   const notifPermissionRequested = useRef(false)
-  const [notificationSession, setNotificationSession] = useState<string | null>(null)
+  const [notificationSession, setNotificationSession] = useState<{sessionId:string;workspace:boolean} | null>(null)
 
   useEffect(() => {
     initAuth()
@@ -53,7 +55,7 @@ function RootLayout() {
     // Navigate to session when user taps a notification. Connection-drop
     // notifications carry no sessionId (they aren't about a session) — route
     // to the home tab instead of "/session/" (an empty, dead-end route).
-    const unsubNotifications = notifications.onTap((data) => setNotificationSession(data.sessionId))
+    const unsubNotifications = notifications.onTap((data) => setNotificationSession({sessionId:data.sessionId,workspace:typeof data.eventId==="string"}))
 
     // Allow / Deny pressed on a permission notification: answer without opening the app.
     const unsubActions = notifications.onAction((reply, sessionId, requestId) => {
@@ -135,7 +137,8 @@ function RootLayout() {
   useEffect(() => {
     if (isLoading || notificationSession === null) return
     setNotificationSession(null)
-    if (notificationSession) router.push({ pathname: "/session/[id]", params: { id: notificationSession } })
+    if(notificationSession.workspace)router.push("/workspace")
+    else if (notificationSession.sessionId) router.push({ pathname: "/session/[id]", params: { id: notificationSession.sessionId } })
     else router.push("/")
   }, [isLoading, notificationSession, router])
   usePhoneBridge()
@@ -155,7 +158,7 @@ function RootLayout() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: isDark ? "#07080c" : "#ffffff",
+          backgroundColor: isDark ? palette.bg : "#ffffff",
         }}
       >
         <Mascot state="loading" size={120} />
@@ -172,11 +175,11 @@ function RootLayout() {
             <AuthGate>
             <Stack
               screenOptions={{
-                headerStyle: { backgroundColor: cyber.bg },
-                headerTintColor: cyber.cyan,
-                headerTitleStyle: { color: cyber.text, fontFamily: cyber.mono, fontSize: 15 },
+                headerStyle: { backgroundColor: palette.bg },
+                headerTintColor: palette.cyan,
+                headerTitleStyle: { color: palette.text, fontSize: 17, fontWeight: "600" },
                 headerShadowVisible: false,
-                contentStyle: { backgroundColor: cyber.bg },
+                contentStyle: { backgroundColor: palette.bg },
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -199,6 +202,8 @@ function RootLayout() {
               <Stack.Screen name="scan" options={{ title: t("scan.title"), presentation: "modal" }} />
               <Stack.Screen name="pair-code" options={{ title: t("pairCode.title"), presentation: "modal" }} />
               <Stack.Screen name="agents" options={{ title: t("acp.title") }} />
+              <Stack.Screen name="workspace" options={{ title: "AgentLink Workspace" }} />
+              <Stack.Screen name="phone-models" options={{ title: t("workspace.phoneModels") }} />
               <Stack.Screen name="agent-chat" options={{ title: "" }} />
               <Stack.Screen name="termux-setup" options={{ title: t("termuxSetup.title") }} />
               <Stack.Screen name="files" options={{ title: t("files.title"), presentation: "card" }} />
@@ -219,7 +224,7 @@ function RootLayout() {
               />
             </Stack>
               <PermissionBanner />
-              <FloatingCheri />
+              <FloatingCheri key={avatarCharacter} character={avatarCharacter} />
               <StatusBar style={isDark ? "light" : "dark"} />
             </AuthGate>
           </QueryClientProvider>

@@ -3,6 +3,7 @@ import i18n from "./i18n/config"
 import { ACTION_ALLOW, ACTION_DENY, PERMISSION_CATEGORY_ID, replyFromAction, type PermissionReply } from "./permission-reply"
 import * as Device from "expo-device"
 import { Platform, AppState } from "react-native"
+import { useConnections } from "../stores/connections"
 
 // ---------------------------------------------------------------------------
 // Categories — every notification belongs to exactly one
@@ -72,6 +73,8 @@ interface NotificationData {
   category: Category
   sessionId: string
   requestId?: string
+  eventId?: string
+  connectionId?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -153,10 +156,12 @@ async function ensureChannel() {
 // ---------------------------------------------------------------------------
 
 export async function send(payload: Payload) {
+  const host=useConnections.getState().activeConnection
   const prefs = preferences()
   if (!prefs[payload.category]) return
   if (AppState.currentState === "active") return
   if (!(await granted())) return
+  if(useConnections.getState().activeConnection?.id!==host?.id || useConnections.getState().activeConnection?.url!==host?.url)return
 
   if (payload.dedupeKey) {
     const now = Date.now()
@@ -173,6 +178,7 @@ export async function send(payload: Payload) {
       data: {
         category: payload.category,
         sessionId: payload.sessionId,
+        connectionId: host?.id,
         ...(payload.requestId ? { requestId: payload.requestId } : {}),
       } satisfies NotificationData as Record<string, unknown>,
       ...(payload.requestId ? { categoryIdentifier: PERMISSION_CATEGORY_ID } : {}),
@@ -196,9 +202,10 @@ export function onTap(handler: (data: NotificationData) => void) {
     const data = raw as unknown as NotificationData | undefined
     if (!data) return
     const sessionId = typeof data.sessionId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(data.sessionId)
-    if (sessionId || data.category === "connection") {
+    if (sessionId || data.category === "connection" || typeof data.eventId === "string") {
       void Notifications.clearLastNotificationResponseAsync().catch(() => {})
-      handler({ ...data, sessionId: sessionId ? data.sessionId : "" })
+      const sameHost=!!data.connectionId&&data.connectionId===useConnections.getState().activeConnection?.id
+      handler({ ...data, sessionId: sessionId&&sameHost ? data.sessionId : "" })
     }
   }
   const subscription = Notifications.addNotificationResponseReceivedListener(handle)
@@ -215,7 +222,7 @@ export function onAction(handler: (reply: PermissionReply, sessionId: string, re
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     const reply = replyFromAction(response.actionIdentifier)
     const data = response.notification.request.content.data as unknown as NotificationData | undefined
-    if (reply && data?.sessionId && data.requestId) handler(reply, data.sessionId, data.requestId)
+    if (reply && data?.sessionId && data.requestId && data.connectionId && data.connectionId === useConnections.getState().activeConnection?.id) handler(reply, data.sessionId, data.requestId)
   })
   return () => subscription.remove()
 }

@@ -189,3 +189,47 @@ test('pairing route does not open the other routes', async () => {
     assert.equal((await call('PUT', '/pair')).status, 405)
   })
 })
+
+
+test('pairing does not succeed or consume the code without saved credentials', async () => {
+  const { deps, box } = pairDeps(liveCode())
+  let password = ''
+  deps.readPassword = () => password
+  await withServer(deps, async (call) => {
+    const missing = await call('POST', '/pair', undefined, { code: '482913' })
+    assert.equal(missing.status, 503)
+    assert.equal(missing.json.ok, false)
+    assert.equal(missing.json.password, undefined)
+    assert.ok(box.pair)
+    password = PASSWORD
+    const restored = await call('POST', '/pair', undefined, { code: '482913' })
+    assert.equal(restored.status, 200)
+    assert.equal(restored.json.password, PASSWORD)
+    assert.equal(box.pair, null)
+  })
+})
+
+test('hardware route uses existing authentication', async () => {
+ const {deps}=fakeDeps({hardware:async()=>({at:123,cpu:{percent:25},gpu:null})})
+ await withServer(deps,async call=>{
+  assert.equal((await call('GET','/hardware')).status,401)
+  const result=await call('GET','/hardware',basic('opencode',PASSWORD))
+  assert.equal(result.status,200)
+  assert.equal(result.json.cpu.percent,25)
+  assert.equal(result.json.gpu,null)
+  assert.equal((await call('POST','/hardware',basic('opencode',PASSWORD))).status,404)
+ })
+})
+test('host CPU uses deltas and leaves unsupported sensors unknown',async()=>{
+ const {createHardwareSampler}=require('./launcher.js')
+ let idle=50,user=50,at=1000
+ const system={cpus:()=>[{model:'fake',times:{idle,user}}],totalmem:()=>1000,freemem:()=>300,platform:()=> 'linux',arch:()=> 'x64',uptime:()=>20}
+ const sample=createHardwareSampler({system,clock:()=>at,disk:async()=>({blocks:100,bavail:40,bsize:4096})})
+ assert.equal((await sample()).cpu.percent,null)
+ idle+=75;user+=25;at+=1000
+ const value=await sample()
+ assert.equal(value.cpu.percent,25)
+ assert.equal(value.memory.availableBytes,300)
+ assert.equal(value.storage.availableBytes,163840)
+ assert.equal(value.temperatureC,null)
+})

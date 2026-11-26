@@ -1,10 +1,11 @@
+import { useTheme } from "../../src/theme/useTheme"
 import { Tabs } from "expo-router"
 import { useColorScheme } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
-import { cyber } from "../../src/theme/cyber"
 
 export default function TabLayout() {
+  const palette = useTheme()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
@@ -12,13 +13,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: cyber.cyan,
-        tabBarInactiveTintColor: cyber.muted,
-        tabBarLabelStyle: { fontFamily: cyber.mono, fontSize: 10, letterSpacing: 0.5 },
-        tabBarStyle: { backgroundColor: cyber.bg, borderTopColor: cyber.borderGlow },
-        headerStyle: { backgroundColor: cyber.bg },
-        headerTintColor: cyber.cyan,
-        headerTitleStyle: { color: cyber.text, fontFamily: cyber.mono, fontSize: 15 },
+        tabBarActiveTintColor: palette.cyan,
+        tabBarInactiveTintColor: palette.muted,
+        tabBarLabelStyle: { fontFamily: palette.mono, fontSize: 10, letterSpacing: 0.5 },
+        tabBarStyle: { backgroundColor: palette.bg, borderTopColor: palette.borderGlow },
+        headerStyle: { backgroundColor: palette.bg },
+        headerTintColor: palette.cyan,
+        headerTitleStyle: { color: palette.text, fontFamily: palette.mono, fontSize: 15 },
         headerShadowVisible: false,
       }}
     >

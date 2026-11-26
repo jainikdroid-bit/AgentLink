@@ -1,0 +1,38 @@
+<style>
+#lab{position:fixed;z-index:2;left:8px;top:8px;right:8px;font:13px system-ui;color:#e8ecf4;background:#141926e8;padding:8px;border-radius:10px}
+#lab button,#lab select{background:#20293b;color:#e8ecf4;border:1px solid #43506a;border-radius:6px;padding:6px 8px;margin:2px}
+#lab button:focus-visible,#lab select:focus-visible{outline:2px solid #22d3ee}
+#c{position:fixed;bottom:10px;left:50%;transform:translateX(-50%)}
+</style>
+<div id="lab">
+  <div id="moods" aria-label="Mood"></div>
+  <div><button id="walkLeft">Walk left</button><button id="walkRight">Walk right</button><button id="stop">Stop</button><button id="pet">Pet</button></div>
+  <label>Scenario <select id="scenario"><option value="normal">Normal job</option><option value="failure">Failure and recovery</option><option value="interrupt">Walk interrupted by work</option><option value="stress">Rapid state changes</option></select></label>
+  <button id="run">Run</button><button id="cancel">Cancel</button>
+  <label>Window width <select id="size"><option>50</option><option>84</option><option selected>112</option><option>200</option></select></label>
+  <div id="status" aria-live="polite">Ready</div>
+</div>
+<script>
+(() => {
+ const api=window.cheri, status=document.getElementById("status"), canvas=document.getElementById("c")
+ const moods=["idle","thinking","working","writing","loading","success","error","offline"]
+ const scenarios={
+  normal:[["loading",1500],["idle",1000],["thinking",3500],["working",4000],["writing",3000],["success",3000],["idle",1500]],
+  failure:[["thinking",2000],["working",2500],["error",3000],["offline",3000],["loading",2000],["thinking",2000],["success",2000],["idle",1000]],
+  interrupt:[["idle",500],["walkRight",2200],["working",2000],["writing",1500],["success",1800],["idle",1000],["walkLeft",2000],["offline",2000],["loading",1500],["idle",1000]],
+  stress:Array.from({length:32},(_,i)=>[moods[i%moods.length],120]).concat([["idle",1500]])
+ }
+ let generation=0
+ const stop=()=>{generation++;api.walk(0)}
+ function action(m){if(m==="walkRight"||m==="walkLeft"){api.setMood("idle");api.walk(m==="walkRight"?1:-1,Date.now())}else{api.setMood(m)}status.textContent=m}
+ for(const mood of moods){const b=document.createElement("button");b.textContent=mood;b.onclick=()=>{stop();action(mood)};document.getElementById("moods").append(b)}
+ document.getElementById("walkLeft").onclick=()=>{stop();action("walkLeft")}
+ document.getElementById("walkRight").onclick=()=>{stop();action("walkRight")}
+ document.getElementById("stop").onclick=()=>{stop();status.textContent="Stopped"}
+ document.getElementById("pet").onclick=()=>api.pet()
+ document.getElementById("cancel").onclick=()=>{stop();action("idle")}
+ document.getElementById("run").onclick=async()=>{stop();const token=generation;const name=document.getElementById("scenario").value;for(const [m,delay] of scenarios[name]){if(token!==generation)return;action(m);status.textContent=name+": "+m;await new Promise(r=>setTimeout(r,delay))}if(token===generation)status.textContent=name+": finished"}
+ const resize=()=>{const w=Number(document.getElementById("size").value);canvas.style.width=w+"px";canvas.style.height=Math.round(w*2.1)+"px";window.dispatchEvent(new Event("resize"))}
+ document.getElementById("size").onchange=resize;resize()
+})()
+</script>

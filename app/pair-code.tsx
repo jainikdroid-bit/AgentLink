@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../src/theme/useTheme"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView } from "react-native"
 import { router } from "expo-router"
@@ -16,6 +17,8 @@ const keyOf = (c: PairTarget) => `${c.host}:${c.port}`
 // (home network and built-in Tailscale), the person types the code, and the computer hands over the same
 // details a QR code carries. Those go to the usual confirmation screen: nothing is added from here.
 export default function PairCodeScreen() {
+  const palette = useTheme()
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const tailnet = useTailnet()
   const [found, setFound] = useState<FoundComputer[]>([])
@@ -98,7 +101,7 @@ export default function PairCodeScreen() {
   if (waitingTailnet) {
     return (
       <View style={[s.container, s.center]} testID="pair-code-tailnet-wait">
-        <ActivityIndicator size="large" color={cyber.cyan} />
+        <ActivityIndicator size="large" color={palette.cyan} />
         <Text style={s.title}>{t("tailnet.waitTitle")}</Text>
         <Text style={s.body}>{t("tailnet.waitBody")}</Text>
         <TouchableOpacity style={s.link} onPress={() => void useTailnet.getState().signIn()}>
@@ -120,7 +123,7 @@ export default function PairCodeScreen() {
       <View style={s.sectionRow}>
         <Text style={s.section}>{t("pairCode.computers")}</Text>
         {searching ? (
-          <ActivityIndicator size="small" color={cyber.cyan} />
+          <ActivityIndicator size="small" color={palette.cyan} />
         ) : (
           <TouchableOpacity onPress={() => void search()} testID="pair-code-search">
             <Text style={s.linkText}>{t("pairCode.searchAgain")}</Text>
@@ -139,12 +142,12 @@ export default function PairCodeScreen() {
             }}
             testID="pair-code-computer"
           >
-            <Ionicons name="desktop-outline" size={20} color={active ? cyber.cyan : cyber.muted} />
+            <Ionicons name="desktop-outline" size={20} color={active ? palette.cyan : palette.muted} />
             <View style={s.computerText}>
               <Text style={s.computerName}>{computer.name}</Text>
               <Text style={s.computerHost}>{computer.host}</Text>
             </View>
-            {active ? <Ionicons name="checkmark-circle" size={20} color={cyber.cyan} /> : null}
+            {active ? <Ionicons name="checkmark-circle" size={20} color={palette.cyan} /> : null}
           </TouchableOpacity>
         )
       })}
@@ -161,7 +164,7 @@ export default function PairCodeScreen() {
         value={address}
         onChangeText={setAddress}
         placeholder="192.168.1.20"
-        placeholderTextColor={cyber.muted}
+        placeholderTextColor={palette.muted}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="url"
@@ -174,20 +177,20 @@ export default function PairCodeScreen() {
         value={formatCode(code)}
         onChangeText={(text) => setCode(normalizeCode(text))}
         placeholder="000 000"
-        placeholderTextColor={cyber.border}
+        placeholderTextColor={palette.border}
         keyboardType="number-pad"
         maxLength={CODE_LENGTH + 1}
         testID="pair-code-input"
       />
 
       <TouchableOpacity style={[s.primary, busy && s.primaryBusy]} onPress={() => void submit()} disabled={busy} testID="pair-code-submit">
-        {busy ? <ActivityIndicator color={cyber.bg} /> : <Text style={s.primaryText}>{t("connection.pair.connect")}</Text>}
+        {busy ? <ActivityIndicator color={palette.bg} /> : <Text style={s.primaryText}>{t("connection.pair.connect")}</Text>}
       </TouchableOpacity>
     </ScrollView>
   )
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: cyber.bg },
   content: { padding: 20, gap: 10 },
   center: { alignItems: "center", justifyContent: "center", padding: 24, gap: 14 },

@@ -1,3 +1,5 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
+import { THEME_IDS, PALETTES } from "../../src/theme/palettes"
 import * as Clipboard from "expo-clipboard"
 import { getAndroidPushToken } from "../../src/lib/notifications"
 import { useCallback, useEffect, useState } from "react"
@@ -51,6 +53,7 @@ function SettingRow({
   right?: React.ReactNode
   onPress?: () => void
 }) {
+  const styles = useThemedStyles(baseStyles)
   const content = (
     <View style={[styles.settingRow, isDark && styles.settingRowDark]}>
       <View style={[styles.settingIcon, isDark && styles.settingIconDark]}>
@@ -72,6 +75,7 @@ function SettingRow({
 }
 
 function SettingSection({ title, children, isDark }: { title: string; children: React.ReactNode; isDark: boolean }) {
+  const styles = useThemedStyles(baseStyles)
   return (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{title}</Text>
@@ -81,13 +85,15 @@ function SettingSection({ title, children, isDark }: { title: string; children: 
 }
 
 export default function SettingsScreen() {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
   const { t } = useTranslation()
 
   const { settings, hasBiometrics, updateSettings, lock } = useAuth()
   const {
-    notifications, setNotification, locale, setLocale, mascot, setMascot,
+    notifications, setNotification, locale, setLocale, mascot, setMascot, theme, setTheme, avatarCharacter, setAvatarCharacter,
     showThinking, setShowThinking, showActions, setShowActions, replyInMyLanguage, setReplyInMyLanguage, avatar, setAvatar,
   } = useSettings()
   const [osGranted, setOsGranted] = useState<boolean | null>(null)
@@ -155,6 +161,21 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={[styles.container, isDark && styles.containerDark]} contentContainerStyle={styles.content}>
+      <SettingSection title={t("settings.appearance.title")} isDark={isDark}>
+        <View style={{ padding: 12, gap: 8 }}>
+          {THEME_IDS.map(id => (
+            <TouchableOpacity key={id} onPress={() => void setTheme(id)} accessibilityRole="radio" accessibilityState={{ selected: theme === id }} testID={`theme-${id}`} style={{ backgroundColor: PALETTES[id].bg, borderColor: theme === id ? PALETTES[id].cyan : PALETTES[id].border, borderWidth: theme === id ? 2 : 1, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: PALETTES[id].text, fontSize: 16, fontWeight: "600" }}>{t(`settings.appearance.${id}`)}</Text>
+                <View style={{ flexDirection: "row", gap: 5, marginTop: 8 }}>
+                  {[PALETTES[id].surface2, PALETTES[id].cyan, PALETTES[id].magenta].map(color => <View key={color} style={{ width: 24, height: 12, borderRadius: 4, backgroundColor: color }} />)}
+                </View>
+              </View>
+              {theme === id && <Ionicons name="checkmark-circle" size={22} color={PALETTES[id].cyan} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </SettingSection>
       <SettingSection title={t("settings.sections.mcp")} isDark={isDark}>
         <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
           <McpConnectors isDark={isDark} />
@@ -216,6 +237,16 @@ export default function SettingsScreen() {
       </SettingSection>
 
       <SettingSection title={t("settings.sections.avatar")} isDark={isDark}>
+        <Text style={{ color: palette.muted, fontSize: 14, paddingHorizontal: 16, paddingTop: 12 }}>{t("settings.appearance.character3d")}</Text>
+        <View style={{ flexDirection: "row", gap: 8, padding: 12 }}>
+          {(["cheri", "byte", "orbit"] as const).map(kind => (
+            <TouchableOpacity key={kind} onPress={() => void setAvatarCharacter(kind)} accessibilityRole="radio" accessibilityState={{ selected: avatarCharacter === kind }} testID={`avatar-character-${kind}`} style={{ flex: 1, alignItems: "center", padding: 8, backgroundColor: palette.surface2, borderColor: avatarCharacter === kind ? palette.cyan : palette.border, borderWidth: 1, borderRadius: 10 }}>
+              <MascotOf kind={kind} state="idle" size={50} calm />
+              <Text style={{ color: palette.text, fontSize: 13 }}>{t(`settings.mascot.${kind}`)}</Text>
+              {avatarCharacter === kind && <Ionicons name="checkmark-circle" size={16} color={palette.cyan} />}
+            </TouchableOpacity>
+          ))}
+        </View>
         <SettingRow
           icon="happy-outline"
           label={t("avatar.show")}
@@ -404,7 +435,7 @@ export default function SettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   mascotOption: {
     flexDirection: "row",
     alignItems: "center",

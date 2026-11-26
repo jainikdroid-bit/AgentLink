@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../src/theme/useTheme"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Pressable } from "react-native"
 import { Stack, router, useLocalSearchParams } from "expo-router"
@@ -5,7 +6,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
 import { cyber } from "../src/theme/cyber"
-import { useConnections } from "../src/stores/connections"
+import { getConnectionTarget, useConnections } from "../src/stores/connections"
+import * as Crypto from "expo-crypto"
+import type { AgentQueue, QueueAction, AcpTarget } from "../src/lib/acp/api"
 import { useAcpChat } from "../src/lib/acp/useAcpChat"
 import { loginHint, type ChatItem } from "../src/lib/acp/protocol"
 import { Markdown } from "../src/components/markdown"
@@ -21,24 +24,50 @@ import { useSettings } from "../src/stores/settings"
 // Protocol. Everything shown here is rebuilt from the agent's event stream, so closing the screen leaves the
 // agent running and reopening it from the agents list picks the chat up again.
 export default function AgentChatScreen() {
+  const palette = useTheme()
+  const isDark = true
+  const s = useThemedStyles(baseStyles)
   const { t } = useTranslation()
   const insets = useSafeAreaInsets()
-  const params = useLocalSearchParams<{ agent: string; name?: string; cwd?: string; id?: string }>()
+  const params = useLocalSearchParams<{ agent: string; name?: string; cwd?: string; id?: string; connectionId?: string; resumeId?: string; draft?: string }>()
   const { activeConnection, clientBase } = useConnections()
-  const target = useMemo(
+  const originalConnectionId = useRef(params.connectionId || activeConnection?.id || "")
+  const activeTarget = useMemo(
     () =>
       activeConnection?.launcherPort
         ? { serverUrl: activeConnection.url, launcherPort: activeConnection.launcherPort, auth: clientBase?.auth, tunnel: !!activeConnection.tunnelTopic }
         : null,
     [activeConnection, clientBase],
   )
-  const chat = useAcpChat(target, { agent: String(params.agent), cwd: params.cwd || undefined, existingId: params.id || undefined })
+  const [explicitTarget, setExplicitTarget] = useState<AcpTarget | null>(null)
+  useEffect(() => { let cancelled = false; if (params.connectionId) void getConnectionTarget(params.connectionId).then(target => { if (!cancelled) setExplicitTarget(target) }).catch(() => undefined); return () => { cancelled = true } }, [params.connectionId])
+  const target = params.connectionId ? explicitTarget : activeTarget
+  const chat = useAcpChat(target, { agent: String(params.agent), cwd: params.cwd || undefined, existingId: params.id || undefined, resumeId: params.resumeId || undefined })
   const { state } = chat
   // The name from the list ("Claude Code") reads better than what some adapters report (their package name).
   const agentName = params.name || state.agentName || String(params.agent)
   const [modelMenu, setModelMenu] = useState(false)
-  const [text, setText] = useState("")
+  const [text, setText] = useState(params.draft || "")
   const [sending, setSending] = useState(false)
+  const [queue,setQueue]=useState<AgentQueue|null>(null)
+  const [queueBusy,setQueueBusy]=useState(false)
+  const queueLock=useRef(false)
+  const queueEpoch=useRef(0)
+  const enqueueId=useRef<{text:string;id:string}|null>(null)
+  useEffect(()=>{
+    if(!chat.agentId||chat.link!=="live"||chat.fatal)return
+    let alive=true,polling=false
+    const poll=async()=>{if(polling||queueLock.current)return;polling=true;const epoch=queueEpoch.current;try{const q=await chat.readQueue();if(alive&&epoch===queueEpoch.current)setQueue(q)}catch{}finally{polling=false}}
+    void poll();const timer=setInterval(()=>void poll(),3000);return()=>{alive=false;clearInterval(timer)}
+  },[chat.agentId,chat.link,chat.fatal,chat.readQueue])
+  const queueAction=async(action:QueueAction)=>{
+    if(queueLock.current)return
+    queueLock.current=true;queueEpoch.current++;setQueueBusy(true)
+    try{await chat.changeQueue(action);if(action.action==="enqueue"){setText("");enqueueId.current=null}setQueue(await chat.readQueue())}
+    catch(e){Alert.alert(t("common.error"),e instanceof Error?e.message:String(e))}
+    finally{queueEpoch.current++;queueLock.current=false;setQueueBusy(false)}
+  }
+  const enqueue=()=>{const value=text.trim();if(!value)return;if(enqueueId.current?.text!==value)enqueueId.current={text:value,id:Crypto.randomUUID()};void queueAction({action:"enqueue",...enqueueId.current})}
   const list = useRef<FlatList<Grouped<ChatItem>>>(null)
   const showActions = useSettings((st) => st.showActions)
   // Runs of tool calls fold into one "Actions (N)" line, like in the opencode chat.
@@ -49,13 +78,13 @@ export default function AgentChatScreen() {
     if (nearBottom.current) list.current?.scrollToEnd({ animated: true })
   }, [state.items, state.pendingPermissions.length])
 
-  const ready = state.handshake === "done" && !state.exit
+  const ready = state.handshake === "done" && !!state.sessionId && !state.exit && !chat.fatal && chat.link === "live"
   const hint = loginHint(state)
   const lastItem = state.items.at(-1)
 
   const submit = async () => {
     const message = text.trim()
-    if (!message || sending || !ready || state.busy) return
+    if (!message || sending || !ready || state.busy || queue?.items.length || queue?.paused) return
     setSending(true)
     try {
       await chat.send(message)
@@ -67,6 +96,11 @@ export default function AgentChatScreen() {
     }
   }
 
+  const transfer = () => {
+    const visible = state.items.filter((item): item is Extract<ChatItem,{type:"user"|"agent"}> => item.type==="user"||item.type==="agent")
+    const draft = visible.slice(-8).map(item=>`${item.type}: ${item.text}`).join("\n\n").slice(-7500)
+    Alert.alert(t("workspace.handoffFrom"),t("workspace.handoffHelp"),[{text:t("common.cancel"),style:"cancel"},{text:t("workspace.confirm"),onPress:()=>router.push({pathname:"/workspace",params:{draft,connectionId:originalConnectionId.current}})}])
+  }
   const confirmStop = () =>
     Alert.alert(t("acp.stopTitle"), t("acp.stopBody"), [
       { text: t("common.cancel"), style: "cancel" },
@@ -121,15 +155,17 @@ export default function AgentChatScreen() {
         options={{
           title: agentName,
           headerRight: () => (
+            <View style={{flexDirection:"row",gap:16}}><TouchableOpacity onPress={transfer} accessibilityLabel={t("workspace.handoffFrom")}><Ionicons name="swap-horizontal-outline" size={22} color={palette.cyan}/></TouchableOpacity>
             <TouchableOpacity onPress={confirmStop} hitSlop={12} testID="acp-stop-agent">
-              <Ionicons name="power-outline" size={22} color={cyber.red} />
-            </TouchableOpacity>
+              <Ionicons name="power-outline" size={22} color={palette.red} />
+            </TouchableOpacity></View>
           ),
         }}
       />
+      {state.usage&&<Text style={{color:palette.muted,paddingHorizontal:12,fontSize:12}}>{t("workspace.contextUsed")}: {state.usage.used} / {state.usage.size} · {t("workspace.quotaUnknown")}</Text>}
       {statusLine ? (
         <View style={[s.status, statusLine.tone === "error" && s.statusError]}>
-          {statusLine.tone === "info" ? <ActivityIndicator size="small" color={cyber.cyan} /> : null}
+          {statusLine.tone === "info" ? <ActivityIndicator size="small" color={palette.cyan} /> : null}
           <View style={s.statusTextWrap}>
             <Text style={s.statusText}>{statusLine.text}</Text>
             {"detail" in statusLine && statusLine.detail ? <Text style={s.statusDetail} numberOfLines={6}>{statusLine.detail}</Text> : null}
@@ -138,9 +174,9 @@ export default function AgentChatScreen() {
       ) : null}
       {state.modelConfig || state.modelName ? (
         <Pressable style={s.modelButton} onPress={() => setModelMenu(true)} disabled={!state.modelConfig || !ready || Object.values(state.requests).includes("session/set_config_option")} accessibilityRole="button" accessibilityLabel={t("chat.modelPicker.title")}>
-          <Ionicons name="hardware-chip-outline" size={16} color={cyber.cyan} />
+          <Ionicons name="hardware-chip-outline" size={16} color={palette.cyan} />
           <Text style={s.modelText} numberOfLines={1}>{state.modelName || t("chat.modelPicker.title")}</Text>
-          {state.modelConfig ? <Ionicons name="chevron-down" size={16} color={cyber.cyan} /> : null}
+          {state.modelConfig ? <Ionicons name="chevron-down" size={16} color={palette.cyan} /> : null}
         </Pressable>
       ) : null}
       <Modal visible={modelMenu && !!state.modelConfig} transparent animationType="fade" onRequestClose={() => setModelMenu(false)}>
@@ -153,7 +189,7 @@ export default function AgentChatScreen() {
                 if (item.value !== state.modelConfig?.current) void chat.setModel(item.value).catch(() => Alert.alert(t("common.error")))
               }} accessibilityRole="button" accessibilityState={{ selected: item.value === state.modelConfig?.current }}>
                 <Text style={s.modelText}>{item.name}</Text>
-                {item.value === state.modelConfig?.current ? <Ionicons name="checkmark" size={18} color={cyber.cyan} /> : null}
+                {item.value === state.modelConfig?.current ? <Ionicons name="checkmark" size={18} color={palette.cyan} /> : null}
               </Pressable>
             )} />
             <Pressable style={s.modelButton} onPress={() => setModelMenu(false)} accessibilityRole="button">
@@ -183,29 +219,30 @@ export default function AgentChatScreen() {
           nearBottom.current = contentOffset.y + layoutMeasurement.height > contentSize.height - 120
         }}
         scrollEventThrottle={100}
-        ListFooterComponent={state.busy && lastItem?.type !== "thought" ? <ActivityIndicator style={s.busy} color={cyber.cyan} /> : null}
+        ListFooterComponent={state.busy && lastItem?.type !== "thought" ? <ActivityIndicator style={s.busy} color={palette.cyan} /> : null}
       />
       {state.pendingPermissions.map((request) => (
         <PermissionCard key={String(request.requestId)} request={request} agent={agentName} onAnswer={(optionId) => void chat.answer(request.requestId, optionId).catch(() => undefined)} />
       ))}
+      {queue&&<View style={{paddingHorizontal:12,gap:6}}>{queue.items.length>0||queue.paused?<><Text style={{color:palette.text}}>{t("workspace.queue")} · {queue.items.length}{queue.paused?" · "+t("workspace.queuePaused"):""}</Text><ScrollView style={{maxHeight:120}}>{queue.items.map(item=><View key={item.id} style={{flexDirection:"row",alignItems:"center",gap:8}}><Text numberOfLines={2} style={{flex:1,color:palette.text}}>{item.text}</Text><TouchableOpacity disabled={queueBusy||!ready} onPress={()=>void queueAction({action:"remove",id:item.id})}><Ionicons name="close-circle-outline" size={22} color={palette.muted}/></TouchableOpacity></View>)}</ScrollView><TouchableOpacity disabled={queueBusy||!ready} onPress={()=>void queueAction({action:queue.paused?"resume":"pause"})}><Text style={{color:palette.cyan,paddingVertical:6}}>{t(queue.paused?"workspace.queueResume":"workspace.queuePause")}</Text></TouchableOpacity></>:null}{ready&&text.trim()&&(state.busy||queue.items.length>0||queue.paused)?<TouchableOpacity disabled={queueBusy} onPress={enqueue}><Text style={{color:palette.cyan,paddingVertical:8}}>{t("workspace.queueAdd")}</Text></TouchableOpacity>:null}</View>}
       <View style={[s.inputRow, { paddingBottom: Math.max(10, insets.bottom) }]}>
         <TextInput
           style={s.input}
           value={text}
           onChangeText={setText}
           placeholder={t("acp.inputPlaceholder", { agent: agentName })}
-          placeholderTextColor={cyber.muted}
+          placeholderTextColor={palette.muted}
           multiline
-          editable={ready}
+          editable={ready&&!queueBusy}
           testID="acp-input"
         />
         {state.busy ? (
           <TouchableOpacity style={[s.send, s.cancel]} onPress={() => void chat.cancel().catch(() => undefined)} testID="acp-cancel">
-            <Ionicons name="stop" size={20} color={cyber.red} />
+            <Ionicons name="stop" size={20} color={palette.red} />
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[s.send, (!ready || !text.trim() || sending) && s.sendOff]} onPress={() => void submit()} disabled={!ready || !text.trim() || sending} testID="acp-send">
-            {sending ? <ActivityIndicator size="small" color={cyber.bg} /> : <Ionicons name="arrow-up" size={20} color={cyber.bg} />}
+          <TouchableOpacity style={[s.send, (!ready || !text.trim() || sending) && s.sendOff]} onPress={() => void submit()} disabled={!ready || !text.trim() || sending || !!queue?.items.length || !!queue?.paused} testID="acp-send">
+            {sending ? <ActivityIndicator size="small" color={palette.bg} /> : <Ionicons name="arrow-up" size={20} color={palette.bg} />}
           </TouchableOpacity>
         )}
       </View>
@@ -222,7 +259,7 @@ function noticeText(item: Extract<ChatItem, { type: "notice" }>, t: (key: string
   return code
 }
 
-const s = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: cyber.bg },
   status: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: cyber.surface, borderBottomWidth: 1, borderBottomColor: cyber.border },
   statusError: { backgroundColor: "#2a0f16" },

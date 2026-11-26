@@ -18,3 +18,11 @@ test("unknown or missing stored values fall back to the default", () => {
     assert.equal(resolveMascot(value), DEFAULT_MASCOT)
   }
 })
+
+test("Byte and Orbit are selectable without changing the default", () => {
+  for (const kind of ["byte", "orbit"] as const) {
+    assert.ok(isMascotKind(kind))
+    assert.equal(resolveMascot(kind), kind)
+  }
+  assert.equal(resolveMascot(undefined), "cheri")
+})

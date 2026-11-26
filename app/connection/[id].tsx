@@ -1,3 +1,4 @@
+import { useTheme, useThemedStyles } from "../../src/theme/useTheme"
 import { useEffect, useState } from "react"
 import {
   View,
@@ -15,7 +16,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router"
 import { Ionicons } from "@expo/vector-icons"
 import { useTranslation } from "react-i18next"
-import { useConnections } from "../../src/stores/connections"
+import { getEditTestPassword, useConnections } from "../../src/stores/connections"
 import { useEvents } from "../../src/stores/events"
 import type { ConnectionType } from "../../src/lib/types"
 import { probeConnection, shareReport } from "../../src/lib/diagnostics"
@@ -36,6 +37,8 @@ const CONNECTION_TYPES: Array<{
 ]
 
 export default function EditConnectionScreen() {
+  const palette = useTheme()
+  const styles = useThemedStyles(baseStyles)
   const { id } = useLocalSearchParams<{ id: string }>()
   const colorScheme = useColorScheme()
   const isDark = colorScheme === "dark"
@@ -83,40 +86,39 @@ export default function EditConnectionScreen() {
     }
 
     setIsTesting(true)
-    const result = await testConnection(
-      {
+    try {
+      const candidate = {
         id: connection.id,
         name: name || "Test",
         type,
         url: url.trim(),
         directory: directory.trim() || undefined,
         username: username.trim() || undefined,
-      },
-      "edit_test",
-      password || undefined,
-    )
+      }
+      const effectivePassword = await getEditTestPassword(candidate, connection, password)
+      const result = await testConnection(candidate, "edit_test", effectivePassword)
+      if (result.ok) {
+        Alert.alert(t("connection.edit.alerts.successTitle"), t("connection.edit.alerts.successMessage"))
+        return
+      }
 
-    if (result.ok) {
+      const report = await probeConnection(candidate.url, buildAuth(candidate.username, effectivePassword))
+      Alert.alert(
+        t("connection.shared.alerts.connectionFailedTitle"),
+        t("connection.edit.alerts.connectionFailedMessage", {
+          summary: report.summary,
+          detail: result.error || t("connection.edit.alerts.noDetail"),
+        }),
+        [
+          { text: t("common.ok"), style: "cancel" },
+          { text: t("common.shareReport"), onPress: () => shareReport(report) },
+        ],
+      )
+    } catch {
+      Alert.alert(t("common.error"), t("connection.shared.alerts.unknownError"))
+    } finally {
       setIsTesting(false)
-      Alert.alert(t("connection.edit.alerts.successTitle"), t("connection.edit.alerts.successMessage"))
-      return
     }
-
-    // Failed: run active diagnostics and offer a shareable report.
-    const report = await probeConnection(url.trim(), buildAuth(username, password))
-    setIsTesting(false)
-
-    Alert.alert(
-      t("connection.shared.alerts.connectionFailedTitle"),
-      t("connection.edit.alerts.connectionFailedMessage", {
-        summary: report.summary,
-        detail: result.error || t("connection.edit.alerts.noDetail"),
-      }),
-      [
-        { text: t("common.ok"), style: "cancel" },
-        { text: t("common.shareReport"), onPress: () => shareReport(report) },
-      ],
-    )
   }
 
   const handleSave = async () => {
@@ -208,7 +210,7 @@ export default function EditConnectionScreen() {
             <Ionicons
               name={opt.icon}
               size={20}
-              color={type === opt.type ? (isDark ? "#07080c" : "#ffffff") : isDark ? "#8a93a8" : "#8a93a8"}
+              color={type === opt.type ? (isDark ? palette.bg : "#ffffff") : isDark ? palette.muted : palette.muted}
             />
             <Text
               style={[
@@ -229,7 +231,7 @@ export default function EditConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder={t("connection.shared.namePlaceholder")}
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={name}
         onChangeText={setName}
       />
@@ -239,7 +241,7 @@ export default function EditConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder="http://192.168.1.100:4096"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={url}
         onChangeText={setUrl}
         autoCapitalize="none"
@@ -252,7 +254,7 @@ export default function EditConnectionScreen() {
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
         placeholder="/path/to/project"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={directory}
         onChangeText={setDirectory}
         autoCapitalize="none"
@@ -266,8 +268,8 @@ export default function EditConnectionScreen() {
       <Text style={[styles.label, isDark && styles.labelDark]}>{t("connection.shared.username")}</Text>
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
-        placeholder="admin"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholder="opencode"
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
@@ -277,8 +279,8 @@ export default function EditConnectionScreen() {
       <Text style={[styles.label, isDark && styles.labelDark]}>{t("connection.edit.passwordLabel")}</Text>
       <TextInput
         style={[styles.input, isDark && styles.inputDark]}
-        placeholder="••••••••"
-        placeholderTextColor={isDark ? "#8a93a8" : "#8a93a8"}
+        placeholder={t("connection.edit.passwordLabel")}
+        placeholderTextColor={isDark ? palette.muted : palette.muted}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -289,13 +291,13 @@ export default function EditConnectionScreen() {
         <TouchableOpacity
           style={[styles.testButton, isDark && styles.testButtonDark]}
           onPress={handleTest}
-          disabled={isTesting}
+          disabled={isTesting || isSaving}
         >
           {isTesting ? (
-            <ActivityIndicator size="small" color={isDark ? "#ffffff" : "#07080c"} />
+            <ActivityIndicator size="small" color={isDark ? "#ffffff" : palette.bg} />
           ) : (
             <>
-              <Ionicons name="pulse" size={20} color={isDark ? "#ffffff" : "#07080c"} />
+              <Ionicons name="pulse" size={20} color={isDark ? "#ffffff" : palette.bg} />
               <Text style={[styles.testButtonText, isDark && styles.textDark]}>{t("connection.edit.testButton")}</Text>
             </>
           )}
@@ -304,10 +306,10 @@ export default function EditConnectionScreen() {
         <TouchableOpacity
           style={[styles.saveButton, isDark && styles.saveButtonDark]}
           onPress={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isTesting}
         >
           {isSaving ? (
-            <ActivityIndicator size="small" color={isDark ? "#07080c" : "#ffffff"} />
+            <ActivityIndicator size="small" color={isDark ? palette.bg : "#ffffff"} />
           ) : (
             <Text style={[styles.saveButtonText, isDark && styles.saveButtonTextDark]}>
               {t("connection.edit.saveButton")}
@@ -325,7 +327,7 @@ export default function EditConnectionScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",

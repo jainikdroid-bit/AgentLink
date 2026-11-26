@@ -107,11 +107,84 @@ function withPhoneMcp(message, phone) {
   return { ...message, params: { ...params, mcpServers: [...servers, entry] } }
 }
 
+// Durable, bounded metadata inbox (not a transcript, no prompt or tool arguments).
+// Optional FCM HTTP v1: administrator configures a local service-account file
+// and the phone's copied registration token. No credentials leave this host
+// other than the signed OAuth assertion to Google's official endpoints.
+function createInbox(file,clock=Date.now){
+ let events=[]
+ if(file)try{const saved=JSON.parse(fs.readFileSync(file,'utf8'));if(Array.isArray(saved))events=saved.filter(e=>e&&typeof e.id==='string'&&typeof e.at==='number').slice(-500)}catch{}
+ function record(category,session){
+  const item={id:crypto.randomUUID(),at:clock(),category,agent:session.agent,bridgeId:session.id}
+  events.push(item);events=events.slice(-500)
+  if(file){
+   const tmp=file+'.'+crypto.randomUUID()+'.tmp'
+   try{fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});fs.writeFileSync(tmp,JSON.stringify(events),{mode:0o600,flag:'wx'});fs.renameSync(tmp,file)}
+   catch{try{fs.rmSync(tmp,{force:true})}catch{}}
+  }
+  return item
+ }
+ return {record,list:()=>events.slice(),}
+}
+function createPushSender({accountPath=process.env.AGENTLINK_FCM_SERVICE_ACCOUNT,registration=process.env.AGENTLINK_FCM_TOKEN,fetchImpl=globalThis.fetch}={}){
+ let access=null,until=0,queue=Promise.resolve(),pending=0
+ const enabled=!!(accountPath&&registration)
+ async function token(){
+  if(access&&Date.now()<until)return access
+  const account=JSON.parse(fs.readFileSync(accountPath,'utf8'))
+  if(!account.client_email||!account.private_key||!account.project_id||!(/^[a-z0-9-]+$/).test(account.project_id))throw Error('invalid push configuration')
+  const at=Math.floor(Date.now()/1000)
+  const enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url')
+  const assertion=enc({alg:'RS256',typ:'JWT'})+'.'+enc({iss:account.client_email,scope:'https://www.googleapis.com/auth/firebase.messaging',aud:'https://oauth2.googleapis.com/token',iat:at,exp:at+3600})
+  const signed=assertion+'.'+crypto.sign('RSA-SHA256',Buffer.from(assertion),account.private_key).toString('base64url')
+  const response=await fetchImpl('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:signed}),signal:AbortSignal.timeout(10000),redirect:'error'})
+  if(!response.ok)throw Error('push OAuth failed')
+  const data=await response.json();if(!data.access_token)throw Error('push token missing')
+  access={value:data.access_token,project:account.project_id};until=Date.now()+Math.max(0,(Number(data.expires_in)||3600)-60)*1000
+  return access
+ }
+ function send(event){
+  if(!enabled||pending>=20)return
+  pending++
+  queue=queue.then(async()=>{
+   try{
+    const auth=await token()
+    const response=await fetchImpl('https://fcm.googleapis.com/v1/projects/'+auth.project+'/messages:send',{method:'POST',headers:{Authorization:'Bearer '+auth.value,'Content-Type':'application/json'},body:JSON.stringify({message:{token:registration,notification:{title:'AgentLink',body:({permissions:'Agent needs approval',completed:'Agent finished a turn',errors:'Agent reported an error',connection:'Agent disconnected'})[event.category]||'Agent activity'},data:{category:event.category,sessionId:'',eventId:event.id},android:{priority:'high',notification:{channel_id:'prompts',tag:event.id}}}}),signal:AbortSignal.timeout(10000),redirect:'error'})
+    if(response.status===401)until=0
+    // Inbox remains available even when push fails. Never log OAuth or FCM responses.
+   }catch{}finally{pending--}
+  })
+ }
+ return {enabled,send}
+}
+
+// Metadata only; the provider owns the actual conversation. Atomic bounded catalog.
+function createSessionCatalog(file, clock=Date.now) {
+  let entries=[]
+  const valid=e=>e&&typeof e.agent==='string'&&typeof e.cwd==='string'&&typeof e.sessionId==='string'&&e.sessionId.length>0&&e.sessionId.length<=512&&Number.isFinite(e.at)
+  if(file)try{const raw=JSON.parse(fs.readFileSync(file,'utf8'));if(Array.isArray(raw))entries=raw.filter(valid).slice(-200)}catch{}
+  function remember(session){
+    const item={agent:session.agent,cwd:session.cwd,sessionId:session.protocolSessionId,at:clock(),loadSession:session.loadSession===true}
+    if(!valid(item))return
+    entries=entries.filter(e=>!(e.agent===item.agent&&e.cwd===item.cwd&&e.sessionId===item.sessionId))
+    entries.push(item);entries=entries.slice(-200)
+    if(file){
+      const tmp=file+'.'+crypto.randomUUID()+'.tmp'
+      try{fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700});fs.writeFileSync(tmp,JSON.stringify(entries),{flag:'wx',mode:0o600});fs.renameSync(tmp,file)}
+      catch{try{fs.rmSync(tmp,{force:true})}catch{}}
+    }
+  }
+  return {remember,list:()=>entries.slice().reverse()}
+}
 function createAcpBridge(deps = {}) {
   const agents = deps.agents || AGENTS
   const now = deps.now || (() => Date.now())
   const phoneMcp = deps.phoneMcp || detectPhoneMcp
   const sessions = new Map()
+  const inbox = createInbox(deps.inboxFile,now)
+  const catalog = createSessionCatalog(deps.catalogFile,now)
+  const push = deps.push || {enabled:false,send:()=>{}}
+  const notify=(category,session)=>{ const item=inbox.record(category,session); try{push.send(item)}catch{} }
   let detected = { at: 0, ids: new Set() }
 
   function installedIds() {
@@ -155,12 +228,49 @@ function createAcpBridge(deps = {}) {
     session.bytes += text.length
     while (session.log.length > MAX_LOG_MESSAGES || session.bytes > MAX_LOG_BYTES) session.bytes -= session.log.shift().text.length
     session.lastActivity = now()
-    for (const client of session.clients) client.write(frame(entry))
+    for (const client of session.clients) {
+      // Do not buffer an unbounded transcript for a stalled mobile client.
+      if (client.writableLength > 1024*1024) { session.clients.delete(client); client.destroy(); continue }
+      client.write(frame(entry))
+    }
   }
 
   /** An agent's request the phone already answered is not worth showing again after a reconnect. */
   const stale = (session, entry) => entry.reqKey !== null && session.answered.has(entry.reqKey)
 
+  // Queue belongs to the live host process, not the mobile screen. Do not replay
+  // queued prompts after process death or an uncertain/failed/cancelled turn.
+  function drainQueue(session) {
+    if(session.exited||session.queuePaused||!session.protocolSessionId||session.prompts.size||session.pending.size||!session.queue.length||session.child.stdin.destroyed)return
+    const item=session.queue.shift()
+    const id='agentlink-queue-'+item.id
+    const msg={jsonrpc:'2.0',id,method:'session/prompt',params:{sessionId:session.protocolSessionId,prompt:[{type:'text',text:item.text}]}}
+    const key=keyOf(id)
+    session.prompts.add(key);session.requests.set(key,{method:msg.method})
+    add(session,'sent',JSON.stringify(msg))
+    try{session.child.stdin.write(JSON.stringify(msg)+'\n',error=>{if(error){session.queuePaused=true;notify('errors',session)}})}
+    catch{session.queuePaused=true;notify('errors',session)}
+  }
+  async function queueRoute(req,res,session){
+    if(req.method==='GET')return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused})
+    if(req.method!=='POST')return send(res,405,{ok:false,error:'wrong method'})
+    if(session.exited)return send(res,409,{ok:false,error:'agent stopped'})
+    const body=await readBody(req,65536)
+    if(!body||typeof body!=='object')return send(res,400,{ok:false,error:'invalid queue action'})
+    if(body.action==='enqueue'){
+      if(!session.protocolSessionId)return send(res,409,{ok:false,error:'session not ready'})
+      if(typeof body.id!=='string'||!(/^[a-f0-9-]{36}$/i).test(body.id)||typeof body.text!=='string'||!body.text.trim()||body.text.length>8000)return send(res,400,{ok:false,error:'invalid queue item'})
+      const hash=crypto.createHash('sha256').update(body.text).digest('hex')
+      if(session.queueIds.has(body.id))return send(res,session.queueIds.get(body.id)===hash?200:409,session.queueIds.get(body.id)===hash?{ok:true,duplicate:true}:{ok:false,error:'queue ID conflict'})
+      if(session.queue.length>=20||session.queueIds.size>=2000)return send(res,429,{ok:false,error:'queue limit reached'})
+      session.queueIds.set(body.id,hash);session.queue.push({id:body.id,text:body.text});drainQueue(session)
+    }else if(body.action==='remove'){
+      session.queue=session.queue.filter(item=>item.id!==body.id)
+    }else if(body.action==='pause')session.queuePaused=true
+    else if(body.action==='resume'){session.queuePaused=false;drainQueue(session)}
+    else return send(res,400,{ok:false,error:'unsupported queue action'})
+    return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused})
+  }
   function onLine(session, line) {
     const text = line.trim()
     if (!text) return
@@ -172,14 +282,40 @@ function createAcpBridge(deps = {}) {
     }
     const isRequest = typeof message.method === 'string' && message.id !== undefined && message.id !== null
     add(session, 'out', text, isRequest ? keyOf(message.id) : null)
+    if(isRequest){
+      const key=keyOf(message.id)
+      session.pending.add(key);session.answered.delete(key);session.permissions.delete(key)
+      if(message.method==='session/request_permission'){session.permissions.add(key);notify('permissions',session)}
+    }
+    if(!message.method&&message.id!==undefined){
+      const key=keyOf(message.id),request=session.requests.get(key)
+      session.requests.delete(key)
+      if(request&&!message.error){
+        if(request.method==='initialize')session.loadSession=message.result?.agentCapabilities?.loadSession===true
+        if(request.method==='session/new'||request.method==='session/load'){
+          const id=request.method==='session/load'?request.sessionId:message.result?.sessionId
+          if(typeof id==='string'&&id.length>0&&id.length<=512){session.protocolSessionId=id;catalog.remember(session)}
+        }
+        if(request.method==='session/prompt'&&session.protocolSessionId)catalog.remember(session)
+      }
+    }
+    if(!message.method&&message.id!==undefined&&session.prompts.has(keyOf(message.id))){
+      session.prompts.delete(keyOf(message.id))
+      if(message.error){session.queuePaused=true;notify('errors',session)}
+      else if(message.result?.stopReason==='end_turn'){notify('completed',session);drainQueue(session)}
+      else session.queuePaused=true
+    }
   }
 
   function start(agent, cwd) {
-    const options = { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, env: { ...process.env, NO_COLOR: '1' } }
+    const env={...process.env,NO_COLOR:'1'}
+    // Host-owned push credentials aren't needed by child agents.
+    delete env.AGENTLINK_FCM_SERVICE_ACCOUNT;delete env.AGENTLINK_FCM_TOKEN
+    const options = { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, env }
     const child = WIN && !agent.direct ? spawn('cmd.exe', ['/c', agent.cmd, ...agent.args], options) : spawn(agent.cmd, agent.args, options)
     const session = {
       id: crypto.randomBytes(9).toString('base64url'), agent: agent.id, name: agent.name, cwd, startedAt: now(), lastActivity: now(),
-      child, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
+      child, queue: [], queueIds: new Map(), queuePaused: false, prompts: new Set(), pending: new Set(), permissions: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
     }
     let partial = ''
     child.stdout.setEncoding('utf8')
@@ -196,6 +332,7 @@ function createAcpBridge(deps = {}) {
     child.on('close', (code, signal) => {
       if (partial.trim()) onLine(session, partial)
       session.exited = { code, signal, stderr: session.stderr, at: now() }
+      if(code!==0&&code!==null)notify('errors',session)
       const text = `event: exit\ndata: ${JSON.stringify({ code, signal, stderr: session.stderr })}\n\n`
       for (const client of session.clients) { client.write(text); client.end() }
       session.clients.clear()
@@ -211,7 +348,7 @@ function createAcpBridge(deps = {}) {
     send(res, 200, {
       ok: true,
       agents: agents.map((a) => ({ id: a.id, name: a.name, installed: installed.has(a.id) })),
-      running: [...sessions.values()].map((s) => ({ id: s.id, agent: s.agent, name: s.name, cwd: s.cwd, startedAt: s.startedAt, exited: !!s.exited })),
+      running: [...sessions.values()].map((s) => ({ id: s.id, agent: s.agent, name: s.name, cwd: s.cwd, startedAt: s.startedAt, exited: !!s.exited, busy: s.prompts.size > 0, pendingPermissions: s.permissions.size, lastActivity: s.lastActivity, sessionId: s.protocolSessionId })),
     })
   }
 
@@ -255,11 +392,32 @@ function createAcpBridge(deps = {}) {
     const isRequest = message && message.jsonrpc === '2.0' && typeof message.method === 'string'
     const isResponse = message && message.jsonrpc === '2.0' && message.id !== undefined && message.id !== null && typeof message.method !== 'string' && ('result' in message || 'error' in message)
     if (!isRequest && !isResponse) return send(res, 400, { ok: false, error: 'not a JSON-RPC message' })
-    if (isResponse) session.answered.add(keyOf(message.id))
+    if(message.method==='session/load'){
+      const saved=message.params?.sessionId
+      if(typeof saved!=='string'||!saved||saved.length>512)return send(res,400,{ok:false,error:'invalid saved session id'})
+      if([...sessions.values()].some(other=>other!==session&&!other.exited&&other.agent===session.agent&&(other.protocolSessionId===saved||[...other.requests.values()].some(r=>r.method==='session/load'&&r.sessionId===saved))))return send(res,409,{ok:false,error:'this session is already open in another agent process'})
+    }
     const text = JSON.stringify(message)
+    const key=message.id===undefined||message.id===null?null:keyOf(message.id)
+    if(key!==null && (typeof message.id!=='string'&&typeof message.id!=='number'||key.length>512))return send(res,400,{ok:false,error:'invalid RPC id'})
+    if(!isResponse&&typeof message.id==='string'&&message.id.startsWith('agentlink-queue-'))return send(res,400,{ok:false,error:'reserved RPC id'})
+    if(isResponse){
+      if(session.answered.has(key))return send(res,200,{ok:true,duplicate:true})
+      if(!session.pending.has(key))return send(res,409,{ok:false,error:'request no longer pending'})
+    }else if(key!==null){
+      const hash=crypto.createHash('sha256').update(text).digest('hex')
+      if(session.sentIds.has(key))return send(res,session.sentIds.get(key)===hash?200:409,session.sentIds.get(key)===hash?{ok:true,duplicate:true}:{ok:false,error:'RPC id already used'})
+      if(message.method==='session/prompt'&&(session.prompts.size||session.pending.size||session.queue.length))return send(res,409,{ok:false,error:'agent busy or messages queued; use the queue'})
+      if(session.sentIds.size>=20000)return send(res,409,{ok:false,error:'session request limit reached; resume in a new agent'})
+      session.sentIds.set(key,hash)
+      session.requests.set(key,{method:message.method,sessionId:message.method==='session/load'?message.params?.sessionId:undefined})
+    }
+    if(message.method==='session/cancel')session.queuePaused=true
+    if (isResponse) {session.answered.add(key);session.pending.delete(key);session.permissions.delete(key)}
+    if(message.method==='session/prompt'&&key!==null)session.prompts.add(key)
     // The agent gets the phone's MCP server on session/new|load; the replay log keeps what the phone sent.
-    session.child.stdin.write(JSON.stringify(withPhoneMcp(message, phoneMcp())) + '\n')
     add(session, 'sent', text)
+    session.child.stdin.write(JSON.stringify(withPhoneMcp(message, phoneMcp())) + '\n')
     send(res, 200, { ok: true, seq: session.nextSeq - 1 })
   }
 
@@ -267,12 +425,15 @@ function createAcpBridge(deps = {}) {
   async function handle(req, res, route) {
     const url = new URL(req.url || '/', 'http://x')
     try {
+      if (route === '/acp/saved' && req.method === 'GET') return send(res,200,{ok:true,sessions:catalog.list()}),true
+      if (route === '/acp/inbox' && req.method === 'GET') return send(res,200,{ok:true,events:inbox.list(),pushConfigured:push.enabled}),true
       if (route === '/acp/agents' && req.method === 'GET') return agentsRoute(res), true
       if (route === '/acp/start' && req.method === 'POST') return await startRoute(req, res), true
-      const m = /^\/acp\/([A-Za-z0-9_-]{6,32})\/(events|send|stop)$/.exec(route)
+      const m = /^\/acp\/([A-Za-z0-9_-]{6,32})\/(events|send|stop|queue)$/.exec(route)
       if (!m) return send(res, 404, { ok: false, error: 'not found' }), true
       const session = sessions.get(m[1])
       if (!session) return send(res, 404, { ok: false, error: 'no such agent (it may have been stopped)' }), true
+      if (m[2] === 'queue') return await queueRoute(req,res,session),true
       if (m[2] === 'events' && req.method === 'GET') return eventsRoute(req, res, session, url.searchParams), true
       if (m[2] === 'send' && req.method === 'POST') return await sendRoute(req, res, session), true
       if (m[2] === 'stop' && req.method === 'POST') { killTree(session.child); return send(res, 200, { ok: true }), true }
@@ -287,7 +448,7 @@ function createAcpBridge(deps = {}) {
   const sweep = setInterval(() => {
     for (const [id, s] of sessions) {
       if (s.exited) { if (now() - s.exited.at > EXITED_KEEP_MS) sessions.delete(id) }
-      else if (s.clients.size === 0 && now() - s.lastActivity > IDLE_STOP_MS) killTree(s.child)
+      else if (s.clients.size === 0 && s.queue.length === 0 && s.prompts.size === 0 && s.pending.size === 0 && now() - s.lastActivity > IDLE_STOP_MS) killTree(s.child)
     }
   }, SWEEP_MS)
   sweep.unref()
@@ -299,4 +460,4 @@ function createAcpBridge(deps = {}) {
   }
 }
 
-module.exports = { createAcpBridge, AGENTS, onPath, withPhoneMcp }
+module.exports = { createSessionCatalog, createInbox, createPushSender, createAcpBridge, AGENTS, onPath, withPhoneMcp }

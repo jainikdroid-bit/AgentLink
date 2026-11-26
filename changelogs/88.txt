@@ -1,0 +1,1 @@
+v0.27.0 — easier pairing with a step-by-step guide, Workspace (computer hardware, saved agent sessions, Git), on-phone local AI without Termux, Aurora/Nebula/Ember themes, Byte and Orbit 3D companions.

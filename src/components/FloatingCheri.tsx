@@ -11,11 +11,13 @@ import { AVATAR_ASPECT, AVATAR_OPACITIES, AVATAR_SIZES, avatarMood, clampPositio
 import { WALK_TURN_MS, walkScreenSpeed } from "../lib/cheri/walk"
 
 const SOURCE = { uri: "file:///android_asset/cheri3d/index.html" }
+const COMPANION_SOURCES = { byte: { uri: "file:///android_asset/companions3d/byte.html" }, orbit: { uri: "file:///android_asset/companions3d/orbit.html" } } as const
 const CELEBRATE_MS = 6000
 
 // The floating 3D Cheri (three.js + VRM in a transparent WebView, see web/cheri3d). She floats over every
 // screen, can be dragged, reacts to what the agent does, and a long press opens her menu.
-export function FloatingCheri() {
+export function FloatingCheri({ character = "cheri" }: { character?: "cheri" | "byte" | "orbit" }) {
+  const source = character === "cheri" ? SOURCE : COMPANION_SOURCES[character]
   const avatar = useSettings((s) => s.avatar)
   const setAvatar = useSettings((s) => s.setAvatar)
   const activity = useAvatar((s) => s.activity)
@@ -98,6 +100,10 @@ export function FloatingCheri() {
   }
   // ---- wandering: when the agent is idle she takes a stroll along the bottom of the screen ----
   const walkAnim = useRef<Animated.CompositeAnimation | null>(null)
+  useEffect(() => () => {
+    walkAnim.current?.stop()
+    walkAnim.current = null
+  }, [])
   const lastTouch = useRef(Date.now())
   const stopWalk = () => {
     lastTouch.current = Date.now()
@@ -165,7 +171,7 @@ export function FloatingCheri() {
       <Animated.View ref={box} pointerEvents="none" onLayout={publishRect} style={[s.window, { width: w, height: h, opacity: avatar.opacity, transform: pos.getTranslateTransform() }]} testID="floating-cheri">
         <WebView
           ref={web}
-          source={SOURCE}
+          source={source}
           originWhitelist={["*"]}
           allowFileAccess
           allowFileAccessFromFileURLs

@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 6 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 11 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -37,6 +37,50 @@ const MAX_FAILS = 6 // wrong passwords per minute per address before answering 4
 // served without the password, so it is one-time, short-lived and dies after a few wrong guesses.
 const PAIR_MAX_FAILS = 5
 const PAIR_BODY_LIMIT = 1024
+
+// Lightweight host metrics. CPU is measured between two samples (not loadavg).
+// Unknown sensor values remain null rather than inventing hardware readings.
+async function sampleNvidia() {
+  const {execFile}=require('node:child_process')
+  return new Promise(resolve=>{
+    execFile('nvidia-smi',['--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu','--format=csv,noheader,nounits'],{timeout:2000,maxBuffer:16384,windowsHide:true},(error,stdout)=>{
+      if(error)return resolve(null)
+      const rows=stdout.trim().split(/\r?\n/).map(line=>{
+        const [name,...raw]=line.split(',').map(x=>x.trim())
+        const values=raw.map(x=>x===''||!Number.isFinite(Number(x))?null:Number(x))
+        return {name,percent:values[0]??null,memoryUsedMiB:values[1]??null,memoryTotalMiB:values[2]??null,temperatureC:values[3]??null}
+      }).filter(x=>x.name)
+      resolve(rows.length?rows:null)
+    })
+  })
+}
+function createHardwareSampler({ system = os, clock = Date.now, disk = () => fs.promises.statfs(system.homedir()), gpu = system===os?sampleNvidia:async()=>null } = {}) {
+  let previous = null
+  return async function sample() {
+    const at = clock()
+    const cores = system.cpus()
+    const ticks = cores.reduce((sum, core) => {
+      const values = Object.values(core.times)
+      return { total: sum.total + values.reduce((a,b)=>a+b,0), idle: sum.idle + core.times.idle }
+    }, {total:0,idle:0})
+    let cpuPercent = null
+    if (previous && previous.count === cores.length && at > previous.at) {
+      const total = ticks.total - previous.total, idle = ticks.idle - previous.idle
+      if (total > 0 && idle >= 0 && idle <= total) cpuPercent = Math.round((1-idle/total)*1000)/10
+    }
+    previous = {...ticks,at,count:cores.length}
+    const total = system.totalmem()
+    let free = system.freemem(), memorySource='os.freemem'
+    if(system===os&&system.platform()==='linux')try{const m=/^MemAvailable:\s+(\d+)\s+kB/m.exec(await fs.promises.readFile('/proc/meminfo','utf8'));if(m){free=Math.min(total,Number(m[1])*1024);memorySource='MemAvailable'}}catch{}
+    let storage = null
+    try {
+      const d = await disk()
+      storage = { totalBytes: Number(d.blocks)*Number(d.bsize), availableBytes: Number(d.bavail)*Number(d.bsize) }
+    } catch { /* not supported by this host */ }
+    return { at, platform: system.platform(), arch: system.arch(), cpu: { model: cores[0]?.model || null, logicalCores: cores.length, percent:cpuPercent }, memory: { totalBytes:total, availableBytes:free, source:memorySource }, storage, gpu:await gpu().catch(()=>null), temperatureC:null, uptimeSeconds:system.uptime() }
+  }
+}
+const sampleHardware = createHardwareSampler()
 
 function defaultDir() {
   if (process.env.OPENCODE_CONNECT_DIR) return process.env.OPENCODE_CONNECT_DIR
@@ -111,12 +155,12 @@ function createLauncher(deps) {
     return pair
   }
 
-  function readBody(req) {
+  function readBody(req, limit = PAIR_BODY_LIMIT) {
     return new Promise((resolve) => {
       let text = ''
       req.on('data', (chunk) => {
         text += chunk
-        if (text.length > PAIR_BODY_LIMIT) { text = ''; req.destroy() }
+        if (Buffer.byteLength(text) > limit) { text = ''; req.destroy() }
       })
       req.on('end', () => { try { resolve(JSON.parse(text)) } catch { resolve({}) } })
       req.on('error', () => resolve({}))
@@ -143,9 +187,11 @@ function createLauncher(deps) {
       deps.writePair(left === 0 ? null : { ...current, fails: failed })
       return send(res, 403, { ok: false, error: 'wrong code', left })
     }
+    const password = deps.readPassword()
+    if (!password) return send(res, 503, { ok: false, error: 'no password saved yet: run the installer once' })
     deps.writePair(null)
     const state = deps.readState() || {}
-    return send(res, 200, { ok: true, name, password: deps.readPassword(), port: portOf(), launcherPort: Number(state.launcherPort) || portOf() - 1, ...addresses(state) })
+    return send(res, 200, { ok: true, name, password, port: portOf(), launcherPort: Number(state.launcherPort) || portOf() - 1, ...addresses(state) })
   }
 
   const actions = { start, stop, restart: async () => { await stop(); return start() } }
@@ -190,8 +236,35 @@ function createLauncher(deps) {
     // Other coding agents (ACP): the bridge answers its own routes, once the password has been checked above.
     if (route.startsWith('/acp/') && deps.acp) { await deps.acp.handle(req, res, route); return }
     try {
+      if (['/git/inventory','/git/action','/git/file'].includes(route)) {
+        if ((route==='/git/inventory' && req.method!=='GET') || (route==='/git/action' && req.method!=='POST') || (route==='/git/file' && !['GET','PUT'].includes(req.method))) return send(res,405,{ok:false,error:'wrong method'})
+        if (!process.env.AGENTLINK_GIT_ROOTS) return send(res, 403, {ok:false,error:'Git workspace access is not enabled'})
+        let workspace
+        try { workspace = require('./git-workspace.js') } catch { return send(res, 501, {ok:false,error:'update the installer to enable Git inventory'}) }
+        try {
+          const query=new URL(req.url,'http://local').searchParams, cwd=query.get('cwd'), file=query.get('file')
+          let result
+          if(route==='/git/inventory')result=await workspace.inventory(cwd)
+          else if(route==='/git/file'&&req.method==='GET')result=await workspace.readText(cwd,file)
+          else {
+            const body=await readBody(req,2*1024*1024)
+            const readOnly=route==='/git/action'&&['diff','log','files'].includes(body?.action)
+            if(!readOnly&&process.env.AGENTLINK_GIT_WRITE!=='1')return send(res,403,{ok:false,error:'workspace write access is disabled on the computer'})
+            result=route==='/git/action'?await workspace.gitAction(cwd,body):await workspace.writeText(cwd,file,body.text,body.revision)
+          }
+          return send(res,200,{ok:true,...result})
+        }
+        catch (e) { return send(res, e.status || 500, {ok:false,error:e.status ? e.message : 'Git inventory failed'}) }
+      }
+      if (route === '/hardware' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.hardware || sampleHardware)()) })
       if (route === '/status' && req.method === 'GET') return send(res, 200, { ok: true, launcher: VERSION, acp: !!deps.acp, server: await status(), ...addresses(deps.readState() || {}) })
       // Local model (llama.cpp router): state, and load/unload it from the computer's memory.
+      if (route === '/llm/benchmark' && req.method === 'GET') return send(res,200,{ok:true,models:await (deps.llm||llm()).benchmarkModels()})
+      if (route === '/llm/benchmark' && req.method === 'POST') {
+        const body=await readBody(req,8192)
+        const result=await (deps.llm||llm()).benchmark(body.engine,body.model)
+        return send(res,result.ok?200:400,result)
+      }
       if (route === '/llm' && req.method === 'GET') return send(res, 200, { ok: true, ...(await (deps.llm || llm()).llmStatus()) })
       const llmMatch = /^\/llm\/(load|unload)$/.exec(route)
       if (llmMatch) {
@@ -201,10 +274,12 @@ function createLauncher(deps) {
         return send(res, result.ok ? 200 : 400, result)
       }
       const name = route.slice(1)
-      if (actions[name]) {
+      if (Object.hasOwn(actions,name)) {
         if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'use POST' })
-        working = (working || Promise.resolve()).then(() => actions[name]()).finally(() => { working = null })
-        const result = await working
+        const pending = (working || Promise.resolve()).catch(() => undefined).then(() => actions[name]())
+        working = pending
+        let result
+        try { result = await pending } finally { if (working === pending) working = null }
         return send(res, result.error ? 500 : 200, { ok: !result.error, launcher: VERSION, server: result, ...(result.error ? { error: result.error } : {}) })
       }
       return send(res, 404, { ok: false, error: 'not found' })
@@ -243,7 +318,7 @@ function realDeps(dir) {
     },
     startServer(port, password, host) {
       const args = ['serve', '--hostname', host || bindHostOf(this.readState()), '--port', String(port)]
-      const options = { env: { ...process.env, OPENCODE_SERVER_PASSWORD: password }, cwd: os.homedir(), detached: process.platform !== 'win32', stdio: 'ignore', windowsHide: true } // on Windows a detached cmd has no console, so opencode.exe would open its own visible window
+      const options = { env: { ...process.env, OPENCODE_SERVER_USERNAME: 'opencode', OPENCODE_SERVER_PASSWORD: password }, cwd: os.homedir(), detached: process.platform !== 'win32', stdio: 'ignore', windowsHide: true } // on Windows a detached cmd has no console, so opencode.exe would open its own visible window
       const child = process.platform === 'win32' ? spawn('cmd.exe', ['/c', 'opencode', ...args], options) : spawn('opencode', args, options)
       child.on('error', () => {})
       child.unref()
@@ -388,7 +463,7 @@ function main() {
   const deps = realDeps(dir)
   const state = deps.readState()
   const port = Number(process.env.OPENCODE_LAUNCHER_PORT) || Number(state.launcherPort) || (Number(state.port) || 4096) - 1
-  try { deps.acp = require('./acp-bridge.js').createAcpBridge() } catch { /* an older install without the file: no other agents */ }
+  try { const acp = require('./acp-bridge.js'); deps.acp = acp.createAcpBridge({inboxFile:path.join(dir,'acp-inbox.json'),catalogFile:path.join(dir,'acp-sessions.json'),push:acp.createPushSender()}) } catch { /* an older install without the file: no other agents */ }
   if (deps.acp) process.on('exit', () => deps.acp.stopAll())
   const launcher = createLauncher(deps)
   const server = http.createServer((req, res) => { launcher.handle(req, res) })
@@ -423,5 +498,5 @@ function main() {
   })
 }
 
-module.exports = { VERSION, writePairFile, createLauncher, passwordMatches, parseBasic, listenerPids, stopPort, realDeps, bindHostOf, lanAddresses, startLanForward, helloProof }
+module.exports = { createHardwareSampler, VERSION, writePairFile, createLauncher, passwordMatches, parseBasic, listenerPids, stopPort, realDeps, bindHostOf, lanAddresses, startLanForward, helloProof }
 if (require.main === module) main()

@@ -34,6 +34,15 @@ export function useOverallStatus(opts: { sessionId?: string; busy?: boolean } = 
       sessionBusy,
       launcherAvailable: canStartFromPhone(activeConnection),
     }
-    return { info: describeStatus(input), links: chainLinks(input), checkedAt, checking }
+    const info = describeStatus(input)
+    const links = chainLinks(input)
+    // An open event stream proves connectivity, not that the model can answer.
+    const statuses = sessionId ? [sessionStatus[sessionId]] : Object.values(sessionStatus)
+    const retry = busyOverride === undefined && info.status === "online-busy"
+      ? statuses.find((st) => st?.type === "retry")
+      : undefined
+    const retryAttempt = retry?.type === "retry" ? retry.attempt : undefined
+    if (retryAttempt !== undefined) links.agent = "unknown"
+    return { info: retryAttempt === undefined ? info : { ...info, tone: "warn" as const }, links, checkedAt, checking, retryAttempt }
   }, [activeConnection, sseConnected, authError, reconnectAttempts, sessionStatus, lastHealth, checkedAt, checking, sessionId, busyOverride])
 }

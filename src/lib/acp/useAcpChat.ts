@@ -7,7 +7,7 @@ import { deviceLocaleTags } from "../i18n/config"
 import { resolveLocale } from "../i18n/locale-resolve"
 import { replyLanguageInstruction } from "../reply-language"
 import pkg from "../../../package.json"
-import { AcpApiError, sendMessage, startAgent, stopAgent, streamEvents, type AcpTarget } from "./api"
+import { AcpApiError, getAgentQueue, updateAgentQueue, type QueueAction, sendMessage, startAgent, stopAgent, streamEvents, type AcpTarget } from "./api"
 import {
   cancelNotification, initialState, nextHandshakeStep, permissionResponse, promptRequest, reduce, setModeRequest, setModelRequest, unsupportedRequestReply, type AcpState, type RpcMessage,
 } from "./protocol"
@@ -20,6 +20,7 @@ export interface AcpChatParams {
   cwd?: string
   /** Reopen an agent that is already running. */
   existingId?: string
+  resumeId?: string
 }
 
 const RECONNECT_FIRST_MS = 1_000
@@ -35,7 +36,10 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
   const stateRef = useRef<AcpState>(state)
   stateRef.current = state
   const targetRef = useRef(target)
-  targetRef.current = target
+  // A chat belongs to the computer that started it, not the current global selection.
+  // Never send an existing session ID or its messages to a different host.
+  if (!targetRef.current && target) targetRef.current = target
+  const targetAvailable = !!targetRef.current
   const lastSeq = useRef(0) // updated as events are read, ahead of the render
   const idFloor = useRef(1)
   const stepSent = useRef<string | null>(null)
@@ -54,7 +58,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
       .catch((error: unknown) => { if (!cancelled) setFatal(error instanceof Error ? error.message : String(error)) })
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.agent, params.cwd, params.existingId])
+  }, [params.agent, params.cwd, params.existingId, targetAvailable])
 
   // 2. Keep the event stream connected; after a drop, read on from the last event seen.
   useEffect(() => {
@@ -78,6 +82,12 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
               if (event.seq <= lastSeq.current) continue // already read before the drop
               lastSeq.current = event.seq
             }
+            if (event.kind === "gap") {
+              // An incomplete replay cannot safely reconstruct requests or permissions.
+              dispatch(event)
+              setFatal("Session history is incomplete. Reopen the saved session instead.")
+              return
+            }
             if (event.kind === "live") {
               setLink("live")
               delay = RECONNECT_FIRST_MS
@@ -91,7 +101,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
           }
         } catch (error) {
           if (controller.signal.aborted) return
-          if (error instanceof AcpApiError && error.status === 404) {
+          if (error instanceof AcpApiError && [401, 403, 404].includes(error.status)) {
             setFatal(error.message)
             return
           }
@@ -111,14 +121,19 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
   // 3. The handshake, once the backlog has been read (the chat may already exist).
   useEffect(() => {
     const t = targetRef.current
-    if (!t || !handle) return
-    const step = nextHandshakeStep(state, handle.cwd, pkg.version)
+    if (!t || !handle || fatal || link !== "live") return
+    if (params.resumeId && state.handshake === "initialized" && !state.loadSession) { setFatal("ACP session/load is not supported by this agent"); return }
+    const step = nextHandshakeStep(state, handle.cwd, pkg.version, params.resumeId)
     if (!step) return
     const key = `${state.handshake}:${state.nextId}`
     if (stepSent.current === key) return
     stepSent.current = key
-    sendMessage(t, handle.id, step).catch(() => { stepSent.current = null })
-  }, [state, handle])
+    sendMessage(t, handle.id, step).catch((error:unknown) => {
+      // Permanent HTTP errors must be shown instead of silently stalling the handshake.
+      if(error instanceof AcpApiError && [400,401,403,404,409,429].includes(error.status))setFatal(error.message)
+      else stepSent.current=null
+    })
+  }, [state, handle, params.resumeId, fatal, link])
 
   const post = useCallback(async (message: RpcMessage) => {
     const t = targetRef.current
@@ -168,5 +183,7 @@ export function useAcpChat(target: AcpTarget | null, params: AcpChatParams) {
     await post(setModelRequest(id, sessionId, modelConfig.id, value))
   }, [post])
 
-  return { setModel, state, link, fatal, agentId: handle?.id ?? null, send, cancel, answer, setMode, stop }
+  const readQueue=useCallback(async()=>{const t=targetRef.current;if(!t||!handle)throw Error('not connected');return getAgentQueue(t,handle.id)},[handle])
+  const changeQueue=useCallback(async(action:QueueAction)=>{const t=targetRef.current;if(!t||!handle)throw Error('not connected');return updateAgentQueue(t,handle.id,action)},[handle])
+  return { readQueue, changeQueue, setModel, state, link, fatal, agentId: handle?.id ?? null, send, cancel, answer, setMode, stop }
 }
