@@ -10,6 +10,14 @@ $ru=@{
  'Launcher: checking...' = 'Launcher: проверка...'
  'Address: —' = 'Адрес: —'
  'Pairing code: —' = 'Код подключения: —'
+ 'Create desktop shortcut' = 'Создать ярлык на рабочем столе'
+ 'Shortcut created.' = 'Ярлык создан.'
+ 'Could not create shortcut.' = 'Не удалось создать ярлык.'
+ 'Network details' = 'Состояние сети'
+ 'Refresh network details' = 'Обновить состояние сети'
+ 'No selected exit node' = 'Выходной узел не выбран'
+ 'Online' = 'В сети'
+ 'Offline' = 'Не в сети'
  'Connection / setup' = 'Подключение и настройка'
  'Pair / start computer connection' = 'Подключить телефон / запустить сервер'
  'Stop launcher and server' = 'Остановить Launcher и сервер'
@@ -98,6 +106,18 @@ function RunCore([string[]]$arguments){
 $null=Button 'Pair / start computer connection' {RunCore @('--mode',([string]$mode.SelectedItem))}
 $null=Button 'Stop launcher and server' {if(Confirm 'Stop the launcher and server?'){Remove-Item -LiteralPath $policy -Force -ErrorAction SilentlyContinue;RunCore @('--stop')}}
 $null=Button 'Run connection diagnostics' {RunCore @('--doctor')}
+$null=Button 'Create desktop shortcut' {
+ try {
+  $desk=[Environment]::GetFolderPath('DesktopDirectory')
+  $w=New-Object -ComObject WScript.Shell
+  $link=$w.CreateShortcut((Join-Path $desk 'AgentLink.lnk'))
+  $link.TargetPath=Join-Path $PSHOME 'powershell.exe'
+  $link.Arguments='-NoProfile -File "'+(Join-Path $Core 'windows-control.ps1')+'" -NodePath "'+$NodePath+'" -Core "'+$Core+'" -DataDir "'+$DataDir+'"'
+  $link.WorkingDirectory=$Core
+  $link.Save()
+  Notify 'Shortcut created.'
+ }catch{Notify 'Could not create shortcut.'}
+}
 $null=Label 'Phone agent permissions (off by default; one hour)' 13
 $roots=New-Object Windows.Forms.TextBox;$roots.Width=710;$roots.Text=[Environment]::GetFolderPath('MyDocuments');$panel.Controls.Add($roots)
 $null=Button 'Choose allowed folder' {$d=New-Object Windows.Forms.FolderBrowserDialog;try{if($d.ShowDialog($form) -eq 'OK'){$roots.Text=$d.SelectedPath}}finally{$d.Dispose()}}
@@ -118,6 +138,25 @@ $null=Button 'Enable selected permissions for one hour' {
 }
 $null=Button 'Disable remote permissions immediately' {Remove-Item -LiteralPath $policy -Force -ErrorAction SilentlyContinue;Notify 'New remote actions are disabled. Already running commands may finish.'}
 $null=Label 'Internet sharing (system networking)' 13
+$null=Button 'Refresh network details' {
+ try {
+  $lines=@()
+  Get-NetIPConfiguration -ErrorAction SilentlyContinue | ForEach-Object {
+   $lines+=($_.InterfaceAlias+': '+(($_.IPv4Address | ForEach-Object IPAddress) -join ', '))
+  }
+  $ts=Get-Command tailscale.exe -ErrorAction SilentlyContinue
+  if($ts){
+   $raw=& $ts.Source status --json
+   if($LASTEXITCODE -eq 0){
+    $state=$raw | ConvertFrom-Json
+    $lines+=('Tailscale: '+$state.BackendState)
+    if($state.ExitNodeStatus){$lines+=('Exit node: '+(($state.ExitNodeStatus.TailscaleIPs) -join ', ')+' | '+$(if($state.ExitNodeStatus.Online){L 'Online'}else{L 'Offline'}))}
+    else{$lines+=(L 'No selected exit node')}
+   }
+  }else{$lines+=(L 'Tailscale client unavailable.')}
+  Notify ($lines -join [Environment]::NewLine)
+ }catch{Notify 'Could not enumerate exit nodes.'}
+}
 $null=Button 'Open Windows mobile hotspot settings' {Start-Process 'ms-settings:network-mobilehotspot'}
 $null=Button 'Ethernet / Wi-Fi sharing (ICS settings)' {Start-Process 'ncpa.cpl'}
 $null=Button 'Offer this PC as a Tailscale exit node' {
