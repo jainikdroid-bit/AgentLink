@@ -12,11 +12,12 @@ import {validModel,type HfFile} from "../src/lib/phone-models"
 import {generateLocal,installedModel,cancelLocal} from "../src/lib/native-local-models"
 import {parseRemoteProposal,privateRemoteUrl,toolPrompt,type RemoteProposal} from "../src/lib/remote-proposal"
 
-type Status={enabled:boolean;platform:string;until:number;roots:string[];shell:boolean;files:boolean;desktop:boolean;maxFileBytes:number;maxDownloadBytes?:number;downloadChunkBytes?:number}
+type Status={enabled:boolean;platform:string;until:number;roots:string[];shell:boolean;files:boolean;desktop:boolean;maxFileBytes:number;maxDownloadBytes?:number;downloadChunkBytes?:number;maxUploadBytes?:number;uploadChunkBytes?:number}
 type Picked={name:string;base64:string;bytes:number;sha256:string}
-type Result={stdout?:string;stderr?:string;exitCode?:number|null;timedOut?:boolean;truncated?:boolean;entries?:{name:string;directory:boolean}[];jpeg?:string;base64?:string;sha256?:string;bytes?:number;windows?:unknown;controls?:unknown;performed?:boolean;version?:string;offset?:number;chunkBytes?:number}
+type LargePicked={id:string;name:string;bytes:number;sha256:string}
+type Result={stdout?:string;stderr?:string;exitCode?:number|null;timedOut?:boolean;truncated?:boolean;entries?:{name:string;directory:boolean}[];jpeg?:string;base64?:string;sha256?:string;bytes?:number;windows?:unknown;controls?:unknown;performed?:boolean;version?:string;offset?:number;chunkBytes?:number;cancelled?:boolean}
 const libraryKey="agentlink-local-model-library-v1"
-const nativeFiles=()=>{const n=NativeModules.AgentLinkRemoteFiles;if(!n)throw Error("File picker unavailable");return n as {pick():Promise<Picked|null>;save(name:string,base64:string,sha256:string):Promise<boolean|null>;beginDownload?(total:number,hash:string):Promise<string>;appendDownload?(id:string,offset:number,base64:string,hash:string):Promise<number>;finishDownload?(id:string,name:string):Promise<boolean|null>;discardDownload?(id:string):Promise<boolean>}}
+const nativeFiles=()=>{const n=NativeModules.AgentLinkRemoteFiles;if(!n)throw Error("File picker unavailable");return n as {pick():Promise<Picked|null>;save(name:string,base64:string,sha256:string):Promise<boolean|null>;beginDownload?(total:number,hash:string):Promise<string>;appendDownload?(id:string,offset:number,base64:string,hash:string):Promise<number>;finishDownload?(id:string,name:string):Promise<boolean|null>;discardDownload?(id:string):Promise<boolean>;pickLarge?():Promise<LargePicked|null>;readUploadChunk?(id:string,offset:number):Promise<{base64:string;sha256:string;bytes:number}>;discardUpload?(id:string):Promise<boolean>}}
 export default function RemoteControl(){
  const p=useTheme(),{t}=useTranslation(),w=(key:string)=>t("workspace."+key)
  const params=useLocalSearchParams<{hash?:string;connectionId?:string}>()
@@ -108,10 +109,49 @@ export default function RemoteControl(){
  }
  const approve=(body:Record<string,unknown>)=>Alert.alert(w("remoteApprove"),(connections.find(c=>c.id===host)?.name||host)+"\n"+JSON.stringify(body,null,2),[{text:t("common.cancel"),style:"cancel"},{text:w("confirm"),onPress:()=>void run(async()=>{const r=await perform(body);if(r.jpeg)setJpeg(r.jpeg);else setOutput(summarize(r))})}])
  const browse=()=>void run(async()=>{const r=await perform({action:"list",path:folder});setEntries(r.entries||[])})
- const upload=()=>void run(async()=>{const picked=await nativeFiles().pick();if(!picked)return
-  const dest=[folder,picked.name].filter(Boolean).join("/")
-  const yes=await new Promise<boolean>(resolve=>Alert.alert(w("remoteUpload"),dest+" · "+picked.bytes+" bytes",[{text:t("common.cancel"),style:"cancel",onPress:()=>resolve(false)},{text:w("confirm"),onPress:()=>resolve(true)}],{cancelable:false}))
-  if(!yes)return;const r=await perform({action:"upload",path:dest,base64:picked.base64,sha256:picked.sha256});setOutput(summarize(r))
+ const upload=()=>void run(async()=>{
+  const native=nativeFiles()
+  const approveUpload=(dest:string,bytes:number)=>new Promise<boolean>(resolve=>Alert.alert(w("remoteUpload"),dest+" · "+bytes+" bytes",[{text:t("common.cancel"),style:"cancel",onPress:()=>resolve(false)},{text:w("confirm"),onPress:()=>resolve(true)}],{cancelable:false}))
+  if(!status?.uploadChunkBytes||!native.pickLarge||!native.readUploadChunk||!native.discardUpload){
+   const picked=await native.pick();if(!picked)return
+   const dest=[folder,picked.name].filter(Boolean).join("/")
+   if(!await approveUpload(dest,picked.bytes))return
+   const r=await perform({action:"upload",path:dest,base64:picked.base64,sha256:picked.sha256});setOutput(summarize(r))
+   return
+  }
+  transferCancel.current=false
+  const picked=await native.pickLarge();if(!picked)return
+  const path=[folder,picked.name].filter(Boolean).join("/"),transferId=picked.id,total=picked.bytes,chunk=status.uploadChunkBytes
+  let begun=false,finished=false
+  try{
+   if(transferCancel.current)return
+   if(!Number.isSafeInteger(total)||total<0||total>Math.min(status.maxUploadBytes||0,256*1024*1024)||chunk!==512*1024)throw Error(w("failed"))
+   if(!await approveUpload(path,total)||transferCancel.current)return
+   setTransfer({done:0,total})
+   // Mark the attempt before sending: a timeout may still have created a staging session.
+   begun=true
+   const begin=await perform({action:"upload_begin",path,transferId,bytes:total,sha256:picked.sha256})
+   if(begin.offset!==0)throw Error(w("failed"))
+   for(let offset=0;offset<total;){
+    if(transferCancel.current)return
+    const part=await native.readUploadChunk(transferId,offset)
+    if(transferCancel.current)return
+    const expected=Math.min(chunk,total-offset)
+    if(part.bytes!==expected)throw Error(w("failed"))
+    const r=await perform({action:"upload_chunk",path,transferId,offset,base64:part.base64,sha256:part.sha256})
+    if(r.offset!==offset+expected)throw Error(w("failed"))
+    offset=r.offset
+    setTransfer({done:offset,total})
+   }
+   if(transferCancel.current)return
+   const r=await perform({action:"upload_finish",path,transferId})
+   if(r.bytes!==total||r.sha256!==picked.sha256)throw Error(w("failed"))
+   finished=true;setOutput(summarize(r))
+  }finally{
+   if(begun&&!finished)await perform({action:"upload_cancel",path,transferId}).catch(()=>{})
+   await native.discardUpload(transferId).catch(()=>{})
+   setTransfer(null)
+  }
  })
  const download=()=>void run(async()=>{
   const path=[folder,file].filter(Boolean).join("/"),name=file.split("/").pop()||"file",native=nativeFiles()
@@ -158,7 +198,7 @@ export default function RemoteControl(){
  {error?<Text selectable style={{color:p.red}}>{error}</Text>:null}
  <View style={box}><Text style={title}>{w("remoteLocalAgent")}</Text>{models.map(m=>btn((model?.sha256===m.sha256?"✓ ":"")+m.file,()=>{setModel(m);setProposal(null);setResults([])}))}{field(task,v=>{setTask(v);setProposal(null);setResults([]);setAnswer("")},w("taskDescription"),true)}{btn(w("remotePropose"),propose,!enabled||!model||!task.trim()||!!proposal||results.length>=6)}{proposal&&<><Text selectable style={txt}>{JSON.stringify(proposal,null,2)}</Text>{btn(w("remoteApprove"),executeProposal)}{btn(t("common.cancel"),()=>setProposal(null))}</>}{answer?<Text selectable style={txt}>{answer}</Text>:null}<Text style={{color:p.muted}}>{results.length}/6</Text>{results.map((r,i)=><Text key={i} selectable style={{color:p.muted,fontSize:12}}>{r}</Text>)}</View>
  <View style={box}><Text style={title}>{w("remoteShell")}</Text>{field(folder,v=>{setFolder(v);setEntries([]);setProposal(null);setResults([])},w("remoteFolder"))}{field(command,setCommand,status?.platform==="win32"?"Get-Location":"pwd",true)}{btn(w("remoteApprove"),()=>approve({action:"shell",command,path:folder}),!enabled||!status?.shell||!command.trim())}</View>
- <View style={box}><Text style={title}>{w("remoteFiles")}</Text><Text style={{color:p.muted}}>{w("remoteFileLimit")}{status?.maxDownloadBytes&&status.downloadChunkBytes?" · ↓ "+Math.floor(status.maxDownloadBytes/1048576)+" MiB":""}</Text>{transfer&&<><Text style={txt}>{(transfer.done/1048576).toFixed(1)} / {(transfer.total/1048576).toFixed(1)} MiB</Text><View style={{height:6,backgroundColor:p.surface2,borderRadius:4,overflow:"hidden"}}><View style={{height:6,backgroundColor:p.cyan,width:(transfer.total>0?Math.min(100,100*transfer.done/transfer.total)+"%":"0%") as `${number}%`}}/></View><TouchableOpacity onPress={()=>{transferCancel.current=true}}><Text style={{color:p.amber}}>{t("common.cancel")}</Text></TouchableOpacity></>}{btn(w("browseFiles"),browse,!enabled||!status?.files)}{entries.map(e=>btn((e.directory?"📁 ":"")+e.name,()=>{if(e.directory){setFolder([folder,e.name].filter(Boolean).join("/"));setEntries([]);setFile("")}else setFile(e.name)}))}{field(file,setFile,w("file"))}{btn(w("remoteDownload"),download,!enabled||!status?.files||!file.trim())}{btn(w("remoteUpload"),upload,!enabled||!status?.files)}</View>
+ <View style={box}><Text style={title}>{w("remoteFiles")}</Text><Text style={{color:p.muted}}>{status?.maxDownloadBytes&&status.downloadChunkBytes?"↓ "+Math.floor(status.maxDownloadBytes/1048576)+" MiB · ↑ "+Math.floor((status.maxUploadBytes||status.maxFileBytes)/1048576)+" MiB · SHA-256":w("remoteFileLimit")}</Text>{transfer&&<><Text style={txt}>{(transfer.done/1048576).toFixed(1)} / {(transfer.total/1048576).toFixed(1)} MiB</Text><View style={{height:6,backgroundColor:p.surface2,borderRadius:4,overflow:"hidden"}}><View style={{height:6,backgroundColor:p.cyan,width:(transfer.total>0?Math.min(100,100*transfer.done/transfer.total)+"%":"0%") as `${number}%`}}/></View><TouchableOpacity onPress={()=>{transferCancel.current=true}}><Text style={{color:p.amber}}>{t("common.cancel")}</Text></TouchableOpacity></>}{btn(w("browseFiles"),browse,!enabled||!status?.files)}{entries.map(e=>btn((e.directory?"📁 ":"")+e.name,()=>{if(e.directory){setFolder([folder,e.name].filter(Boolean).join("/"));setEntries([]);setFile("")}else setFile(e.name)}))}{field(file,setFile,w("file"))}{btn(w("remoteDownload"),download,!enabled||!status?.files||!file.trim())}{btn(w("remoteUpload"),upload,!enabled||!status?.files)}</View>
  <View style={box}><Text style={title}>{w("remoteDesktop")}</Text>{btn(w("remoteWindows"),()=>approve({action:"windows"}),!enabled||!status?.desktop)}{field(pid,setPid,"PID")}{btn(w("remoteActivate"),()=>approve({action:"activate",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteInspect"),()=>approve({action:"inspect",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteScreenshot"),()=>approve({action:"screenshot"}),!enabled||!status?.desktop)}{jpeg?<Image resizeMode="contain" source={{uri:"data:image/jpeg;base64,"+jpeg}} style={{width:"100%",height:220}}/>:null}{field(x,setX,"X 0–1000")}{field(y,setY,"Y 0–1000")}{btn(w("remoteClick"),()=>approve({action:"click",x:Number(x),y:Number(y)}),!enabled||!status?.desktop||!x.trim()||!y.trim())}<View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>{["enter","escape","tab","up","down","left","right","backspace","space"].map(key=>btn(key,()=>approve({action:"key",key}),!enabled||!status?.desktop))}</View></View>
  {output?<Text selectable style={{color:p.text,fontFamily:p.mono,fontSize:12}}>{output}</Text>:null}
  {busy&&<TouchableOpacity onPress={()=>void cancelLocal().catch(()=>{})}><Text style={{color:p.amber,padding:10}}>{t("common.cancel")} · {w("remoteLocalAgent")}</Text></TouchableOpacity>}
