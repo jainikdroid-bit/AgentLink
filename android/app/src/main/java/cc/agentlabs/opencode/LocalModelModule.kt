@@ -33,7 +33,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     private external fun nativeAvailable(): Boolean
     private external fun nativeReset()
     private external fun nativeCancel()
-    private external fun nativeGenerate(file: ByteArray, input: ByteArray, context: Int, threads: Int, limit: Int, memoryBudget: Long): Array<ByteArray>
+    private external fun nativeGenerate(file: ByteArray, input: Array<ByteArray>, context: Int, threads: Int, limit: Int, memoryBudget: Long): Array<ByteArray>
     @Suppress("unused") private fun nativePreview(bytes: ByteArray) { partialText = bytes.toString(Charsets.UTF_8) }
     override fun getName() = "AgentLinkLocalModels"
 
@@ -50,6 +50,59 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     }
     private fun thermal(): Int =
         if (Build.VERSION.SDK_INT >= 29) (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).currentThermalStatus else -1
+
+    // Android Keystore key is non-exportable. No plaintext fallback or backup.
+    private val vaultLock = Any()
+    private fun vaultFile(name: String): android.util.AtomicFile {
+        require(name.matches(Regex("[a-z0-9_-]{1,100}"))) { "Invalid vault name" }
+        val dir = File(ctx.noBackupFilesDir, "agentlink-vault").apply { mkdirs() }
+        return android.util.AtomicFile(File(dir, name + ".bin"))
+    }
+    private fun vaultKey(create: Boolean): javax.crypto.SecretKey {
+        val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val alias = "agentlink-local-vault-v1"
+        val existing = store.getKey(alias, null) as? javax.crypto.SecretKey
+        if (existing != null) return existing
+        check(create) { "History encryption key unavailable" }
+        val generator = javax.crypto.KeyGenerator.getInstance("AES", "AndroidKeyStore")
+        generator.init(android.security.keystore.KeyGenParameterSpec.Builder(alias,
+            android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256).build())
+        return generator.generateKey()
+    }
+    @ReactMethod fun vaultRead(name: String, promise: Promise) {
+        try { synchronized(vaultLock) {
+            val file = vaultFile(name)
+            if (!file.baseFile.exists()) { promise.resolve(null); return@synchronized }
+            val data = file.readFully()
+            require(data.size in 29..(1024 * 1024 + 64) && data[0] == 1.toByte()) { "Invalid encrypted history" }
+            val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, vaultKey(false), javax.crypto.spec.GCMParameterSpec(128, data.copyOfRange(1,13)))
+            cipher.updateAAD(name.toByteArray(Charsets.UTF_8))
+            promise.resolve(cipher.doFinal(data,13,data.size-13).toString(Charsets.UTF_8))
+        } } catch (e: Exception) { promise.reject("vault_read", e) }
+    }
+    @ReactMethod fun vaultWrite(name: String, value: String, promise: Promise) {
+        try { synchronized(vaultLock) {
+            val raw = value.toByteArray(Charsets.UTF_8)
+            require(raw.size <= 1024*1024) { "History storage limit" }
+            val file = vaultFile(name)
+            val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, vaultKey(!file.baseFile.exists()))
+            cipher.updateAAD(name.toByteArray(Charsets.UTF_8))
+            check(cipher.iv.size == 12)
+            val payload = byteArrayOf(1) + cipher.iv + cipher.doFinal(raw)
+            val out = file.startWrite()
+            try { out.write(payload); file.finishWrite(out) } catch (e: Exception) { file.failWrite(out); throw e }
+            promise.resolve(null)
+        } } catch (e: Exception) { promise.reject("vault_write", e) }
+    }
+    @ReactMethod fun vaultRemove(name: String, promise: Promise) {
+        try { synchronized(vaultLock) { vaultFile(name).delete(); promise.resolve(null) } }
+        catch (e: Exception) { promise.reject("vault_remove", e) }
+    }
 
     @ReactMethod fun stats(promise: Promise) {
         try {
@@ -193,7 +246,22 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     @ReactMethod fun generate(hash: String, prompt: String, context: Int, threads: Int, limit: Int, promise: Promise) =
         task("generate", promise) {
             check(engine) { "Native model engine unavailable for this ABI" }
-            require(prompt.isNotBlank() && prompt.length <= 8000 && !prompt.contains('\u0000')) { "Invalid prompt" }
+            require(prompt.length <= 128000) { "Conversation too large" }
+            val json = org.json.JSONArray(prompt)
+            require(json.length() in 1..31 && json.length() % 2 == 1) { "Invalid chat turns" }
+            val messages = ArrayList<ByteArray>()
+            var total = 0
+            for (i in 0 until json.length()) {
+                val message = json.getJSONObject(i)
+                val role = message.getString("role")
+                val content = message.getString("content")
+                require(role == (if(i % 2 == 0) "user" else "assistant") && content.isNotBlank() && !content.contains('\u0000')) { "Invalid chat message" }
+                val data = content.toByteArray(Charsets.UTF_8)
+                total += data.size
+                require(total <= 32000) { "Conversation exceeds input limit" }
+                messages.add(role.toByteArray(Charsets.UTF_8)); messages.add(data)
+            }
+            val input = messages.toTypedArray()
             require(context in listOf(1024,2048,4096) && threads in 1..8 && limit in 1..512) { "Invalid generation settings" }
             val model = file(hash)
             check(model.isFile && isGguf(model)) { "Download this model first" }
@@ -210,9 +278,9 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
                 power.addThermalStatusListener(listener)
                 try {
                     checkCancelled()
-                    nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), prompt.toByteArray(Charsets.UTF_8), context, threads, limit, mem.availMem)
+                    nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), input, context, threads, limit, mem.availMem)
                 } finally { power.removeThermalStatusListener(listener) }
-            } else nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), prompt.toByteArray(Charsets.UTF_8), context, threads, limit, mem.availMem)
+            } else nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), input, context, threads, limit, mem.availMem)
             val map = Arguments.createMap()
             map.putString("text", result[0].toString(Charsets.UTF_8))
             map.putString("metrics", result[1].toString(Charsets.UTF_8))
