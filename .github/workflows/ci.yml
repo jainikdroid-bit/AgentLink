@@ -40,7 +40,7 @@ jobs:
 
   native-tailnet:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -53,7 +53,7 @@ jobs:
         working-directory: native/tsnet
         run: go test ./...
       - uses: android-actions/setup-android@v3
-      - run: sdkmanager "ndk;27.1.12297006"
+      - run: sdkmanager "ndk;27.1.12297006" "cmake;3.22.1"
       - name: Build Android Tailscale AAR
         shell: bash
         run: |
@@ -66,3 +66,58 @@ jobs:
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.1.12297006"
           sh native/tsnet/build.sh
           test -s android/app/libs/tsnetbridge.aar
+      - name: Preserve freshly built Tailscale library
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsnetbridge-${{ github.sha }}
+          path: android/app/libs/tsnetbridge.aar
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Build offline editor and companion assets
+        run: |
+          npm run build:editor
+          node scripts/build-companions3d.mjs
+      - name: Assemble Android APK with freshly built native bridge
+        working-directory: android
+        run: bash ./gradlew :app:assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
+      - name: Check APK outputs without publishing a release
+        shell: bash
+        run: |
+          set -euo pipefail
+          find android/app/build/outputs/apk/release -name '*.apk' -type f -size +0c -print
+          test -n "$(find android/app/build/outputs/apk/release -name '*arm64-v8a*.apk' -type f -size +0c -print -quit)"
+
+  windows-control:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse Windows PowerShell scripts without executing them
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @('tools/windows-control.ps1', 'tools/opencode-connect.ps1')) {
+            $tokens = $null
+            $errors = $null
+            $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path).Path, [ref]$tokens, [ref]$errors)
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Host "$path : $($_.Extent.StartLineNumber): $($_.Message)" }
+              throw "PowerShell syntax check failed: $path"
+            }
+          }
+      - name: Test remote control module
+        run: node --test tools/remote-control.test.js
