@@ -34,6 +34,10 @@ func resetExitPrefs(s *tsnet.Server) error {
  defer cancel()
  prefs,err:=lc.GetPrefs(ctx)
  if err!=nil{return err}
+ if prefs==nil{return fmt.Errorf("tailnet preferences unavailable")}
+ stale:=prefs.ExitNodeID!=""||prefs.ExitNodeIP.IsValid()||prefs.AutoExitNode!=""
+ for _,route:=range prefs.AdvertiseRoutes{if route.Bits()==0{stale=true}}
+ if !stale{return nil}
  prefs.SetAdvertiseExitNode(false)
  // Explicitly remove stale default routes even on a build without advertising support.
  routes:=prefs.AdvertiseRoutes[:0]
