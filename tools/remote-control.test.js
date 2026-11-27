@@ -57,3 +57,44 @@ test('launcher cannot auto-restart while an approved remote operation is active'
   assert.equal(service.isWorking(),false)
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 })
+
+test('chunked download beyond legacy limit, integrity, mutation and permission revocation',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'agentlink-chunked-'))
+ try{
+  const root=path.join(dir,'project');await fs.mkdir(root)
+  const file=path.join(root,'large.bin'),data=crypto.randomBytes(5*1024*1024+123)
+  await fs.writeFile(file,data)
+  const policyFile=path.join(dir,'remote-control.json')
+  await fs.writeFile(policyFile,JSON.stringify({until:Date.now()+60000,roots:[root],files:true}))
+  const service=createRemoteControl({dir,readState:()=>({mode:'lan'})})
+  const req={socket:{remoteAddress:'192.168.0.2'}}
+  const action=(action,extra={})=>service.act(req,{action,root:0,path:'large.bin',...extra})
+  const info=await action('download_info')
+  assert.equal(info.bytes,data.length)
+  assert.equal(info.sha256,crypto.createHash('sha256').update(data).digest('hex'))
+  assert.equal(info.chunkBytes,512*1024)
+  assert.equal((await service.status(req)).maxDownloadBytes,256*1024*1024)
+  await assert.rejects(action('download'),{status:413})
+  await assert.rejects(action('download_chunk',{version:info.version,offset:1}),{status:400})
+  await assert.rejects(action('download_chunk',{version:'stale',offset:0}),{status:409})
+  const hash=crypto.createHash('sha256')
+  for(let offset=0;offset<data.length;offset+=info.chunkBytes){
+   const chunk=await action('download_chunk',{version:info.version,offset})
+   const decoded=Buffer.from(chunk.base64,'base64')
+   assert.equal(chunk.offset,offset)
+   assert.equal(chunk.version,info.version)
+   assert.equal(chunk.sha256,crypto.createHash('sha256').update(decoded).digest('hex'))
+   assert.deepEqual(decoded,data.subarray(offset,offset+info.chunkBytes))
+   hash.update(decoded)
+  }
+  assert.equal(hash.digest('hex'),info.sha256)
+  await fs.appendFile(file,'changed')
+  await assert.rejects(action('download_chunk',{version:info.version,offset:0}),{status:409})
+  await fs.writeFile(path.join(root,'empty'),'')
+  const empty=await action('download_info',{path:'empty'})
+  assert.equal(empty.bytes,0)
+  assert.equal(empty.sha256,crypto.createHash('sha256').digest('hex'))
+  await fs.rm(policyFile)
+  await assert.rejects(action('download_info'),{status:403})
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+})
