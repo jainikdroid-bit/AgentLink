@@ -216,11 +216,11 @@ function createSecureJournal(file) {
         try{const dir=fs.openSync(path.dirname(file),'r');try{fs.fsyncSync(dir)}finally{fs.closeSync(dir)}}catch{}
       }finally{try{fs.rmSync(tmp,{force:true})}catch{}}
     }
-    state=next
+    state=JSON.parse(JSON.stringify(next))
   }
   return {
     health:()=>({durable:!!file&&!fault,error:fault}),
-    get:(agent,cwd,sessionId)=>state[id(agent,cwd,sessionId)]||null,
+    get:(agent,cwd,sessionId)=>{const saved=state[id(agent,cwd,sessionId)];return saved?JSON.parse(JSON.stringify(saved)):null},
     list:()=>Object.values(state).map(({agent,cwd,sessionId,items,uncertain,at})=>({agent,cwd,sessionId,pending:items.length,uncertain:!!uncertain,at})),
     save:(session)=>{
       if(!session.protocolSessionId)return
@@ -242,7 +242,7 @@ function createAcpBridge(deps = {}) {
   const inbox = createInbox(deps.inboxFile,now)
   const catalog = createSessionCatalog(deps.catalogFile,now)
   const journal = createSecureJournal(deps.journalFile)
-  function persist(session){try{journal.save(session);return true}catch{session.queuePaused=true;session.journalFailed=true;return false}}
+  function persist(session){try{journal.save(session);session.journalFailed=false;return true}catch{session.queuePaused=true;session.journalFailed=true;return false}}
   function restore(session){const saved=journal.get(session.agent,session.cwd,session.protocolSessionId);if(!saved)return;session.queue=saved.items;session.queueIds=new Map(saved.ids);session.queueInFlight=saved.uncertain;session.visibleHistory=saved.history||[];session.queuePaused=true}
   function visible(session,role,text){if(typeof text!=='string'||!text)return;const last=session.visibleHistory.at(-1);if(role==='assistant'&&last?.role==='assistant')last.text=(last.text+text).slice(-16000);else session.visibleHistory.push({role,text:text.slice(0,16000)});session.visibleHistory=session.visibleHistory.slice(-200)}
   const push = deps.push || {enabled:false,send:()=>{}}
@@ -303,7 +303,7 @@ function createAcpBridge(deps = {}) {
   // Queue belongs to the live host process, not the mobile screen. Do not replay
   // queued prompts after process death or an uncertain/failed/cancelled turn.
   function drainQueue(session) {
-    if(session.exited||session.queuePaused||session.queueInFlight||!session.protocolSessionId||session.prompts.size||session.pending.size||!session.queue.length||session.child.stdin.destroyed)return
+    if(session.exited||session.journalFailed||session.queuePaused||session.queueInFlight||!session.protocolSessionId||session.prompts.size||session.pending.size||!session.queue.length||session.child.stdin.destroyed)return
     const item=session.queue.shift()
     session.queueInFlight=item
     if(!persist(session)){session.queue.unshift(item);session.queueInFlight=null;return}
@@ -317,7 +317,7 @@ function createAcpBridge(deps = {}) {
     catch{session.queuePaused=true;notify('errors',session)}
   }
   async function queueRoute(req,res,session){
-    if(req.method==='GET')return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused,uncertain:session.queueInFlight,journalFailed:!!session.journalFailed})
+    if(req.method==='GET')return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused,uncertain:session.prompts.size?null:session.queueInFlight,journalFailed:!!session.journalFailed})
     if(req.method!=='POST')return send(res,405,{ok:false,error:'wrong method'})
     if(session.exited)return send(res,409,{ok:false,error:'agent stopped'})
     const body=await readBody(req,65536)
@@ -478,7 +478,7 @@ function createAcpBridge(deps = {}) {
     }else if(key!==null){
       const hash=crypto.createHash('sha256').update(text).digest('hex')
       if(session.sentIds.has(key))return send(res,session.sentIds.get(key)===hash?200:409,session.sentIds.get(key)===hash?{ok:true,duplicate:true}:{ok:false,error:'RPC id already used'})
-      if(message.method==='session/prompt'&&(session.prompts.size||session.pending.size||session.queue.length))return send(res,409,{ok:false,error:'agent busy or messages queued; use the queue'})
+      if(message.method==='session/prompt'&&(session.prompts.size||session.pending.size||session.queue.length||session.queueInFlight||session.queuePaused))return send(res,409,{ok:false,error:'agent busy or messages queued; use the queue'})
       if(session.sentIds.size>=20000)return send(res,409,{ok:false,error:'session request limit reached; resume in a new agent'})
       session.sentIds.set(key,hash)
       session.requests.set(key,{method:message.method,sessionId:message.method==='session/load'?message.params?.sessionId:undefined})
@@ -498,6 +498,7 @@ function createAcpBridge(deps = {}) {
     try {
       if(route==='/acp/journal'&&req.method==='GET')return send(res,200,{ok:true,...journal.health(),sessions:journal.list()}),true
       if(route==='/acp/history'&&req.method==='GET'){const saved=journal.get(url.searchParams.get('agent'),url.searchParams.get('cwd'),url.searchParams.get('sessionId'));return send(res,200,{ok:true,history:saved?.history||[]}),true}
+      if(route==='/acp/history'&&req.method==='DELETE'){const agent=url.searchParams.get('agent'),cwd=url.searchParams.get('cwd'),id=url.searchParams.get('sessionId');if([...sessions.values()].some(s=>!s.exited&&s.agent===agent&&s.cwd===cwd&&s.protocolSessionId===id))return send(res,409,{ok:false,error:'close active session before deleting archive'}),true;journal.remove(agent,cwd,id);return send(res,200,{ok:true}),true}
       if (route === '/acp/saved' && req.method === 'GET') return send(res,200,{ok:true,sessions:catalog.list()}),true
       if (route === '/acp/inbox' && req.method === 'GET') return send(res,200,{ok:true,events:inbox.list(),pushConfigured:push.enabled}),true
       if (route === '/acp/agents' && req.method === 'GET') return agentsRoute(res), true
