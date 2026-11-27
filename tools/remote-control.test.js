@@ -98,3 +98,58 @@ test('chunked download beyond legacy limit, integrity, mutation and permission r
   await assert.rejects(action('download_info'),{status:403})
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 })
+
+test('staged upload beyond legacy limit, checksum, exclusive publish and cancellation',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'agentlink-upload-'))
+ try{
+  const root=path.join(dir,'project');await fs.mkdir(root)
+  const policyFile=path.join(dir,'remote-control.json')
+  const grant={until:Date.now()+60000,roots:[root],files:true}
+  await fs.writeFile(policyFile,JSON.stringify(grant))
+  const service=createRemoteControl({dir,readState:()=>({mode:'lan'})})
+  const req={socket:{remoteAddress:'192.168.0.2'}}
+  const data=crypto.randomBytes(5*1024*1024+33),hash=b=>crypto.createHash('sha256').update(b).digest('hex')
+  const sha256=hash(data)
+  let transferId=crypto.randomUUID(),name='large.bin'
+  const action=(action,extra={})=>service.act(req,{action,root:0,path:name,transferId,...extra})
+  const begin=()=>action('upload_begin',{bytes:data.length,sha256})
+  assert.equal((await service.status(req)).maxUploadBytes,256*1024*1024)
+  await begin()
+  await assert.rejects(fs.stat(path.join(root,name)),{code:'ENOENT'})
+  await assert.rejects(action('upload_finish'),{status:409})
+  transferId=crypto.randomUUID();await begin()
+  const first=data.subarray(0,512*1024)
+  await assert.rejects(action('upload_chunk',{offset:0,base64:first.toString('base64'),sha256:'0'.repeat(64)}),{status:400})
+  await assert.rejects(action('upload_finish'),{status:409})
+  transferId=crypto.randomUUID();await begin()
+  for(let offset=0;offset<data.length;offset+=512*1024){
+   const part=data.subarray(offset,offset+512*1024)
+   const result=await action('upload_chunk',{offset,base64:part.toString('base64'),sha256:hash(part)})
+   assert.equal(result.offset,offset+part.length)
+  }
+  assert.deepEqual(await action('upload_finish'),{bytes:data.length,sha256})
+  assert.deepEqual(await fs.readFile(path.join(root,name)),data)
+  transferId=crypto.randomUUID()
+  await assert.rejects(begin(),{status:409})
+  name='cancelled.bin';transferId=crypto.randomUUID();await begin()
+  assert.equal((await action('upload_cancel')).cancelled,true)
+  await assert.rejects(action('upload_finish'),{status:409})
+  assert.deepEqual(await fs.readdir(path.join(dir,'remote-upload-staging')),[])
+  await assert.rejects(fs.stat(path.join(root,name)),{code:'ENOENT'})
+  name='race.bin';transferId=crypto.randomUUID()
+  const emptyHash=hash(Buffer.alloc(0))
+  await action('upload_begin',{bytes:0,sha256:emptyHash})
+  await fs.writeFile(path.join(root,name),'existing')
+  await assert.rejects(action('upload_finish'),{status:409})
+  assert.equal(await fs.readFile(path.join(root,name),'utf8'),'existing')
+  name='empty.bin';transferId=crypto.randomUUID()
+  await action('upload_begin',{bytes:0,sha256:emptyHash})
+  assert.deepEqual(await action('upload_finish'),{bytes:0,sha256:emptyHash})
+  name='revoked.bin';transferId=crypto.randomUUID()
+  await action('upload_begin',{bytes:0,sha256:emptyHash})
+  await fs.writeFile(policyFile,JSON.stringify({...grant,until:grant.until+1}))
+  await assert.rejects(action('upload_finish'),{status:403})
+  await assert.rejects(fs.stat(path.join(root,name)),{code:'ENOENT'})
+  assert.deepEqual(await fs.readdir(path.join(dir,'remote-upload-staging')),[])
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+})
