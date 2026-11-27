@@ -48,7 +48,7 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeReset(JNIEnv *, jobject) { can
 extern "C" JNIEXPORT void JNICALL
 Java_cc_agentlabs_opencode_LocalModelModule_nativeCancel(JNIEnv *, jobject) { cancelled.store(true); }
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject self, jbyteArray file, jbyteArray input, jint context, jint threads, jint limit, jlong memoryBudget) {
+Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject self, jbyteArray file, jobjectArray input, jint context, jint threads, jint limit, jlong memoryBudget) {
 #ifndef AGENTLINK_LLAMA
     fail(env, "Local inference requires a 64-bit Android build");
     return nullptr;
@@ -57,8 +57,22 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject 
         if (context < 1024 || context > 4096 || threads < 1 || threads > 8 || limit < 1 || limit > 512) throw std::runtime_error("Invalid inference parameters");
         std::call_once(backend, [] { llama_backend_init(); });
         const auto path = bytes(env, file);
-        const auto user = bytes(env, input);
-        if (user.empty() || user.size() > 32000 || user.find('\0') != std::string::npos) throw std::runtime_error("Invalid prompt");
+        if (!input) throw std::runtime_error("Missing messages");
+        const int n = env->GetArrayLength(input);
+        if(n < 2 || n > 62 || n % 2) throw std::runtime_error("Invalid message count");
+        std::vector<std::string> parts; parts.reserve(n);
+        size_t total=0;
+        for(int i=0;i<n;i++){
+            auto item=static_cast<jbyteArray>(env->GetObjectArrayElement(input,i));
+            auto part=bytes(env,item);env->DeleteLocalRef(item);
+            if(part.empty()||part.find('\0')!=std::string::npos)throw std::runtime_error("Invalid message");
+            if(i%2==0&&part!=((i/2)%2==0?"user":"assistant"))throw std::runtime_error("Invalid role");
+            total+=part.size();if(total>32500)throw std::runtime_error("Conversation too large");
+            parts.push_back(std::move(part));
+        }
+        if(parts[parts.size()-2]!="user")throw std::runtime_error("Last message must be user");
+        std::vector<llama_chat_message> messages;
+        for(int i=0;i<n;i+=2)messages.push_back({parts[i].c_str(),parts[i+1].c_str()});
         auto mp = llama_model_default_params();
         mp.n_gpu_layers = 0; mp.use_mmap = true; mp.use_mlock = false; mp.progress_callback = progress;
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(llama_model_load_from_file(path.c_str(), mp), llama_model_free);
@@ -71,11 +85,10 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject 
         if (llama_model_has_encoder(model.get())) throw std::runtime_error("Encoder-decoder models are not supported");
         const char *tmpl = llama_model_chat_template(model.get(), nullptr);
         if (!tmpl) throw std::runtime_error("GGUF has no supported chat template");
-        llama_chat_message msg{"user", user.c_str()};
-        int length = llama_chat_apply_template(tmpl, &msg, 1, true, nullptr, 0);
+        int length = llama_chat_apply_template(tmpl, messages.data(), messages.size(), true, nullptr, 0);
         if (length <= 0 || length > 1000000) throw std::runtime_error("Unsupported chat template");
         std::vector<char> formatted(length + 1);
-        if (llama_chat_apply_template(tmpl, &msg, 1, true, formatted.data(), static_cast<int>(formatted.size())) != length) throw std::runtime_error("Chat template error");
+        if (llama_chat_apply_template(tmpl, messages.data(), messages.size(), true, formatted.data(), static_cast<int>(formatted.size())) != length) throw std::runtime_error("Chat template error");
         const auto *vocab = llama_model_get_vocab(model.get());
         int count = -llama_tokenize(vocab, formatted.data(), length, nullptr, 0, true, true);
         if (count <= 0 || count + limit > context) throw std::runtime_error("Prompt exceeds context; reduce prompt or output length");
