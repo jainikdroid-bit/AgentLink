@@ -5,6 +5,9 @@ const {spawn,execFile}=require('node:child_process')
 const {promisify}=require('node:util')
 const exec=promisify(execFile)
 const MAX_FILE=4*1024*1024,MAX_OUTPUT=64*1024
+const MAX_DOWNLOAD=256*1024*1024,CHUNK=512*1024
+const snapshot=st=>crypto.createHash('sha256').update([st.dev,st.ino,st.size,st.mtimeMs,st.ctimeMs].join(':')).digest('hex')
+const sha256=data=>crypto.createHash('sha256').update(data).digest('hex')
 const problem=(status,message)=>Object.assign(Error(message),{status})
 function inside(root,target){const rel=path.relative(root,target);return rel===''||(!path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep))}
 function relative(value){
@@ -106,7 +109,7 @@ function createRemoteControl({dir,readState,clock=Date.now}){
  async function status(req){
   if(!privateAddress(req.socket.remoteAddress)||readState()?.mode==='tunnel')throw problem(403,'Remote control requires a trusted LAN or private tailnet')
   const p=await policy(dir,clock())
-  return {enabled:!!p,platform:process.platform,until:p?.until||0,roots:p?.roots||[],shell:!!p?.shell,files:!!p?.files,desktop:!!p?.desktop,maxFileBytes:MAX_FILE}
+  return {enabled:!!p,platform:process.platform,until:p?.until||0,roots:p?.roots||[],shell:!!p?.shell,files:!!p?.files,desktop:!!p?.desktop,maxFileBytes:MAX_FILE,maxDownloadBytes:MAX_DOWNLOAD,downloadChunkBytes:CHUNK}
  }
  async function perform(req,body){
   const p=await status(req)
@@ -118,6 +121,45 @@ function createRemoteControl({dir,readState,clock=Date.now}){
    const base=await locate(p.roots,body.root,body.path||'',{directory:true})
    const rows=await fs.readdir(base,{withFileTypes:true})
    return {entries:rows.filter(e=>!e.isSymbolicLink()&&(e.isDirectory()||e.isFile())).slice(0,500).map(e=>({name:e.name,directory:e.isDirectory()})),truncated:rows.length>500}
+  }
+  // Chunked download is read-only and tied to the same file identity on every request.
+  // It never opens an arbitrary URL or bypasses the local file permission.
+  if(action==='download_info'||action==='download_chunk'){
+   if(!p.files)throw problem(403,'File access disabled')
+   const file=await locate(p.roots,body.root,body.path)
+   const fd=await fs.open(file,require('node:fs').constants.O_RDONLY|(require('node:fs').constants.O_NOFOLLOW||0))
+   try{
+    const st=await fd.stat()
+    if(!st.isFile()||st.nlink!==1||st.size>MAX_DOWNLOAD)throw problem(413,'File exceeds download limit')
+    const version=snapshot(st)
+    let result
+    if(action==='download_info'){
+     const hash=crypto.createHash('sha256'),buf=Buffer.alloc(CHUNK)
+     let offset=0
+     while(offset<st.size){
+      const {bytesRead}=await fd.read(buf,0,Math.min(CHUNK,st.size-offset),offset)
+      if(!bytesRead)throw problem(409,'File changed during download')
+      hash.update(buf.subarray(0,bytesRead));offset+=bytesRead
+     }
+     result={bytes:st.size,version,sha256:hash.digest('hex'),chunkBytes:CHUNK}
+    }else{
+     if(body.version!==version)throw problem(409,'File changed during download')
+     if(!Number.isSafeInteger(body.offset)||body.offset<0||body.offset>=st.size||body.offset%CHUNK!==0)throw problem(400,'Invalid download offset')
+     const data=Buffer.alloc(Math.min(CHUNK,st.size-body.offset))
+     let read=0
+     while(read<data.length){
+      const {bytesRead}=await fd.read(data,read,data.length-read,body.offset+read)
+      if(!bytesRead)throw problem(409,'File changed during download')
+      read+=bytesRead
+     }
+     result={base64:data.toString('base64'),bytes:read,sha256:sha256(data),version,offset:body.offset}
+    }
+    const end=await fd.stat()
+    if(snapshot(end)!==version||end.nlink!==1)throw problem(409,'File changed during download')
+    const fresh=await status(req)
+    if(!fresh.files||fresh.until!==p.until||JSON.stringify(fresh.roots)!==JSON.stringify(p.roots))throw problem(403,'Remote permission changed')
+    return result
+   }finally{await fd.close()}
   }
   if(action==='download'){
    if(!p.files)throw problem(403,'File access disabled')
