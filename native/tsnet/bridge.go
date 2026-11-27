@@ -71,6 +71,11 @@ func watch(s *tsnet.Server) {
 		setErr(err.Error())
 		return
 	}
+	if err := resetExitForStart(s); err != nil {
+		setErr("exit preferences: " + err.Error())
+		_ = s.Close()
+		return
+	}
 	lc, err := s.LocalClient()
 	if err != nil {
 		setErr(err.Error())
@@ -154,6 +159,7 @@ func Forward(target string) (int, error) {
 }
 
 func Logout() error {
+	_ = SetExitMode("off", "")
 	g.mu.Lock()
 	s := g.srv
 	g.mu.Unlock()
@@ -168,14 +174,18 @@ func Logout() error {
 }
 
 func Stop() {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	for _, l := range g.fwds {
-		l.Close()
-	}
-	g.fwds = nil
-	if g.srv != nil {
-		g.srv.Close()
-	}
-	g.srv, g.ready = nil, false
+ exitMu.Lock()
+ defer exitMu.Unlock()
+ g.mu.Lock()
+ s:=g.srv
+ listeners:=g.fwds
+ g.fwds=nil
+ g.srv,g.ready=nil,false
+ g.mu.Unlock()
+ if shareTimer!=nil {shareTimer.Stop();shareTimer=nil}
+ shareUntil=time.Time{}
+ selectedExit=""
+ closeModelRelay()
+ for _,l:=range listeners{_ = l.Close()}
+ if s!=nil{_ = resetExitPrefs(s);_ = s.Close()}
 }
