@@ -6,7 +6,7 @@ import * as Crypto from "expo-crypto"
 import {useTranslation} from "react-i18next"
 import {useTheme} from "../src/theme/useTheme"
 import {useConnections,getConnectionTarget} from "../src/stores/connections"
-import {call} from "../src/lib/acp/api"
+import {call,type AcpTarget} from "../src/lib/acp/api"
 import {tailnetExitInfo,setTailnetExitMode,localAddresses,type ExitInfo} from "../src/lib/tailnet"
 import {validModel,type HfFile} from "../src/lib/phone-models"
 import {generateLocal,installedModel,cancelLocal} from "../src/lib/native-local-models"
@@ -30,6 +30,7 @@ export default function RemoteControl(){
  const [pid,setPid]=useState(""),[x,setX]=useState(""),[y,setY]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("")
  const [exit,setExit]=useState<ExitInfo|null>(null),[lan,setLan]=useState<string[]>([]),[exitError,setExitError]=useState("")
  const lock=useRef(false),hostRef=useRef(host);hostRef.current=host
+ const approvedTarget=useRef<AcpTarget|null>(null)
  const exitEpoch=useRef(0),exitRead=useRef(false)
  const [transfer,setTransfer]=useState<{done:number;total:number}|null>(null)
  const transferCancel=useRef(false)
@@ -78,10 +79,12 @@ export default function RemoteControl(){
  useEffect(()=>{let alive=true;void AsyncStorage.getItem(libraryKey).then(async raw=>{const list=raw?JSON.parse(raw):[];if(!Array.isArray(list))return;const available:HfFile[]=[];for(const m of list.filter(validModel).slice(0,40))if(await installedModel(m).catch(()=>false))available.push(m);if(alive){setModels(available);setModel(available.find(m=>m.sha256===params.hash)||available[0]||null)}}).catch(e=>{if(alive)setError(String(e))});return()=>{alive=false}},[params.hash])
  const run=async(fn:()=>Promise<void>)=>{if(lock.current)return;lock.current=true;setBusy(true);setError("");try{await fn()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{lock.current=false;setBusy(false)}}
  const target=async(id=host)=>{const a=await getConnectionTarget(id);if(!a||hostRef.current!==id||a.tunnel||!a.auth?.password||!privateRemoteUrl(a.serverUrl))throw Error(w("remotePrivate"));return a}
- const probe=()=>void run(async()=>{const a=await target();const s=await call<Status>(a,"/remote/status",{},8000);setStatus(s);setRoot(0);setFolder("");setEntries([]);setProposal(null);setResults([]);setJpeg("")})
- const choose=(id:string)=>{if(lock.current)return;hostRef.current=id;setHost(id);setStatus(null);setRoot(0);setFolder("");setFile("");setResults([]);setProposal(null);setEntries([]);setOutput("");setAnswer("");setJpeg("")}
+ const probe=()=>void run(async()=>{approvedTarget.current=null;setStatus(null);const a=await target();const s=await call<Status>(a,"/remote/status",{},8000);approvedTarget.current=a;setStatus(s);setRoot(0);setFolder("");setEntries([]);setProposal(null);setResults([]);setJpeg("")})
+ const choose=(id:string)=>{if(lock.current)return;hostRef.current=id;approvedTarget.current=null;setHost(id);setStatus(null);setRoot(0);setFolder("");setFile("");setResults([]);setProposal(null);setEntries([]);setOutput("");setAnswer("");setJpeg("")}
  const perform=async(body:Record<string,unknown>)=>{
-  const a=await target();const live=await call<Status>(a,"/remote/status",{},8000)
+  const a=await target(),bound=approvedTarget.current
+  if(!bound||bound.serverUrl!==a.serverUrl||bound.launcherPort!==a.launcherPort||bound.auth?.username!==a.auth?.username||bound.auth?.password!==a.auth?.password)throw Error(w("remotePermissionChanged"))
+  const live=await call<Status>(a,"/remote/status",{},8000)
   if(!status||!live.enabled||live.until!==status.until||JSON.stringify(live.roots)!==JSON.stringify(status.roots))throw Error(w("remotePermissionChanged"))
   const result=await call<Result>(a,"/remote/action",{method:"POST",body:JSON.stringify({...body,root,id:Crypto.randomUUID()})},45000)
   return result
