@@ -35,6 +35,10 @@ func resetExitPrefs(s *tsnet.Server) error {
  prefs,err:=lc.GetPrefs(ctx)
  if err!=nil{return err}
  prefs.SetAdvertiseExitNode(false)
+ // Explicitly remove stale default routes even on a build without advertising support.
+ routes:=prefs.AdvertiseRoutes[:0]
+ for _,r:=range prefs.AdvertiseRoutes{if r.Bits()!=0{routes=append(routes,r)}}
+ prefs.AdvertiseRoutes=routes
  _,err=lc.EditPrefs(ctx,&ipn.MaskedPrefs{
   Prefs:ipn.Prefs{AdvertiseRoutes:prefs.AdvertiseRoutes},
   AdvertiseRoutesSet:true,ExitNodeIDSet:true,ExitNodeIPSet:true,AutoExitNodeSet:true,
@@ -46,6 +50,8 @@ func resetExitPrefs(s *tsnet.Server) error {
 func resetExitForStart(s *tsnet.Server) error {
  exitMu.Lock()
  defer exitMu.Unlock()
+ g.mu.Lock();same:=g.srv==s;g.mu.Unlock()
+ if !same{return fmt.Errorf("node was stopped")}
  if shareTimer!=nil {shareTimer.Stop();shareTimer=nil}
  shareUntil=time.Time{}
  selectedExit=""
