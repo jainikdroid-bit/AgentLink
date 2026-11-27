@@ -26,3 +26,6 @@ android/app/src/main/assets/cheri3d/
 android/app/src/main/assets/companions3d/
 
 /android/app/google-services.json
+
+# Generated offline CodeMirror bundle
+/android/app/src/main/assets/code-editor/
