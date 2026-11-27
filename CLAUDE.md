@@ -136,3 +136,7 @@ Windows: `gradlew.bat assembleRelease`. Не менять 3D-код; сборк�
 ## Адаптация решений Happier, PocketPal AI и Acode
 
 См. [docs/UPSTREAM-IDEAS.ru.md](docs/UPSTREAM-IDEAS.ru.md). Launcher v11, глобальный центр внимания, очередь сообщений live ACP process, Git file picker, автопереход в новый worktree, живой lexical editor, встроенный private preview, CPU profiles и local benchmark history. 8/8 изолированных проверок прошли, полный CI/Android не подтверждён. Не копировали чужой код. Cheri не изменять, Termux не обязателен, PR #1 только draft. Перед релизом выполнить проверку реального устройства и исправить оставшиеся блокеры.
+
+## 0.27.1 — актуальная рабочая ветка после исправлений Клода
+
+См. [docs/PHONE-AGENT-CONTROL.ru.md](docs/PHONE-AGENT-CONTROL.ru.md). Launcher v13, локальный телефонный агент, private LAN/Tailscale shell и file exchange, Windows UI Automation и GUI -Gui, системные hotspot/exit-node настройки, encrypted journal, team tasks, local chat, profiles, diagnostics, CodeMirror и optional backends. 4/4 реальных Node теста нового remote module/парсера прошли, SHA совпадают. Full build/CI/Windows/Android/GPU/NPU не подтверждены, полноценный Android VPN/двусторонний сетевой relay не готов. Продолжить от feat/agentlink-durable-workspace, сохранить main и Cheri, не выпускать APK до проверки.
