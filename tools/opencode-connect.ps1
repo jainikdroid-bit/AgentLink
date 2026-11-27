@@ -57,5 +57,9 @@ if ($core -ne $PSScriptRoot) {
         try { Invoke-WebRequest -UseBasicParsing -Uri "$BaseUrl/$f" -OutFile (Join-Path $core $f) } catch { Say "Could not download $f"; exit 1 }
     }
 }
+if ($args -contains '-Gui') {
+    & (Join-Path $core 'windows-control.ps1') -NodePath $node -Core $core -DataDir $Dir
+    exit 0
+}
 & $node (Join-Path $core 'connect.js') @args
 exit $LASTEXITCODE
