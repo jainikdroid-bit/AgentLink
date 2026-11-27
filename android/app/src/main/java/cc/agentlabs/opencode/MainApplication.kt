@@ -27,6 +27,7 @@ class MainApplication : Application(), ReactApplication {
               add(TailnetPackage())
               add(TermuxPackage())
               add(LocalModelPackage())
+              add(RemoteFilePackage())
               add(CheriTouchPackage())
             }
 
