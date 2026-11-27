@@ -934,6 +934,7 @@
     "failed": "モデルを変更できませんでした"
   },
   "workspace": {
+    "remoteInspect": "Inspect accessible window controls",
     "remotePrivate": "Select a paired private LAN or Tailscale IPv4 address; public tunnels are not supported.",
     "remotePermissionChanged": "Permissions changed; refresh computer status.",
     "remotePlanLimit": "Select a model and computer; up to six approved actions per task.",
