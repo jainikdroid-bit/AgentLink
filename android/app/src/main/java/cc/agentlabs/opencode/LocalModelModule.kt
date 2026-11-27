@@ -176,10 +176,13 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     }
     private fun open(url: URL, offset: Long): HttpURLConnection {
         var next = url
+        // A selected exit node is mandatory for this entire operation.
+        val relay = tsnetbridge.Tsnetbridge.modelRelayURL().orEmpty()
         repeat(8) {
             checkCancelled()
             require(trusted(next)) { "Untrusted model download destination" }
-            val conn = next.openConnection() as HttpURLConnection
+            val transport = if (relay.isEmpty()) next else URL(relay + "?url=" + java.net.URLEncoder.encode(next.toExternalForm(), "UTF-8"))
+            val conn = transport.openConnection(java.net.Proxy.NO_PROXY) as HttpURLConnection
             connection = conn
             conn.instanceFollowRedirects = false; conn.connectTimeout = 20000; conn.readTimeout = 30000
             conn.setRequestProperty("Accept-Encoding", "identity")
@@ -191,6 +194,27 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
             } else return conn
         }
         throw IllegalStateException("Too many redirects")
+    }
+
+    @ReactMethod fun catalog(url: String, promise: Promise) = task("catalog", promise) {
+        val source = URL(url)
+        require(trusted(source) && source.host.equals("huggingface.co", true) && (source.path == "/api/models" || source.path.startsWith("/api/models/"))) { "Invalid catalog URL" }
+        val conn = open(source, 0)
+        try {
+            check(conn.responseCode == 200) { "Catalog HTTP " + conn.responseCode }
+            val output = java.io.ByteArrayOutputStream()
+            conn.inputStream.use { input ->
+                val bytes = ByteArray(32768)
+                while (true) {
+                    checkCancelled()
+                    val n = input.read(bytes)
+                    if (n < 0) break
+                    require(output.size() + n <= 4 * 1024 * 1024) { "Catalog response too large" }
+                    output.write(bytes, 0, n)
+                }
+            }
+            output.toString("UTF-8")
+        } finally { conn.disconnect() }
     }
 
     @ReactMethod fun download(repo: String, revision: String, name: String, hash: String, size: Double, promise: Promise) =
