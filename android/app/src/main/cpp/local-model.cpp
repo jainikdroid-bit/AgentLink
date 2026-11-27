@@ -9,6 +9,7 @@
 #include <cmath>
 #ifdef AGENTLINK_LLAMA
 #include "llama.h"
+#include "ggml-backend.h"
 #endif
 
 namespace {
@@ -32,6 +33,28 @@ void fail(JNIEnv *env, const char *message) {
 std::once_flag backend;
 bool abort_decode(void *) { return cancelled.load(); }
 bool progress(float, void *) { return !cancelled.load(); }
+const char * device_kind(ggml_backend_dev_t dev){
+    if(!dev)return "cpu";
+    auto reg=ggml_backend_dev_backend_reg(dev);
+    if(reg&&std::string(ggml_backend_reg_name(reg))=="HTP")return "npu";
+    const auto type=ggml_backend_dev_type(dev);
+    if(type==GGML_BACKEND_DEVICE_TYPE_GPU||type==GGML_BACKEND_DEVICE_TYPE_IGPU)return "gpu";
+    return "other";
+}
+std::vector<ggml_backend_dev_t> candidates(int mode){
+    std::vector<ggml_backend_dev_t> result;
+    if(mode!=1){
+      for(const char * kind:{"npu","gpu"}){
+        if((mode==2&&std::string(kind)!="gpu")||(mode==3&&std::string(kind)!="npu"))continue;
+        for(size_t i=0;i<ggml_backend_dev_count();i++){
+          auto dev=ggml_backend_dev_get(i);
+          if(std::string(device_kind(dev))==kind)result.push_back(dev);
+        }
+      }
+    }
+    result.push_back(nullptr);
+    return result;
+}
 #endif
 }
 
@@ -43,18 +66,38 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeAvailable(JNIEnv *, jobject) {
     return JNI_FALSE;
 #endif
 }
+extern "C" JNIEXPORT jstring JNICALL
+Java_cc_agentlabs_opencode_LocalModelModule_nativeBackends(JNIEnv *env, jobject) {
+#ifdef AGENTLINK_LLAMA
+    try {
+        std::call_once(backend, [] { llama_backend_init(); });
+        std::string result="cpu";
+        bool gpu=false,npu=false;
+        for(auto dev:candidates(0)){
+            const std::string kind=device_kind(dev);
+            if(kind=="gpu")gpu=true;
+            if(kind=="npu")npu=true;
+        }
+        if(gpu)result+=",gpu";
+        if(npu)result+=",npu";
+        return env->NewStringUTF(result.c_str());
+    }catch(...){return env->NewStringUTF("cpu");}
+#else
+    return env->NewStringUTF("");
+#endif
+}
 extern "C" JNIEXPORT void JNICALL
 Java_cc_agentlabs_opencode_LocalModelModule_nativeReset(JNIEnv *, jobject) { cancelled.store(false); }
 extern "C" JNIEXPORT void JNICALL
 Java_cc_agentlabs_opencode_LocalModelModule_nativeCancel(JNIEnv *, jobject) { cancelled.store(true); }
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject self, jbyteArray file, jobjectArray input, jint context, jint threads, jint limit, jlong memoryBudget) {
+Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject self, jbyteArray file, jobjectArray input, jint context, jint threads, jint limit, jlong memoryBudget, jint backendMode) {
 #ifndef AGENTLINK_LLAMA
     fail(env, "Local inference requires a 64-bit Android build");
     return nullptr;
 #else
     try {
-        if (context < 1024 || context > 4096 || threads < 1 || threads > 8 || limit < 1 || limit > 512) throw std::runtime_error("Invalid inference parameters");
+        if (context < 1024 || context > 4096 || threads < 1 || threads > 8 || limit < 1 || limit > 512 || backendMode < 0 || backendMode > 3) throw std::runtime_error("Invalid inference parameters");
         std::call_once(backend, [] { llama_backend_init(); });
         const auto path = bytes(env, file);
         if (!input) throw std::runtime_error("Missing messages");
@@ -73,8 +116,11 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject 
         if(parts[parts.size()-2]!="user")throw std::runtime_error("Last message must be user");
         std::vector<llama_chat_message> messages;
         for(int i=0;i<n;i+=2)messages.push_back({parts[i].c_str(),parts[i+1].c_str()});
+        auto run = [&](ggml_backend_dev_t device, bool fallback)->jobjectArray {
+        const char* selected=device_kind(device);
+        ggml_backend_dev_t devices[2]={device,nullptr};
         auto mp = llama_model_default_params();
-        mp.n_gpu_layers = 0; mp.use_mmap = true; mp.use_mlock = false; mp.progress_callback = progress;
+        mp.devices=devices; mp.n_gpu_layers = device ? -1 : 0; mp.use_mmap = true; mp.use_mlock = false; mp.progress_callback = progress;
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(llama_model_load_from_file(path.c_str(), mp), llama_model_free);
         if (!model || cancelled.load()) throw std::runtime_error("Model load failed or cancelled");
         // Conservative bound for conventional attention; unsupported architectures may need more.
@@ -97,6 +143,7 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject 
         auto cp = llama_context_default_params();
         cp.n_ctx = context; cp.n_batch = std::min(context, 512); cp.n_ubatch = std::min(context, 128);
         cp.n_threads = threads; cp.n_threads_batch = threads; cp.no_perf = false;
+        cp.offload_kqv = device != nullptr; cp.op_offload = device != nullptr;
         cp.abort_callback = abort_decode; cp.abort_callback_data = nullptr;
         std::unique_ptr<llama_context, decltype(&llama_free)> ctx(llama_init_from_model(model.get(), cp), llama_free);
         if (!ctx) throw std::runtime_error("Could not allocate context");
@@ -144,11 +191,31 @@ Java_cc_agentlabs_opencode_LocalModelModule_nativeGenerate(JNIEnv *env, jobject 
         const auto rate = [](int n, double ms) { return n > 0 && ms > 0 && std::isfinite(ms) ? std::to_string(n * 1000.0 / ms) : "null"; };
         std::string meta = "{\"promptPerSecond\":" + rate(perf.n_p_eval, perf.t_p_eval_ms) +
                            ",\"generationPerSecond\":" + rate(perf.n_eval, perf.t_eval_ms) +
-                           ",\"cancelled\":" + (cancelled.load() ? "true" : "false") + "}";
+                           ",\"cancelled\":" + (cancelled.load() ? "true" : "false") + ",\"backend\":\"" + selected + "\",\"fallback\":" + (fallback ? "true" : "false") + "}";
         auto result = env->NewObjectArray(2, env->FindClass("[B"), nullptr);
         auto a = to_bytes(env, output), b = to_bytes(env, meta);
         env->SetObjectArrayElement(result, 0, a); env->SetObjectArrayElement(result, 1, b);
         return result;
+        };
+        const auto devices=candidates(backendMode);
+        bool failed=backendMode>=2 && devices.front()==nullptr;
+        for(auto device:devices){
+            try{
+                return run(device,failed);
+            }catch(const std::exception &){
+                if(!device||cancelled.load()||env->ExceptionCheck())throw;
+                failed=true;
+                // Restart pure local inference from scratch, clearing any partial preview.
+                jclass cls=env->GetObjectClass(self);
+                jmethodID preview=env->GetMethodID(cls,"nativePreview","([B)V");
+                env->DeleteLocalRef(cls);
+                if(!preview)return nullptr;
+                auto empty=env->NewByteArray(0);
+                env->CallVoidMethod(self,preview,empty);env->DeleteLocalRef(empty);
+                if(env->ExceptionCheck())return nullptr;
+            }
+        }
+        throw std::runtime_error("No usable local backend");
     } catch (const std::exception &error) { fail(env, error.what()); return nullptr; }
     catch (...) { fail(env, "Native inference failed"); return nullptr; }
 #endif
