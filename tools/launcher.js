@@ -29,7 +29,7 @@ const { spawn, execFileSync } = require('node:child_process')
 
 /** The local-model control module; absent in older installs. */
 const llm = () => require('./llm-control.js')
-const VERSION = 12 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
+const VERSION = 13 // 4: /acp/ (other agents through the Agent Client Protocol); 5: /llm (local model in memory)
 const LAN_RESCAN_MS = 30_000
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/
 const MAX_FAILS = 6 // wrong passwords per minute per address before answering 429
@@ -236,6 +236,14 @@ function createLauncher(deps) {
     // Other coding agents (ACP): the bridge answers its own routes, once the password has been checked above.
     if (route.startsWith('/acp/') && deps.acp) { await deps.acp.handle(req, res, route); return }
     try {
+      if(route==='/remote/status'||route==='/remote/action'){
+        if(!deps.remote)return send(res,501,{ok:false,error:'Update the computer launcher'})
+        try{
+          if(route==='/remote/status'&&req.method==='GET')return send(res,200,{ok:true,...await deps.remote.status(req)})
+          if(route==='/remote/action'&&req.method==='POST')return send(res,200,{ok:true,...await deps.remote.act(req,await readBody(req,6*1024*1024))})
+          return send(res,405,{ok:false,error:'wrong method'})
+        }catch(e){return send(res,e.status||500,{ok:false,error:e.status?e.message:'Remote operation failed'})}
+      }
       if (['/git/inventory','/git/action','/git/file'].includes(route)) {
         if ((route==='/git/inventory' && req.method!=='GET') || (route==='/git/action' && req.method!=='POST') || (route==='/git/file' && !['GET','PUT'].includes(req.method))) return send(res,405,{ok:false,error:'wrong method'})
         if (!process.env.AGENTLINK_GIT_ROOTS) return send(res, 403, {ok:false,error:'Git workspace access is not enabled'})
@@ -464,6 +472,7 @@ function main() {
   const state = deps.readState()
   const port = Number(process.env.OPENCODE_LAUNCHER_PORT) || Number(state.launcherPort) || (Number(state.port) || 4096) - 1
   try { const acp = require('./acp-bridge.js'); deps.acp = acp.createAcpBridge({inboxFile:path.join(dir,'acp-inbox.json'),catalogFile:path.join(dir,'acp-sessions.json'),journalFile:path.join(dir,'acp-journal.bin'),push:acp.createPushSender()}) } catch { /* an older install without the file: no other agents */ }
+  try { deps.remote = require('./remote-control.js').createRemoteControl({dir,readState:deps.readState}) } catch { /* installer upgrade required */ }
   if (deps.acp) process.on('exit', () => deps.acp.stopAll())
   const launcher = createLauncher(deps)
   const server = http.createServer((req, res) => { launcher.handle(req, res) })
