@@ -176,6 +176,64 @@ function createSessionCatalog(file, clock=Date.now) {
   }
   return {remember,list:()=>entries.slice().reverse()}
 }
+// Durable queue and visible transcript, encrypted at rest. This protects stored
+// files, not a compromised logged-in OS account. Key stays in the launcher directory.
+function createSecureJournal(file) {
+  let state=Object.create(null), key=null, fault=null
+  const id=(agent,cwd,sessionId)=>crypto.createHash('sha256').update(JSON.stringify([agent,cwd,sessionId])).digest('hex')
+  if(file)try{
+    fs.mkdirSync(path.dirname(file),{recursive:true,mode:0o700})
+    const keyFile=file+'.key'
+    if(!fs.existsSync(keyFile)){
+      if(fs.existsSync(file))throw Error('journal key missing')
+      try{fs.writeFileSync(keyFile,crypto.randomBytes(32),{mode:0o600,flag:'wx'})}catch(e){if(e.code!=='EEXIST')throw e}
+    }
+    key=fs.readFileSync(keyFile)
+    if(key.length!==32)throw Error('invalid journal key')
+    if(fs.existsSync(file)){
+      const data=fs.readFileSync(file)
+      if(data.length<29||data.length>24*1024*1024||data[0]!==1)throw Error('invalid journal')
+      const decipher=crypto.createDecipheriv('aes-256-gcm',key,data.subarray(1,13))
+      decipher.setAuthTag(data.subarray(13,29));decipher.setAAD(Buffer.from('AgentLink journal v1'))
+      const decoded=JSON.parse(Buffer.concat([decipher.update(data.subarray(29)),decipher.final()]).toString('utf8'))
+      if(!decoded||typeof decoded!=='object'||Array.isArray(decoded))throw Error('invalid journal')
+      state=Object.assign(Object.create(null),decoded)
+    }
+  }catch{fault='Encrypted journal unavailable; restore its key and file before continuing'}
+  function write(next){
+    if(fault)throw Object.assign(Error(fault),{code:503})
+    if(file){
+      const raw=Buffer.from(JSON.stringify(next))
+      if(raw.length>20*1024*1024)throw Object.assign(Error('journal storage limit reached'),{code:507})
+      const iv=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',key,iv)
+      cipher.setAAD(Buffer.from('AgentLink journal v1'))
+      const encrypted=Buffer.concat([cipher.update(raw),cipher.final()])
+      const tmp=file+'.'+crypto.randomUUID()+'.tmp'
+      try{
+        const fd=fs.openSync(tmp,'wx',0o600)
+        try{fs.writeFileSync(fd,Buffer.concat([Buffer.from([1]),iv,cipher.getAuthTag(),encrypted]));fs.fsyncSync(fd)}finally{fs.closeSync(fd)}
+        fs.renameSync(tmp,file)
+        try{const dir=fs.openSync(path.dirname(file),'r');try{fs.fsyncSync(dir)}finally{fs.closeSync(dir)}}catch{}
+      }finally{try{fs.rmSync(tmp,{force:true})}catch{}}
+    }
+    state=next
+  }
+  return {
+    health:()=>({durable:!!file&&!fault,error:fault}),
+    get:(agent,cwd,sessionId)=>state[id(agent,cwd,sessionId)]||null,
+    list:()=>Object.values(state).map(({agent,cwd,sessionId,items,uncertain,at})=>({agent,cwd,sessionId,pending:items.length,uncertain:!!uncertain,at})),
+    save:(session)=>{
+      if(!session.protocolSessionId)return
+      const k=id(session.agent,session.cwd,session.protocolSessionId)
+      const next=Object.assign(Object.create(null),state)
+      if(!next[k]&&Object.keys(next).length>=100)throw Object.assign(Error('journal session limit reached; delete an old archived session'),{code:507})
+      next[k]={agent:session.agent,cwd:session.cwd,sessionId:session.protocolSessionId,items:session.queue,ids:[...session.queueIds],uncertain:session.queueInFlight,paused:session.queuePaused,history:session.visibleHistory.slice(-200),at:Date.now()}
+      write(next)
+    },
+    remove:(agent,cwd,sessionId)=>{const next=Object.assign(Object.create(null),state);delete next[id(agent,cwd,sessionId)];write(next)}
+  }
+}
+
 function createAcpBridge(deps = {}) {
   const agents = deps.agents || AGENTS
   const now = deps.now || (() => Date.now())
@@ -183,6 +241,10 @@ function createAcpBridge(deps = {}) {
   const sessions = new Map()
   const inbox = createInbox(deps.inboxFile,now)
   const catalog = createSessionCatalog(deps.catalogFile,now)
+  const journal = createSecureJournal(deps.journalFile)
+  function persist(session){try{journal.save(session);return true}catch{session.queuePaused=true;session.journalFailed=true;return false}}
+  function restore(session){const saved=journal.get(session.agent,session.cwd,session.protocolSessionId);if(!saved)return;session.queue=saved.items;session.queueIds=new Map(saved.ids);session.queueInFlight=saved.uncertain;session.visibleHistory=saved.history||[];session.queuePaused=true}
+  function visible(session,role,text){if(typeof text!=='string'||!text)return;const last=session.visibleHistory.at(-1);if(role==='assistant'&&last?.role==='assistant')last.text=(last.text+text).slice(-16000);else session.visibleHistory.push({role,text:text.slice(0,16000)});session.visibleHistory=session.visibleHistory.slice(-200)}
   const push = deps.push || {enabled:false,send:()=>{}}
   const notify=(category,session)=>{ const item=inbox.record(category,session); try{push.send(item)}catch{} }
   let detected = { at: 0, ids: new Set() }
@@ -241,35 +303,43 @@ function createAcpBridge(deps = {}) {
   // Queue belongs to the live host process, not the mobile screen. Do not replay
   // queued prompts after process death or an uncertain/failed/cancelled turn.
   function drainQueue(session) {
-    if(session.exited||session.queuePaused||!session.protocolSessionId||session.prompts.size||session.pending.size||!session.queue.length||session.child.stdin.destroyed)return
+    if(session.exited||session.queuePaused||session.queueInFlight||!session.protocolSessionId||session.prompts.size||session.pending.size||!session.queue.length||session.child.stdin.destroyed)return
     const item=session.queue.shift()
+    session.queueInFlight=item
+    if(!persist(session)){session.queue.unshift(item);session.queueInFlight=null;return}
     const id='agentlink-queue-'+item.id
     const msg={jsonrpc:'2.0',id,method:'session/prompt',params:{sessionId:session.protocolSessionId,prompt:[{type:'text',text:item.text}]}}
     const key=keyOf(id)
     session.prompts.add(key);session.requests.set(key,{method:msg.method})
+    visible(session,'user',item.text)
     add(session,'sent',JSON.stringify(msg))
     try{session.child.stdin.write(JSON.stringify(msg)+'\n',error=>{if(error){session.queuePaused=true;notify('errors',session)}})}
     catch{session.queuePaused=true;notify('errors',session)}
   }
   async function queueRoute(req,res,session){
-    if(req.method==='GET')return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused})
+    if(req.method==='GET')return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused,uncertain:session.queueInFlight,journalFailed:!!session.journalFailed})
     if(req.method!=='POST')return send(res,405,{ok:false,error:'wrong method'})
     if(session.exited)return send(res,409,{ok:false,error:'agent stopped'})
     const body=await readBody(req,65536)
     if(!body||typeof body!=='object')return send(res,400,{ok:false,error:'invalid queue action'})
+    if(journal.health().error)return send(res,503,{ok:false,error:journal.health().error})
+    const before={queue:session.queue.slice(),queueIds:new Map(session.queueIds),queuePaused:session.queuePaused,queueInFlight:session.queueInFlight}
     if(body.action==='enqueue'){
       if(!session.protocolSessionId)return send(res,409,{ok:false,error:'session not ready'})
       if(typeof body.id!=='string'||!(/^[a-f0-9-]{36}$/i).test(body.id)||typeof body.text!=='string'||!body.text.trim()||body.text.length>8000)return send(res,400,{ok:false,error:'invalid queue item'})
       const hash=crypto.createHash('sha256').update(body.text).digest('hex')
       if(session.queueIds.has(body.id))return send(res,session.queueIds.get(body.id)===hash?200:409,session.queueIds.get(body.id)===hash?{ok:true,duplicate:true}:{ok:false,error:'queue ID conflict'})
       if(session.queue.length>=20||session.queueIds.size>=2000)return send(res,429,{ok:false,error:'queue limit reached'})
-      session.queueIds.set(body.id,hash);session.queue.push({id:body.id,text:body.text});drainQueue(session)
+      session.queueIds.set(body.id,hash);session.queue.push({id:body.id,text:body.text})
     }else if(body.action==='remove'){
       session.queue=session.queue.filter(item=>item.id!==body.id)
     }else if(body.action==='pause')session.queuePaused=true
-    else if(body.action==='resume'){session.queuePaused=false;drainQueue(session)}
+    else if(body.action==='acknowledge'){if(!session.queueInFlight||session.prompts.size)return send(res,409,{ok:false,error:'turn still running or no uncertain item'});session.queueInFlight=null;session.queuePaused=true}
+    else if(body.action==='resume'){if(session.queueInFlight)return send(res,409,{ok:false,error:'review uncertain task before resuming'});session.queuePaused=false}
     else return send(res,400,{ok:false,error:'unsupported queue action'})
-    return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused})
+    if(!persist(session)){Object.assign(session,before);session.queuePaused=true;return send(res,503,{ok:false,error:'could not persist queue'})}
+    if(body.action==='enqueue'||body.action==='resume')drainQueue(session)
+    return send(res,200,{ok:true,items:session.queue,paused:session.queuePaused,uncertain:session.queueInFlight,journalFailed:!!session.journalFailed})
   }
   function onLine(session, line) {
     const text = line.trim()
@@ -294,16 +364,16 @@ function createAcpBridge(deps = {}) {
         if(request.method==='initialize')session.loadSession=message.result?.agentCapabilities?.loadSession===true
         if(request.method==='session/new'||request.method==='session/load'){
           const id=request.method==='session/load'?request.sessionId:message.result?.sessionId
-          if(typeof id==='string'&&id.length>0&&id.length<=512){session.protocolSessionId=id;catalog.remember(session)}
+          if(typeof id==='string'&&id.length>0&&id.length<=512){session.protocolSessionId=id;if(request.method==='session/load')restore(session);catalog.remember(session)}
         }
         if(request.method==='session/prompt'&&session.protocolSessionId)catalog.remember(session)
       }
     }
+    if(message.method==='session/update'&&message.params?.update?.sessionUpdate==='agent_message_chunk'&&message.params.update.content?.type==='text'&&session.prompts.size)visible(session,'assistant',message.params.update.content.text)
     if(!message.method&&message.id!==undefined&&session.prompts.has(keyOf(message.id))){
       session.prompts.delete(keyOf(message.id))
-      if(message.error){session.queuePaused=true;notify('errors',session)}
-      else if(message.result?.stopReason==='end_turn'){notify('completed',session);drainQueue(session)}
-      else session.queuePaused=true
+      if(message.result?.stopReason==='end_turn'&&!message.error){session.queueInFlight=null;notify('completed',session);if(persist(session))drainQueue(session)}
+      else {session.queuePaused=true;persist(session);if(message.error)notify('errors',session)}
     }
   }
 
@@ -315,7 +385,7 @@ function createAcpBridge(deps = {}) {
     const child = WIN && !agent.direct ? spawn('cmd.exe', ['/c', agent.cmd, ...agent.args], options) : spawn(agent.cmd, agent.args, options)
     const session = {
       id: crypto.randomBytes(9).toString('base64url'), agent: agent.id, name: agent.name, cwd, startedAt: now(), lastActivity: now(),
-      child, queue: [], queueIds: new Map(), queuePaused: false, prompts: new Set(), pending: new Set(), permissions: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
+      child, queue: [], queueIds: new Map(), queuePaused: false, queueInFlight:null, visibleHistory:[], journalFailed:false, prompts: new Set(), pending: new Set(), permissions: new Set(), requests: new Map(), sentIds: new Map(), protocolSessionId: null, loadSession: false, log: [], bytes: 0, nextSeq: 1, clients: new Set(), answered: new Set(), stderr: '', exited: null,
     }
     let partial = ''
     child.stdout.setEncoding('utf8')
@@ -332,6 +402,7 @@ function createAcpBridge(deps = {}) {
     child.on('close', (code, signal) => {
       if (partial.trim()) onLine(session, partial)
       session.exited = { code, signal, stderr: session.stderr, at: now() }
+      session.queuePaused=true;persist(session)
       if(code!==0&&code!==null)notify('errors',session)
       const text = `event: exit\ndata: ${JSON.stringify({ code, signal, stderr: session.stderr })}\n\n`
       for (const client of session.clients) { client.write(text); client.end() }
@@ -412,9 +483,9 @@ function createAcpBridge(deps = {}) {
       session.sentIds.set(key,hash)
       session.requests.set(key,{method:message.method,sessionId:message.method==='session/load'?message.params?.sessionId:undefined})
     }
-    if(message.method==='session/cancel')session.queuePaused=true
+    if(message.method==='session/cancel'){session.queuePaused=true;persist(session)}
     if (isResponse) {session.answered.add(key);session.pending.delete(key);session.permissions.delete(key)}
-    if(message.method==='session/prompt'&&key!==null)session.prompts.add(key)
+    if(message.method==='session/prompt'&&key!==null){session.prompts.add(key);for(const part of message.params?.prompt||[])if(part?.type==='text')visible(session,'user',part.text)}
     // The agent gets the phone's MCP server on session/new|load; the replay log keeps what the phone sent.
     add(session, 'sent', text)
     session.child.stdin.write(JSON.stringify(withPhoneMcp(message, phoneMcp())) + '\n')
@@ -425,6 +496,8 @@ function createAcpBridge(deps = {}) {
   async function handle(req, res, route) {
     const url = new URL(req.url || '/', 'http://x')
     try {
+      if(route==='/acp/journal'&&req.method==='GET')return send(res,200,{ok:true,...journal.health(),sessions:journal.list()}),true
+      if(route==='/acp/history'&&req.method==='GET'){const saved=journal.get(url.searchParams.get('agent'),url.searchParams.get('cwd'),url.searchParams.get('sessionId'));return send(res,200,{ok:true,history:saved?.history||[]}),true}
       if (route === '/acp/saved' && req.method === 'GET') return send(res,200,{ok:true,sessions:catalog.list()}),true
       if (route === '/acp/inbox' && req.method === 'GET') return send(res,200,{ok:true,events:inbox.list(),pushConfigured:push.enabled}),true
       if (route === '/acp/agents' && req.method === 'GET') return agentsRoute(res), true
@@ -460,4 +533,4 @@ function createAcpBridge(deps = {}) {
   }
 }
 
-module.exports = { createSessionCatalog, createInbox, createPushSender, createAcpBridge, AGENTS, onPath, withPhoneMcp }
+module.exports = { createSecureJournal, createSessionCatalog, createInbox, createPushSender, createAcpBridge, AGENTS, onPath, withPhoneMcp }
