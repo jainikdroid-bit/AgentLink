@@ -182,7 +182,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
             checkCancelled()
             require(trusted(next)) { "Untrusted model download destination" }
             val transport = if (relay.isEmpty()) next else URL(relay + "?url=" + java.net.URLEncoder.encode(next.toExternalForm(), "UTF-8"))
-            val conn = transport.openConnection(java.net.Proxy.NO_PROXY) as HttpURLConnection
+            val conn = (if (relay.isEmpty()) transport.openConnection() else transport.openConnection(java.net.Proxy.NO_PROXY)) as HttpURLConnection
             connection = conn
             conn.instanceFollowRedirects = false; conn.connectTimeout = 20000; conn.readTimeout = 30000
             conn.setRequestProperty("Accept-Encoding", "identity")
