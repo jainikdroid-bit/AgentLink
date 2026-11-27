@@ -44,6 +44,8 @@ $ru=@{
  'Only grant access to a trusted paired device. Commands can access all files your Windows account can access, not just the selected directory. LAN transport is not encrypted; prefer Tailscale. Continue?' = 'Разрешайте доступ только доверенному телефону. Команды могут обращаться ко всем доступным пользователю Windows файлам, а не только выбранной папке. LAN HTTP не шифруется; предпочтителен Tailscale. Продолжить?'
  'Remote permissions enabled for one hour. Approve each action on the phone.' = 'Доступ разрешён на один час. Подтверждайте действия на телефоне.'
  'Could not save permissions.' = 'Не удалось сохранить разрешения.'
+ 'Could not revoke permissions. Check the policy file and stop Launcher.' = 'Не удалось отозвать разрешения. Проверьте файл разрешений и остановите Launcher.'
+ 'Route Windows internet through {0}?' = 'Направить интернет Windows через {0}?'
  'New remote actions are disabled. Already running commands may finish.' = 'Новые действия запрещены. Уже запущенные команды могут завершиться.'
  'Share your internet with authorized tailnet devices? You must approve the exit node in Tailscale administration. This may incur traffic charges.' = 'Раздавать интернет разрешённым устройствам tailnet? Выходной узел необходимо одобрить в админ-панели Tailscale. Возможен расход трафика.'
  'Install/sign in to the Windows Tailscale client first.' = 'Сначала установите Tailscale на ПК и войдите в аккаунт.'
@@ -83,7 +85,7 @@ function Check($text) {
  $c=New-Object Windows.Forms.CheckBox;$c.Text=(L $text);$c.Width=710;$c.Height=28;$c.ForeColor=$form.ForeColor;$panel.Controls.Add($c);return $c
 }
 function Notify($text){[void][Windows.Forms.MessageBox]::Show($form,(L $text),'AgentLink')}
-function Confirm($text){return [Windows.Forms.MessageBox]::Show($form,$text,'AgentLink',[Windows.Forms.MessageBoxButtons]::YesNo,[Windows.Forms.MessageBoxIcon]::Warning) -eq [Windows.Forms.DialogResult]::Yes}
+function Confirm($text){return [Windows.Forms.MessageBox]::Show($form,(L $text),'AgentLink',[Windows.Forms.MessageBoxButtons]::YesNo,[Windows.Forms.MessageBoxIcon]::Warning) -eq [Windows.Forms.DialogResult]::Yes}
 $null=Label 'AgentLink — your computer, your rules' 20
 $status=Label 'Launcher: checking...' 11
 $address=Label 'Address: —' 11
@@ -93,6 +95,16 @@ $pairFile=Join-Path $DataDir 'pair.json'
 $null=Label 'Connection / setup' 13
 $mode=New-Object Windows.Forms.ComboBox;$mode.DropDownStyle='DropDownList';$mode.Width=300;[void]$mode.Items.Add('tailscale');[void]$mode.Items.Add('lan');$mode.SelectedIndex=0;$panel.Controls.Add($mode)
 $script:job=$null
+function RevokeRemote {
+ try {
+  if(Test-Path -LiteralPath $policy){Remove-Item -LiteralPath $policy -Force -ErrorAction Stop}
+  if(Test-Path -LiteralPath $policy){throw 'Policy still exists'}
+  return $true
+ }catch{
+  Notify 'Could not revoke permissions. Check the policy file and stop Launcher.'
+  return $false
+ }
+}
 function RunCore([string[]]$arguments){
  if($script:job -and -not $script:job.HasExited){Notify 'Another setup operation is running.';return}
  try{
@@ -104,7 +116,7 @@ function RunCore([string[]]$arguments){
  }catch{Notify 'Unable to start setup. Check Node.js and launcher installation.'}
 }
 $null=Button 'Pair / start computer connection' {RunCore @('--mode',([string]$mode.SelectedItem))}
-$null=Button 'Stop launcher and server' {if(Confirm 'Stop the launcher and server?'){Remove-Item -LiteralPath $policy -Force -ErrorAction SilentlyContinue;RunCore @('--stop')}}
+$null=Button 'Stop launcher and server' {if(Confirm 'Stop the launcher and server?'){[void](RevokeRemote);RunCore @('--stop')}}
 $null=Button 'Run connection diagnostics' {RunCore @('--doctor')}
 $null=Button 'Create desktop shortcut' {
  try {
@@ -136,7 +148,7 @@ $null=Button 'Enable selected permissions for one hour' {
   Notify 'Remote permissions enabled for one hour. Approve each action on the phone.'
  }catch{Notify 'Could not save permissions.'}
 }
-$null=Button 'Disable remote permissions immediately' {Remove-Item -LiteralPath $policy -Force -ErrorAction SilentlyContinue;Notify 'New remote actions are disabled. Already running commands may finish.'}
+$null=Button 'Disable remote permissions immediately' {if(RevokeRemote){Notify 'New remote actions are disabled. Already running commands may finish.'}}
 $null=Label 'Internet sharing (system networking)' 13
 $null=Button 'Refresh network details' {
  try {
@@ -181,7 +193,7 @@ $null=Button 'Use an approved tailnet exit node' {
   $list=New-Object Windows.Forms.ListBox;$list.Dock='Fill';foreach($peer in $peers){[void]$list.Items.Add(("$($peer.HostName) · $($peer.TailscaleIPs[0])"))}
   $ok=New-Object Windows.Forms.Button;$ok.Text=(L 'Use selected device');$ok.Dock='Bottom';$ok.DialogResult='OK'
   $dialog.Controls.Add($list);$dialog.Controls.Add($ok);$dialog.AcceptButton=$ok
-  try{if($dialog.ShowDialog($form) -eq 'OK' -and $list.SelectedIndex -ge 0){$ip=[string]$peers[$list.SelectedIndex].TailscaleIPs[0];$parsed=$null;if([Net.IPAddress]::TryParse($ip,[ref]$parsed) -and (Confirm "Route Windows internet through $ip?")){& $ts.Source set "--exit-node=$ip" --exit-node-allow-lan-access=true;if($LASTEXITCODE -ne 0){Notify 'Tailscale rejected the exit node.'}}}}finally{$dialog.Dispose()}
+  try{if($dialog.ShowDialog($form) -eq 'OK' -and $list.SelectedIndex -ge 0){$ip=[string]$peers[$list.SelectedIndex].TailscaleIPs[0];$parsed=$null;if([Net.IPAddress]::TryParse($ip,[ref]$parsed) -and (Confirm ((L 'Route Windows internet through {0}?') -f $ip))){& $ts.Source set "--exit-node=$ip" --exit-node-allow-lan-access=true;if($LASTEXITCODE -ne 0){Notify 'Tailscale rejected the exit node.'}}}}finally{$dialog.Dispose()}
  }catch{Notify 'Could not enumerate exit nodes.'}
 }
 $null=Button 'Stop using exit node' {
