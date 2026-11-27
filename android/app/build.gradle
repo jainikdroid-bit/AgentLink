@@ -222,3 +222,14 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Local CodeMirror assets are built from pinned npm dependencies, never downloaded at runtime.
+def codeEditorTask = tasks.register("bundleCodeEditor", Exec) {
+    workingDir rootProject.projectDir.parentFile
+    commandLine "node", "scripts/build-code-editor.mjs"
+    inputs.file rootProject.file("../package-lock.json")
+    inputs.file rootProject.file("../scripts/build-code-editor.mjs")
+    inputs.file rootProject.file("../web/code-editor/editor.js")
+    outputs.dir file("src/main/assets/code-editor")
+}
+tasks.named("preBuild").configure { dependsOn codeEditorTask }
