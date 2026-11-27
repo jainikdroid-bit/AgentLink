@@ -31,6 +31,10 @@ function Notify($text){[void][Windows.Forms.MessageBox]::Show($form,$text,'Agent
 function Confirm($text){return [Windows.Forms.MessageBox]::Show($form,$text,'AgentLink',[Windows.Forms.MessageBoxButtons]::YesNo,[Windows.Forms.MessageBoxIcon]::Warning) -eq [Windows.Forms.DialogResult]::Yes}
 $null=Label 'AgentLink — your computer, your rules' 20
 $status=Label 'Launcher: checking...' 11
+$address=Label 'Address: —' 11
+$pairLabel=Label 'Pairing code: —' 16
+$pairLabel.ForeColor=[Drawing.Color]::FromArgb(80,210,235)
+$pairFile=Join-Path $DataDir 'pair.json'
 $null=Label 'Connection / setup' 13
 $mode=New-Object Windows.Forms.ComboBox;$mode.DropDownStyle='DropDownList';$mode.Width=300;[void]$mode.Items.Add('tailscale');[void]$mode.Items.Add('lan');$mode.SelectedIndex=0;$panel.Controls.Add($mode)
 $script:job=$null
@@ -68,6 +72,7 @@ $null=Button 'Enable selected permissions for one hour' {
 $null=Button 'Disable remote permissions immediately' {Remove-Item -LiteralPath $policy -Force -ErrorAction SilentlyContinue;Notify 'New remote actions are disabled. Already running commands may finish.'}
 $null=Label 'Internet sharing (system networking)' 13
 $null=Button 'Open Windows mobile hotspot settings' {Start-Process 'ms-settings:network-mobilehotspot'}
+$null=Button 'Ethernet / Wi-Fi sharing (ICS settings)' {Start-Process 'ncpa.cpl'}
 $null=Button 'Offer this PC as a Tailscale exit node' {
  if(-not(Confirm 'Share your internet with authorized tailnet devices? You must approve the exit node in Tailscale administration. This may incur traffic charges.')){return}
  $ts=Get-Command tailscale.exe -ErrorAction SilentlyContinue
@@ -79,6 +84,24 @@ $null=Button 'Stop offering exit node' {
  $ts=Get-Command tailscale.exe -ErrorAction SilentlyContinue
  if($ts){& $ts.Source set --advertise-exit-node=false;if($LASTEXITCODE -eq 0){Notify 'Exit node advertisement disabled.'}else{Notify 'Tailscale rejected the change.'}}
 }
+$null=Button 'Use an approved tailnet exit node' {
+ $ts=Get-Command tailscale.exe -ErrorAction SilentlyContinue
+ if(-not $ts){Notify 'Tailscale client unavailable.';return}
+ try{
+  $st=(& $ts.Source status --json | Out-String | ConvertFrom-Json)
+  $peers=@($st.Peer.PSObject.Properties.Value | Where-Object {$_.ExitNodeOption -and $_.Online -and $_.TailscaleIPs.Count -gt 0})
+  if(!$peers.Count){Notify 'No online approved exit nodes found.';return}
+  $dialog=New-Object Windows.Forms.Form;$dialog.Text='Select exit node';$dialog.Size=New-Object Drawing.Size(500,400);$dialog.StartPosition='CenterParent'
+  $list=New-Object Windows.Forms.ListBox;$list.Dock='Fill';foreach($peer in $peers){[void]$list.Items.Add(("$($peer.HostName) · $($peer.TailscaleIPs[0])"))}
+  $ok=New-Object Windows.Forms.Button;$ok.Text='Use selected device';$ok.Dock='Bottom';$ok.DialogResult='OK'
+  $dialog.Controls.Add($list);$dialog.Controls.Add($ok);$dialog.AcceptButton=$ok
+  try{if($dialog.ShowDialog($form) -eq 'OK' -and $list.SelectedIndex -ge 0){$ip=[string]$peers[$list.SelectedIndex].TailscaleIPs[0];$parsed=$null;if([Net.IPAddress]::TryParse($ip,[ref]$parsed) -and (Confirm "Route Windows internet through $ip?")){& $ts.Source set "--exit-node=$ip" --exit-node-allow-lan-access=true;if($LASTEXITCODE -ne 0){Notify 'Tailscale rejected the exit node.'}}}}finally{$dialog.Dispose()}
+ }catch{Notify 'Could not enumerate exit nodes.'}
+}
+$null=Button 'Stop using exit node' {
+ $ts=Get-Command tailscale.exe -ErrorAction SilentlyContinue
+ if($ts){& $ts.Source set --exit-node=;if($LASTEXITCODE -ne 0){Notify 'Tailscale rejected the change.'}}
+}
 $timer=New-Object Windows.Forms.Timer;$timer.Interval=2000
 $timer.Add_Tick({
  try{
@@ -88,6 +111,15 @@ $timer.Add_Tick({
   $port=if($s.launcherPort){[int]$s.launcherPort}else{4095}
   $bind=if($s.launcherHost){[string]$s.launcherHost}else{'127.0.0.1'}
   $listening=@(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue|Where-Object {$_.LocalAddress -eq $bind}).Count -gt 0
+  $address.Text='Address: '+$s.linkHost+':'+$s.port+' | Launcher port: '+$port
+  $pairLabel.Text='Pairing code: —'
+  if(Test-Path -LiteralPath $pairFile){try{$pair=Get-Content -LiteralPath $pairFile -Raw|ConvertFrom-Json;if([long]$pair.expires -gt [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -and [string]$pair.code -match '^\d{6} '+$(if($listening){'present'}else{'not detected'})+' | '+$s.mode+' | Remote: '+$(if($enabled){'enabled until '+[DateTimeOffset]::FromUnixTimeMilliseconds([long]$p.until).ToLocalTime().ToString('HH:mm')}else{'off'}))
+ }catch{$status.Text='Launcher setup not detected | Remote permissions unknown';$address.Text='Address: —';$pairLabel.Text='Pairing code: —'}
+})
+$timer.Start()
+$form.Add_FormClosed({$timer.Stop();$timer.Dispose()})
+[void]$form.ShowDialog()
+){$pairLabel.Text='Pairing code: '+$pair.code.Substring(0,3)+' '+$pair.code.Substring(3,3)}}catch{}}
   $status.Text=('Launcher listener: '+$(if($listening){'present'}else{'not detected'})+' | '+$s.mode+' | Remote: '+$(if($enabled){'enabled until '+[DateTimeOffset]::FromUnixTimeMilliseconds([long]$p.until).ToLocalTime().ToString('HH:mm')}else{'off'}))
  }catch{$status.Text='Launcher setup not detected | Remote permissions unknown'}
 })
