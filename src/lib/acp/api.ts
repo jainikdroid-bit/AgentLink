@@ -155,8 +155,8 @@ export async function* streamEvents(target: AcpTarget, id: string, from: number,
   }
 }
 
-export interface AgentQueue {items:{id:string;text:string}[];paused:boolean}
-export type QueueAction={action:"enqueue";id:string;text:string}|{action:"remove";id:string}|{action:"pause"|"resume"}
+export interface AgentQueue {items:{id:string;text:string}[];paused:boolean;uncertain?:{id:string;text:string}|null;journalFailed?:boolean}
+export type QueueAction={action:"enqueue";id:string;text:string}|{action:"remove";id:string}|{action:"pause"|"resume"|"acknowledge"}
 export function getAgentQueue(target:AcpTarget,id:string):Promise<AgentQueue>{
  return call(target,`/acp/${encodeURIComponent(id)}/queue`,{},8000)
 }
