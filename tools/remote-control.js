@@ -105,11 +105,17 @@ async function desktopAction(action,params={}){
 }
 function createRemoteControl({dir,readState,clock=Date.now}){
  let running=false, activeOperations=0
- const ids=new Map()
+ const ids=new Map(),uploads=new Map()
+ const UPLOAD_TTL=5*60*1000
+ const expireUpload=async u=>{uploads.delete(u.id);clearTimeout(u.timer);await fs.rm(u.temp,{force:true}).catch(()=>{})}
+ const touchUpload=u=>{clearTimeout(u.timer);u.timer=setTimeout(()=>{if(u.busy){touchUpload(u);return}void expireUpload(u)},UPLOAD_TTL);u.timer.unref()}
+ const validHash=v=>typeof v==='string'&&/^[0-9a-f]{64}$/.test(v)
+ const sameGrant=(u,p)=>u.until===p.until&&JSON.stringify(u.roots)===JSON.stringify(p.roots)
+ const uploadKey=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
  async function status(req){
   if(!privateAddress(req.socket.remoteAddress)||readState()?.mode==='tunnel')throw problem(403,'Remote control requires a trusted LAN or private tailnet')
   const p=await policy(dir,clock())
-  return {enabled:!!p,platform:process.platform,until:p?.until||0,roots:p?.roots||[],shell:!!p?.shell,files:!!p?.files,desktop:!!p?.desktop,maxFileBytes:MAX_FILE,maxDownloadBytes:MAX_DOWNLOAD,downloadChunkBytes:CHUNK}
+  return {enabled:!!p,platform:process.platform,until:p?.until||0,roots:p?.roots||[],shell:!!p?.shell,files:!!p?.files,desktop:!!p?.desktop,maxFileBytes:MAX_FILE,maxDownloadBytes:MAX_DOWNLOAD,downloadChunkBytes:CHUNK,maxUploadBytes:MAX_DOWNLOAD,uploadChunkBytes:CHUNK}
  }
  async function perform(req,body){
   const p=await status(req)
@@ -166,6 +172,83 @@ function createRemoteControl({dir,readState,clock=Date.now}){
    const file=await locate(p.roots,body.root,body.path)
    const fd=await fs.open(file,'r')
    try{const st=await fd.stat();if(!st.isFile()||st.nlink!==1||st.size>MAX_FILE)throw problem(413,'File exceeds limit');const data=Buffer.alloc(st.size+1);const {bytesRead}=await fd.read(data,0,data.length,0);if(bytesRead!==st.size)throw problem(409,'File changed');const b=data.subarray(0,bytesRead);return {base64:b.toString('base64'),bytes:b.length,sha256:crypto.createHash('sha256').update(b).digest('hex')}}finally{await fd.close()}
+  }
+  // Staged uploads are bounded, sequential and never overwrite an existing file.
+  if(action==='upload_begin'||action==='upload_chunk'||action==='upload_finish'||action==='upload_cancel'){
+   if(!p.files)throw problem(403,'File access disabled')
+   if(!uploadKey(body.transferId))throw problem(400,'Invalid transfer ID')
+   const id=body.transferId
+   if(action==='upload_begin'){
+    if(uploads.has(id))throw problem(409,'Transfer already exists')
+    if(uploads.size>=2)throw problem(429,'Too many uploads')
+    if(!Number.isSafeInteger(body.bytes)||body.bytes<0||body.bytes>MAX_DOWNLOAD||!validHash(body.sha256))throw problem(400,'Invalid upload metadata')
+    // Reserve the slot before awaiting filesystem operations.
+    const u={id,until:p.until,roots:p.roots,root:body.root,path:body.path,total:body.bytes,hash:body.sha256,offset:0,busy:true,temp:null}
+    uploads.set(id,u)
+    try{
+     await locate(p.roots,body.root,body.path,{create:true})
+     const stage=path.join(dir,'remote-upload-staging')
+     await fs.mkdir(stage,{recursive:true,mode:0o700})
+     const old=await fs.readdir(stage,{withFileTypes:true})
+     for(const e of old){
+      if(!e.isFile()||!/^upload-[0-9a-f-]{36}\.tmp$/i.test(e.name))continue
+      const candidate=path.join(stage,e.name)
+      if([...uploads.values()].some(x=>x.temp===candidate))continue
+      const st=await fs.lstat(candidate).catch(()=>null)
+      if(st&&Date.now()-st.mtimeMs>24*3600000)await fs.rm(candidate,{force:true}).catch(()=>{})
+     }
+     const temp=path.join(stage,'upload-'+crypto.randomUUID()+'.tmp')
+     const fd=await fs.open(temp,'wx',0o600)
+     u.temp=temp
+     await fd.close()
+     const fresh=await status(req)
+     if(!fresh.files||!sameGrant(u,fresh))throw problem(403,'Remote permission changed')
+     touchUpload(u)
+     return {offset:0}
+    }catch(e){uploads.delete(id);if(u.temp)await fs.rm(u.temp,{force:true}).catch(()=>{});throw e}
+    finally{u.busy=false}
+   }
+   const u=uploads.get(id)
+   if(!u||u.busy)throw problem(409,'Upload unavailable or busy')
+   if(!sameGrant(u,p)||u.root!==body.root||u.path!==body.path){await expireUpload(u);throw problem(403,'Remote permission changed')}
+   u.busy=true
+   try{
+    if(action==='upload_cancel'){await expireUpload(u);return {cancelled:true}}
+    if(action==='upload_chunk'){
+     if(body.offset!==u.offset||!validHash(body.sha256)||typeof body.base64!=='string'||body.base64.length>Math.ceil(CHUNK/3)*4||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(body.base64))throw problem(400,'Invalid upload chunk')
+     const data=Buffer.from(body.base64,'base64')
+     if(data.length!==Math.min(CHUNK,u.total-u.offset)||!data.length||sha256(data)!==body.sha256)throw problem(400,'Chunk checksum or size mismatch')
+     const fd=await fs.open(u.temp,'r+')
+     try{
+      if((await fd.stat()).size!==u.offset)throw problem(409,'Staging file changed')
+      let wrote=0
+      while(wrote<data.length){
+       const {bytesWritten}=await fd.write(data,wrote,data.length-wrote,u.offset+wrote)
+       if(!bytesWritten)throw problem(500,'Could not write upload')
+       wrote+=bytesWritten
+      }
+     }finally{await fd.close()}
+     u.offset+=data.length
+     touchUpload(u)
+     return {offset:u.offset}
+    }
+    if(u.offset!==u.total)throw problem(409,'Upload incomplete')
+    const hash=crypto.createHash('sha256')
+    let bytes=0
+    for await(const chunk of require('node:fs').createReadStream(u.temp,{highWaterMark:CHUNK})){hash.update(chunk);bytes+=chunk.length;if(bytes>u.total)throw problem(409,'Staging file changed')}
+    if(bytes!==u.total||hash.digest('hex')!==u.hash)throw problem(409,'File checksum mismatch')
+    const target=await locate(p.roots,u.root,u.path,{create:true})
+    const fresh=await status(req)
+    if(!fresh.files||!sameGrant(u,fresh))throw problem(403,'Remote permission changed')
+    try{await fs.copyFile(u.temp,target,require('node:fs').constants.COPYFILE_EXCL)}
+    catch(e){if(e.code==='EEXIST')throw problem(409,'File already exists');throw e}
+    await expireUpload(u)
+    return {bytes:u.total,sha256:u.hash}
+   }catch(e){
+    // Do not silently retry a partial write or an uncertain publish.
+    if(action==='upload_finish'||action==='upload_chunk')await expireUpload(u)
+    throw e
+   }finally{u.busy=false}
   }
   if(action==='upload'){
    if(!p.files)throw problem(403,'File access disabled')
