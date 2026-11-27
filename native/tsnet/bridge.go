@@ -72,7 +72,7 @@ func watch(s *tsnet.Server) {
 		return
 	}
 	if err := resetExitForStart(s); err != nil {
-		setErr("exit preferences: " + err.Error())
+		g.mu.Lock(); if g.srv==s { g.lastErr="exit preferences: "+err.Error() }; g.mu.Unlock()
 		_ = s.Close()
 		return
 	}
@@ -97,6 +97,7 @@ func watch(s *tsnet.Server) {
 		st, err := lc.Status(ctx)
 		cancel()
 		g.mu.Lock()
+		if g.srv != s { g.mu.Unlock(); return }
 		if err != nil {
 			g.lastErr = err.Error()
 		} else {
