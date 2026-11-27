@@ -13,7 +13,7 @@ import {parseRemoteProposal,privateRemoteUrl,toolPrompt,type RemoteProposal} fro
 
 type Status={enabled:boolean;platform:string;until:number;roots:string[];shell:boolean;files:boolean;desktop:boolean;maxFileBytes:number}
 type Picked={name:string;base64:string;bytes:number;sha256:string}
-type Result={stdout?:string;stderr?:string;exitCode?:number|null;timedOut?:boolean;truncated?:boolean;entries?:{name:string;directory:boolean}[];jpeg?:string;base64?:string;sha256?:string;bytes?:number}
+type Result={stdout?:string;stderr?:string;exitCode?:number|null;timedOut?:boolean;truncated?:boolean;entries?:{name:string;directory:boolean}[];jpeg?:string;base64?:string;sha256?:string;bytes?:number;windows?:unknown;performed?:boolean}
 const libraryKey="agentlink-local-model-library-v1"
 const nativeFiles=()=>{const n=NativeModules.AgentLinkRemoteFiles;if(!n)throw Error("File picker unavailable");return n as {pick():Promise<Picked|null>;save(name:string,base64:string,sha256:string):Promise<boolean|null>}}
 export default function RemoteControl(){
@@ -25,7 +25,7 @@ export default function RemoteControl(){
  const [models,setModels]=useState<HfFile[]>([]),[model,setModel]=useState<HfFile|null>(null)
  const [task,setTask]=useState(""),[proposal,setProposal]=useState<RemoteProposal|null>(null),[results,setResults]=useState<string[]>([]),[answer,setAnswer]=useState("")
  const [command,setCommand]=useState(""),[output,setOutput]=useState(""),[jpeg,setJpeg]=useState(""),[entries,setEntries]=useState<{name:string;directory:boolean}[]>([])
- const [x,setX]=useState(""),[y,setY]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("")
+ const [pid,setPid]=useState(""),[x,setX]=useState(""),[y,setY]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("")
  const lock=useRef(false),hostRef=useRef(host);hostRef.current=host
  useEffect(()=>{let alive=true;void AsyncStorage.getItem(libraryKey).then(async raw=>{const list=raw?JSON.parse(raw):[];if(!Array.isArray(list))return;const available:HfFile[]=[];for(const m of list.filter(validModel).slice(0,40))if(await installedModel(m).catch(()=>false))available.push(m);if(alive){setModels(available);setModel(available.find(m=>m.sha256===params.hash)||available[0]||null)}}).catch(e=>{if(alive)setError(String(e))});return()=>{alive=false}},[params.hash])
  const run=async(fn:()=>Promise<void>)=>{if(lock.current)return;lock.current=true;setBusy(true);setError("");try{await fn()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{lock.current=false;setBusy(false)}}
@@ -38,7 +38,7 @@ export default function RemoteControl(){
   const result=await call<Result>(a,"/remote/action",{method:"POST",body:JSON.stringify({...body,root,id:Crypto.randomUUID()})},45000)
   return result
  }
- const summarize=(r:Result)=>JSON.stringify({stdout:r.stdout,stderr:r.stderr,exitCode:r.exitCode,timedOut:r.timedOut,truncated:r.truncated,entries:r.entries,bytes:r.bytes}).slice(0,5000)
+ const summarize=(r:Result)=>JSON.stringify({stdout:r.stdout,stderr:r.stderr,exitCode:r.exitCode,timedOut:r.timedOut,truncated:r.truncated,entries:r.entries,windows:r.windows,performed:r.performed,bytes:r.bytes}).slice(0,5000)
  const propose=()=>void run(async()=>{
   if(!model||!status?.enabled||!task.trim()||results.length>=6)throw Error(w("remotePlanLimit"))
   await target()
@@ -53,7 +53,7 @@ export default function RemoteControl(){
  })
  const executeProposal=()=>{if(!proposal||proposal.action==="final")return;const proposed=proposal,id=host,selectedRoot=root,selectedFolder=folder
   Alert.alert(w("remoteApprove"),(connections.find(c=>c.id===id)?.name||id)+"\n"+(status?.roots[selectedRoot]||"")+" / "+selectedFolder+"\n\n"+JSON.stringify(proposed,null,2),[{text:t("common.cancel"),style:"cancel"},{text:w("confirm"),onPress:()=>void run(async()=>{
-   if(hostRef.current!==id||proposal!==proposed)throw Error(w("remotePermissionChanged"))
+   if(hostRef.current!==id)throw Error(w("remotePermissionChanged"))
    setProposal(null)
    const r=await perform({...proposed,path:proposed.action==="list"?proposed.path:selectedFolder})
    const summary=summarize(r);setOutput(summary);setResults(old=>[...old,JSON.stringify(proposed)+"\n"+summary]);if(r.entries)setEntries(r.entries)
@@ -76,9 +76,9 @@ export default function RemoteControl(){
  <View style={box}><Text style={title}>{w("remoteControl")}</Text><Text style={txt}>{w("remoteHelp")}</Text>{connections.map(c=>btn((host===c.id?"✓ ":"")+c.name,()=>choose(c.id),!c.launcherPort))}{btn(w("refresh"),probe,!host)}{status&&<><Text style={txt}>{status.enabled?w("remoteEnabled")+" · "+new Date(status.until).toLocaleTimeString():w("remoteDisabled")}</Text>{status.roots.map((r,i)=>btn((root===i?"✓ ":"")+r,()=>{setRoot(i);setFolder("");setEntries([]);setProposal(null);setResults([])}))}</>}</View>
  {error?<Text selectable style={{color:p.red}}>{error}</Text>:null}
  <View style={box}><Text style={title}>{w("remoteLocalAgent")}</Text>{models.map(m=>btn((model?.sha256===m.sha256?"✓ ":"")+m.file,()=>{setModel(m);setProposal(null);setResults([])}))}{field(task,v=>{setTask(v);setProposal(null);setResults([]);setAnswer("")},w("taskDescription"),true)}{btn(w("remotePropose"),propose,!enabled||!model||!task.trim()||!!proposal||results.length>=6)}{proposal&&<><Text selectable style={txt}>{JSON.stringify(proposal,null,2)}</Text>{btn(w("remoteApprove"),executeProposal)}{btn(t("common.cancel"),()=>setProposal(null))}</>}{answer?<Text selectable style={txt}>{answer}</Text>:null}<Text style={{color:p.muted}}>{results.length}/6</Text>{results.map((r,i)=><Text key={i} selectable style={{color:p.muted,fontSize:12}}>{r}</Text>)}</View>
- <View style={box}><Text style={title}>{w("remoteShell")}</Text>{field(folder,v=>{setFolder(v);setEntries([]);setProposal(null)},w("remoteFolder"))}{field(command,setCommand,status?.platform==="win32"?"Get-Location":"pwd",true)}{btn(w("remoteApprove"),()=>approve({action:"shell",command,path:folder}),!enabled||!status?.shell||!command.trim())}</View>
+ <View style={box}><Text style={title}>{w("remoteShell")}</Text>{field(folder,v=>{setFolder(v);setEntries([]);setProposal(null);setResults([])},w("remoteFolder"))}{field(command,setCommand,status?.platform==="win32"?"Get-Location":"pwd",true)}{btn(w("remoteApprove"),()=>approve({action:"shell",command,path:folder}),!enabled||!status?.shell||!command.trim())}</View>
  <View style={box}><Text style={title}>{w("remoteFiles")}</Text><Text style={{color:p.muted}}>{w("remoteFileLimit")}</Text>{btn(w("browseFiles"),browse,!enabled||!status?.files)}{entries.map(e=>btn((e.directory?"📁 ":"")+e.name,()=>{if(e.directory){setFolder([folder,e.name].filter(Boolean).join("/"));setEntries([]);setFile("")}else setFile(e.name)}))}{field(file,setFile,w("file"))}{btn(w("remoteDownload"),download,!enabled||!status?.files||!file.trim())}{btn(w("remoteUpload"),upload,!enabled||!status?.files)}</View>
- <View style={box}><Text style={title}>{w("remoteDesktop")}</Text>{btn(w("remoteWindows"),()=>approve({action:"windows"}),!enabled||!status?.desktop)}{btn(w("remoteScreenshot"),()=>approve({action:"screenshot"}),!enabled||!status?.desktop)}{jpeg?<Image resizeMode="contain" source={{uri:"data:image/jpeg;base64,"+jpeg}} style={{width:"100%",height:220}}/>:null}{field(x,setX,"X 0–1000")}{field(y,setY,"Y 0–1000")}{btn(w("remoteClick"),()=>approve({action:"click",x:Number(x),y:Number(y)}),!enabled||!status?.desktop||!x.trim()||!y.trim())}<View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>{["enter","escape","tab","up","down","left","right","backspace","space"].map(key=>btn(key,()=>approve({action:"key",key}),!enabled||!status?.desktop))}</View></View>
+ <View style={box}><Text style={title}>{w("remoteDesktop")}</Text>{btn(w("remoteWindows"),()=>approve({action:"windows"}),!enabled||!status?.desktop)}{field(pid,setPid,"PID")}{btn(w("remoteActivate"),()=>approve({action:"activate",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteScreenshot"),()=>approve({action:"screenshot"}),!enabled||!status?.desktop)}{jpeg?<Image resizeMode="contain" source={{uri:"data:image/jpeg;base64,"+jpeg}} style={{width:"100%",height:220}}/>:null}{field(x,setX,"X 0–1000")}{field(y,setY,"Y 0–1000")}{btn(w("remoteClick"),()=>approve({action:"click",x:Number(x),y:Number(y)}),!enabled||!status?.desktop||!x.trim()||!y.trim())}<View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>{["enter","escape","tab","up","down","left","right","backspace","space"].map(key=>btn(key,()=>approve({action:"key",key}),!enabled||!status?.desktop))}</View></View>
  {output?<Text selectable style={{color:p.text,fontFamily:p.mono,fontSize:12}}>{output}</Text>:null}
  {busy&&<TouchableOpacity onPress={()=>void cancelLocal().catch(()=>{})}><Text style={{color:p.amber,padding:10}}>{t("common.cancel")} · {w("remoteLocalAgent")}</Text></TouchableOpacity>}
  <View style={box}><Text style={title}>{w("remoteInternet")}</Text><Text style={txt}>{w("remoteInternetHelp")}</Text>{btn(w("remoteHotspot"),()=>void Linking.sendIntent("android.settings.TETHER_SETTINGS").catch(()=>Linking.sendIntent("android.settings.WIRELESS_SETTINGS")).catch(()=>setError(w("failed"))))}{btn(w("remoteExitDocs"),()=>void Linking.openURL("https://tailscale.com/docs/features/exit-nodes").catch(()=>setError(w("failed"))))}</View>
