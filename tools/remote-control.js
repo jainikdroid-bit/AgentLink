@@ -72,10 +72,17 @@ async function desktopAction(action,params={}){
  else if(action==='activate'){
   if(!Number.isInteger(params.pid)||params.pid<1||params.pid>2147483647)throw problem(400,'Invalid process ID')
   script="$p=Get-Process -Id "+params.pid+" -ErrorAction Stop;if(!$p.MainWindowHandle){throw 'No interactive window'};$w=New-Object -ComObject WScript.Shell;[bool]$w.AppActivate($p.Id)"
+ }else if(action==='click'){
+  if(!Number.isInteger(params.x)||params.x<0||params.x>1000||!Number.isInteger(params.y)||params.y<0||params.y>1000)throw problem(400,'Use normalized primary-screen coordinates 0–1000')
+  script="Add-Type -AssemblyName System.Windows.Forms;Add-Type -TypeDefinition 'using System.Runtime.InteropServices;public static class AgentLinkMouse{[DllImport(\"user32.dll\")]public static extern bool SetCursorPos(int x,int y);[DllImport(\"user32.dll\")]public static extern void mouse_event(uint f,uint x,uint y,uint d,UIntPtr extra);}';$b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds;$x=$b.Left+[int](($b.Width-1)*"+params.x+"/1000);$y=$b.Top+[int](($b.Height-1)*"+params.y+"/1000);if(![AgentLinkMouse]::SetCursorPos($x,$y)){throw 'Cursor unavailable'};[AgentLinkMouse]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[AgentLinkMouse]::mouse_event(4,0,0,0,[UIntPtr]::Zero);'true'"
+ }else if(action==='key'){
+  const keys={enter:'{ENTER}',escape:'{ESC}',tab:'{TAB}',up:'{UP}',down:'{DOWN}',left:'{LEFT}',right:'{RIGHT}',backspace:'{BACKSPACE}',space:' '}
+  if(!Object.hasOwn(keys,params.key))throw problem(400,'Unsupported desktop key')
+  script="$w=New-Object -ComObject WScript.Shell;$w.SendKeys('"+keys[params.key]+"');'true'"
  }else if(action==='screenshot'){
   script="Add-Type -AssemblyName System.Windows.Forms;Add-Type -AssemblyName System.Drawing;$b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds;$bmp=New-Object Drawing.Bitmap($b.Width,$b.Height);$g=[Drawing.Graphics]::FromImage($bmp);try{$g.CopyFromScreen($b.Location,[Drawing.Point]::Empty,$b.Size);$scale=[Math]::Min(1,1280.0/[Math]::Max($b.Width,$b.Height));$small=New-Object Drawing.Bitmap($bmp,[int]($b.Width*$scale),[int]($b.Height*$scale));$ms=New-Object IO.MemoryStream;try{$small.Save($ms,[Drawing.Imaging.ImageFormat]::Jpeg);[Convert]::ToBase64String($ms.ToArray())}finally{$ms.Dispose();$small.Dispose()}}finally{$g.Dispose();$bmp.Dispose()}"
  }else throw problem(400,'Unknown desktop action')
- try{const {stdout}=await exec(ps(),psArgs('[Console]::OutputEncoding=[Text.UTF8Encoding]::new();'+script),{timeout:12000,maxBuffer:3*1024*1024,windowsHide:true,env:commandEnv()});const text=stdout.trim();return action==='screenshot'?{jpeg:text}:action==='windows'?{windows:text?JSON.parse(text):[]}:{activated:text.toLowerCase()==='true'}}
+ try{const {stdout}=await exec(ps(),psArgs('[Console]::OutputEncoding=[Text.UTF8Encoding]::new();'+script),{timeout:12000,maxBuffer:3*1024*1024,windowsHide:true,env:commandEnv()});const text=stdout.trim();return action==='screenshot'?{jpeg:text}:action==='windows'?{windows:text?JSON.parse(text):[]}:{performed:text.toLowerCase()==='true'}}
  catch{throw problem(503,'Desktop unavailable in this Windows session')}
 }
 function createRemoteControl({dir,readState,clock=Date.now}){
@@ -115,7 +122,7 @@ function createRemoteControl({dir,readState,clock=Date.now}){
    try{await fd.writeFile(data);await fd.sync()}catch(e){await fd.close();await fs.rm(file,{force:true}).catch(()=>{});throw e}finally{await fd.close().catch(()=>{})}
    return {bytes:data.length,sha256:hash}
   }
-  if(action==='shell'||['windows','activate','screenshot'].includes(action)){
+  if(action==='shell'||['windows','activate','screenshot','click','key'].includes(action)){
    if(action==='shell'?!p.shell:!p.desktop)throw problem(403,'Capability disabled on computer')
    if(typeof body.id!=='string'||!(/^[0-9a-f-]{36}$/i).test(body.id))throw problem(400,'Action ID required')
    if(ids.has(body.id))throw problem(409,'Action already accepted; do not repeat automatically')
