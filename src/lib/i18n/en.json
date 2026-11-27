@@ -934,6 +934,14 @@
     "failed": "Could not change the model"
   },
   "workspace": {
+    "exitReceiveConfirm": "Use this approved exit node for Hugging Face catalog and model transfers? If it becomes unavailable, the request fails instead of using direct internet.",
+    "exitShareConfirm": "Allow approved tailnet devices to route their internet through this phone for up to one hour? Requires admin approval, a connected tailnet and a running AgentLink process. This may consume mobile data and battery.",
+    "exitStop": "Stop sharing / receiving",
+    "exitShare": "Share phone internet for one hour",
+    "exitOff": "Internet sharing off",
+    "exitReceiving": "Selected exit node for model downloads",
+    "exitSharing": "Exit node advertised (admin approval required)",
+    "exitRefresh": "Refresh internet sharing",
     "remoteInspect": "Inspect accessible window controls",
     "remotePrivate": "Select a paired private LAN or Tailscale IPv4 address; public tunnels are not supported.",
     "remotePermissionChanged": "Permissions changed; refresh computer status.",
@@ -958,7 +966,7 @@
     "remoteScreenshot": "View primary screen",
     "remoteClick": "Click at coordinates",
     "remoteInternet": "Internet sharing",
-    "remoteInternetHelp": "Same network without internet: LAN control can work. To share internet, enable the hotspot on the online device and connect the other device. Tailscale exit nodes need a working path to the tailnet and an approved exit node; the built-in app client is not a system-wide VPN.",
+    "remoteInternetHelp": "Same-network control and file exchange need no internet. Use the system hotspot for general internet sharing on LAN. With built-in Tailscale, the phone can advertise an exit node and receive model downloads through an approved PC or VPS. Other Android apps require a system VPN or hotspot. Both devices need a working tailnet connection for exit-node routing.",
     "remoteHotspot": "Open Android hotspot settings",
     "remoteExitDocs": "Tailscale exit-node instructions",
     "uncertainTask": "Interrupted task — result unknown",
