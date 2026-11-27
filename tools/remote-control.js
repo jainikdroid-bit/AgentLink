@@ -286,6 +286,6 @@ function createRemoteControl({dir,readState,clock=Date.now}){
   activeOperations++
   try{return await perform(req,body)}finally{activeOperations--}
  }
- return {status,act,isWorking:()=>activeOperations>0}
+ return {status,act,isWorking:()=>activeOperations>0||uploads.size>0}
 }
 module.exports={createRemoteControl,privateAddress,relative,locate,policy,shellRun}
