@@ -31,9 +31,10 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     private val engine = try { System.loadLibrary("agentlink_local"); nativeAvailable() } catch (_: Throwable) { false }
 
     private external fun nativeAvailable(): Boolean
+    private external fun nativeBackends(): String
     private external fun nativeReset()
     private external fun nativeCancel()
-    private external fun nativeGenerate(file: ByteArray, input: Array<ByteArray>, context: Int, threads: Int, limit: Int, memoryBudget: Long): Array<ByteArray>
+    private external fun nativeGenerate(file: ByteArray, input: Array<ByteArray>, context: Int, threads: Int, limit: Int, memoryBudget: Long, backendMode: Int): Array<ByteArray>
     @Suppress("unused") private fun nativePreview(bytes: ByteArray) { partialText = bytes.toString(Charsets.UTF_8) }
     override fun getName() = "AgentLinkLocalModels"
 
@@ -109,6 +110,9 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
             val m = memory()
             val map = Arguments.createMap()
             map.putBoolean("engine", engine)
+            val backends=Arguments.createArray()
+            if(engine) nativeBackends().split(",").filter { it.isNotEmpty() }.forEach { backends.pushString(it) }
+            map.putArray("backends", backends)
             map.putDouble("availableRamBytes", m.availMem.toDouble())
             map.putDouble("totalRamBytes", m.totalMem.toDouble())
             map.putDouble("freeStorageBytes", StatFs(root.absolutePath).availableBytes.toDouble())
@@ -243,7 +247,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
     @ReactMethod fun installed(hash: String, promise: Promise) {
         try { promise.resolve(file(hash).isFile) } catch (e: Exception) { promise.reject("invalid_model", e) }
     }
-    @ReactMethod fun generate(hash: String, prompt: String, context: Int, threads: Int, limit: Int, promise: Promise) =
+    @ReactMethod fun generate(hash: String, prompt: String, context: Int, threads: Int, limit: Int, backendMode: Int, promise: Promise) =
         task("generate", promise) {
             check(engine) { "Native model engine unavailable for this ABI" }
             require(prompt.length <= 128000) { "Conversation too large" }
@@ -262,7 +266,7 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
                 messages.add(role.toByteArray(Charsets.UTF_8)); messages.add(data)
             }
             val input = messages.toTypedArray()
-            require(context in listOf(1024,2048,4096) && threads in 1..8 && limit in 1..512) { "Invalid generation settings" }
+            require(context in listOf(1024,2048,4096) && threads in 1..8 && limit in 1..512 && backendMode in 0..3) { "Invalid generation settings" }
             val model = file(hash)
             check(model.isFile && isGguf(model)) { "Download this model first" }
             check(digest(model).equals(hash, true)) { "Model integrity check failed" }
@@ -278,9 +282,9 @@ class LocalModelModule(private val ctx: ReactApplicationContext) : ReactContextB
                 power.addThermalStatusListener(listener)
                 try {
                     checkCancelled()
-                    nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), input, context, threads, limit, mem.availMem)
+                    nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), input, context, threads, limit, mem.availMem, backendMode)
                 } finally { power.removeThermalStatusListener(listener) }
-            } else nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), input, context, threads, limit, mem.availMem)
+            } else nativeGenerate(model.absolutePath.toByteArray(Charsets.UTF_8), input, context, threads, limit, mem.availMem, backendMode)
             val map = Arguments.createMap()
             map.putString("text", result[0].toString(Charsets.UTF_8))
             map.putString("metrics", result[1].toString(Charsets.UTF_8))
