@@ -27,10 +27,50 @@ export default function RemoteControl(){
  const [task,setTask]=useState(""),[proposal,setProposal]=useState<RemoteProposal|null>(null),[results,setResults]=useState<string[]>([]),[answer,setAnswer]=useState("")
  const [command,setCommand]=useState(""),[output,setOutput]=useState(""),[jpeg,setJpeg]=useState(""),[entries,setEntries]=useState<{name:string;directory:boolean}[]>([])
  const [pid,setPid]=useState(""),[x,setX]=useState(""),[y,setY]=useState(""),[busy,setBusy]=useState(false),[error,setError]=useState("")
- const [exit,setExit]=useState<ExitInfo|null>(null),[lan,setLan]=useState<string[]>([])
- const refreshExit=()=>void run(async()=>{setLan(await localAddresses());setExit(await tailnetExitInfo())})
- const changeExit=(mode:"off"|"receive"|"share",id="")=>{const go=()=>void run(async()=>{await setTailnetExitMode(mode,id);setExit(await tailnetExitInfo())});if(mode==="off")go();else Alert.alert(w("remoteInternet"),w(mode==="share"?"exitShareConfirm":"exitReceiveConfirm"),[{text:t("common.cancel"),style:"cancel"},{text:w("confirm"),onPress:go}])}
+ const [exit,setExit]=useState<ExitInfo|null>(null),[lan,setLan]=useState<string[]>([]),[exitError,setExitError]=useState("")
  const lock=useRef(false),hostRef=useRef(host);hostRef.current=host
+ const exitEpoch=useRef(0),exitRead=useRef(false)
+ // Never let a delayed poll overwrite the state after a mode change.
+ const refreshExit=()=>void run(async()=>{
+  const epoch=++exitEpoch.current
+  setExitError("")
+  try{
+   const addresses=await localAddresses()
+   if(exitEpoch.current===epoch)setLan(addresses)
+   const info=await tailnetExitInfo()
+   if(exitEpoch.current===epoch)setExit(info)
+  }catch(e){
+   if(exitEpoch.current===epoch){setExit(null);setExitError(e instanceof Error?e.message:String(e))}
+  }
+ })
+ const changeExit=(mode:"off"|"receive"|"share",id="")=>{
+  const go=()=>void run(async()=>{
+   const epoch=++exitEpoch.current
+   setExit(null);setExitError("")
+   try{await setTailnetExitMode(mode,id);const info=await tailnetExitInfo();if(exitEpoch.current===epoch)setExit(info)}
+   catch(e){if(exitEpoch.current===epoch)setExitError(e instanceof Error?e.message:String(e))}
+  })
+  if(mode==="off")go();else Alert.alert(w("remoteInternet"),w(mode==="share"?"exitShareConfirm":"exitReceiveConfirm"),[{text:t("common.cancel"),style:"cancel"},{text:w("confirm"),onPress:go}])
+ }
+ useEffect(()=>{
+  let alive=true
+  const poll=async()=>{
+   if(lock.current||exitRead.current)return
+   exitRead.current=true
+   const epoch=exitEpoch.current
+   try{
+    const addresses=await localAddresses()
+    if(alive&&exitEpoch.current===epoch)setLan(addresses)
+    const info=await tailnetExitInfo()
+    if(alive&&exitEpoch.current===epoch){setExit(info);setExitError("")}
+   }catch(e){
+    if(alive&&exitEpoch.current===epoch){setExit(null);setExitError(e instanceof Error?e.message:String(e))}
+   }finally{exitRead.current=false}
+  }
+  void poll()
+  const timer=setInterval(()=>void poll(),10000)
+  return()=>{alive=false;exitEpoch.current++;clearInterval(timer)}
+ },[])
  useEffect(()=>{let alive=true;void AsyncStorage.getItem(libraryKey).then(async raw=>{const list=raw?JSON.parse(raw):[];if(!Array.isArray(list))return;const available:HfFile[]=[];for(const m of list.filter(validModel).slice(0,40))if(await installedModel(m).catch(()=>false))available.push(m);if(alive){setModels(available);setModel(available.find(m=>m.sha256===params.hash)||available[0]||null)}}).catch(e=>{if(alive)setError(String(e))});return()=>{alive=false}},[params.hash])
  const run=async(fn:()=>Promise<void>)=>{if(lock.current)return;lock.current=true;setBusy(true);setError("");try{await fn()}catch(e){setError(e instanceof Error?e.message:String(e))}finally{lock.current=false;setBusy(false)}}
  const target=async(id=host)=>{const a=await getConnectionTarget(id);if(!a||hostRef.current!==id||a.tunnel||!a.auth?.password||!privateRemoteUrl(a.serverUrl))throw Error(w("remotePrivate"));return a}
@@ -85,6 +125,6 @@ export default function RemoteControl(){
  <View style={box}><Text style={title}>{w("remoteDesktop")}</Text>{btn(w("remoteWindows"),()=>approve({action:"windows"}),!enabled||!status?.desktop)}{field(pid,setPid,"PID")}{btn(w("remoteActivate"),()=>approve({action:"activate",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteInspect"),()=>approve({action:"inspect",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteScreenshot"),()=>approve({action:"screenshot"}),!enabled||!status?.desktop)}{jpeg?<Image resizeMode="contain" source={{uri:"data:image/jpeg;base64,"+jpeg}} style={{width:"100%",height:220}}/>:null}{field(x,setX,"X 0–1000")}{field(y,setY,"Y 0–1000")}{btn(w("remoteClick"),()=>approve({action:"click",x:Number(x),y:Number(y)}),!enabled||!status?.desktop||!x.trim()||!y.trim())}<View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>{["enter","escape","tab","up","down","left","right","backspace","space"].map(key=>btn(key,()=>approve({action:"key",key}),!enabled||!status?.desktop))}</View></View>
  {output?<Text selectable style={{color:p.text,fontFamily:p.mono,fontSize:12}}>{output}</Text>:null}
  {busy&&<TouchableOpacity onPress={()=>void cancelLocal().catch(()=>{})}><Text style={{color:p.amber,padding:10}}>{t("common.cancel")} · {w("remoteLocalAgent")}</Text></TouchableOpacity>}
- <View style={box}><Text style={title}>{w("remoteInternet")}</Text><Text style={txt}>{w("remoteInternetHelp")}</Text>{btn(w("exitRefresh"),refreshExit)}{lan.length>0?<Text selectable style={txt}>LAN: {lan.join(" · ")}</Text>:null}{exit&&<><Text style={txt}>{exit.sharing?w("exitSharing")+" · "+(exit.until?new Date(exit.until).toLocaleTimeString():"—"):exit.selected?w("exitReceiving")+" · "+(exit.online?"✓":"—"):w("exitOff")}</Text>{exit.peers.map(peer=>btn((exit.selected===peer.id?"✓ ":"")+peer.name+" · "+peer.ip,()=>changeExit("receive",peer.id),!peer.online))}{btn(w("exitShare"),()=>changeExit("share"),exit.sharing)}{btn(w("exitStop"),()=>changeExit("off"),!exit.sharing&&!exit.selected)}</>}{btn(w("remoteHotspot"),()=>void Linking.sendIntent("android.settings.TETHER_SETTINGS").catch(()=>Linking.sendIntent("android.settings.WIRELESS_SETTINGS")).catch(()=>setError(w("failed"))))}{btn(w("remoteExitDocs"),()=>void Linking.openURL("https://tailscale.com/docs/features/exit-nodes").catch(()=>setError(w("failed"))))}</View>
+ <View style={box}><Text style={title}>{w("remoteInternet")}</Text><Text style={txt}>{w("remoteInternetHelp")}</Text>{btn(w("exitRefresh"),refreshExit)}{exitError?<Text selectable style={{color:p.muted}}>{exitError}</Text>:null}{lan.length>0?<Text selectable style={txt}>LAN: {lan.join(" · ")}</Text>:null}{exit&&<><Text style={txt}>{exit.sharing?w("exitSharing")+" · "+(exit.until?new Date(exit.until).toLocaleTimeString():"—"):exit.selected?w("exitReceiving")+" · "+(exit.online?"✓":"—"):w("exitOff")}</Text>{exit.peers.map(peer=>btn((exit.selected===peer.id?"✓ ":"")+peer.name+" · "+peer.ip,()=>changeExit("receive",peer.id),!peer.online))}{btn(w("exitShare"),()=>changeExit("share"),exit.sharing)}{btn(w("exitStop"),()=>changeExit("off"),!exit.sharing&&!exit.selected)}</>}{btn(w("remoteHotspot"),()=>void Linking.sendIntent("android.settings.TETHER_SETTINGS").catch(()=>Linking.sendIntent("android.settings.WIRELESS_SETTINGS")).catch(()=>setError(w("failed"))))}{btn(w("remoteExitDocs"),()=>void Linking.openURL("https://tailscale.com/docs/features/exit-nodes").catch(()=>setError(w("failed"))))}</View>
  </ScrollView>
 }
