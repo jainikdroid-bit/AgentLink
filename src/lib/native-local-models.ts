@@ -7,6 +7,7 @@ export interface LocalProgress {busy:boolean;operation:string;bytes:number;total
 type Result={text:string;metrics:string}
 export type LocalMessage={role:"user"|"assistant";content:string}
 interface LocalNative {
+ catalog(url:string):Promise<string>
  vaultRead(name:string):Promise<string|null>
  vaultWrite(name:string,value:string):Promise<void>
  vaultRemove(name:string):Promise<void>
@@ -40,3 +41,5 @@ export async function generateLocal(m:HfFile,prompt:string|LocalMessage[],contex
 export async function vaultRead<T>(name:string):Promise<T|null>{const data=await engine().vaultRead(name);return data===null?null:JSON.parse(data) as T}
 export async function vaultWrite(name:string,value:unknown){await engine().vaultWrite(name,JSON.stringify(value))}
 export async function vaultRemove(name:string){await engine().vaultRemove(name)}
+
+export async function modelCatalog(url:string):Promise<unknown>{return JSON.parse(await engine().catalog(url))}
