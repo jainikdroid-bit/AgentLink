@@ -140,3 +140,7 @@ Windows: `gradlew.bat assembleRelease`. Не менять 3D-код; сборк�
 ## 0.27.1 — актуальная рабочая ветка после исправлений Клода
 
 См. [docs/PHONE-AGENT-CONTROL.ru.md](docs/PHONE-AGENT-CONTROL.ru.md). Launcher v13, локальный телефонный агент, private LAN/Tailscale shell и file exchange, Windows UI Automation и GUI -Gui, системные hotspot/exit-node настройки, encrypted journal, team tasks, local chat, profiles, diagnostics, CodeMirror и optional backends. 4/4 реальных Node теста нового remote module/парсера прошли, SHA совпадают. Full build/CI/Windows/Android/GPU/NPU не подтверждены, полноценный Android VPN/двусторонний сетевой relay не готов. Продолжить от feat/agentlink-durable-workspace, сохранить main и Cheri, не выпускать APK до проверки.
+
+## 27.11.2026: удалённое управление и интернет
+
+См. [docs/REMOTE-INTERNET.md](docs/REMOTE-INTERNET.md). Сохранены новые изменения Клода (UI Automation, GUI Windows, exit-node selection). Launcher v14; Android встроенный tsnet: выбор exit node, временное объявление телефона, HF catalog/download relay; Windows shortcut и диагностика. **Обязательно пересобрать tsnetbridge.aar**, затем проверить CI/Gradle и реальную сеть. 7/7 изолированных JS и 13/13 отдельных Go URL сценариев прошли, полный пакет/Android/Windows не проверены. Не утверждать, что весь Android-трафик проходит через встроенный tsnet или что передача работает без доступного tailnet; для системной маршрутизации нужны штатные hotspot/ICS/VPN. Не менять Cheri и не публиковать релиз без разрешения.
