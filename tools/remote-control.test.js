@@ -40,3 +40,20 @@ test('remote permissions, real binary transfer, checksum, overwrite and command 
   now+=3600001;assert.equal((await service.status(req)).enabled,false)
  }finally{await fs.rm(dir,{recursive:true,force:true})}
 })
+
+test('launcher cannot auto-restart while an approved remote operation is active',async()=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'agentlink-active-'))
+ try{
+  await fs.writeFile(path.join(dir,'remote-control.json'),JSON.stringify({until:Date.now()+60000,roots:[dir],shell:true,files:false,desktop:false}))
+  const service=createRemoteControl({dir,readState:()=>({mode:'lan'})})
+  const req={socket:{remoteAddress:'127.0.0.1'}}
+  const command=process.platform==='win32'?'Start-Sleep -Milliseconds 300; Write-Output done':'sleep 0.3; printf done'
+  const task=service.act(req,{action:'shell',root:0,path:'',id:crypto.randomUUID(),command})
+  assert.equal(service.isWorking(),true)
+  const result=await task
+  assert.equal(result.exitCode,0)
+  assert.equal(service.isWorking(),false)
+  await assert.rejects(service.act(req,{action:'invalid'}),{status:400})
+  assert.equal(service.isWorking(),false)
+ }finally{await fs.rm(dir,{recursive:true,force:true})}
+})
