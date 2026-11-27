@@ -1,0 +1,1 @@
+v0.27.1 — experimental local phone agent computer control, Windows control center, file exchange, team tasks, encrypted session archive, local chat history, profiles and CodeMirror.
