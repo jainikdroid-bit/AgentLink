@@ -79,10 +79,25 @@ async function desktopAction(action,params={}){
   const keys={enter:'{ENTER}',escape:'{ESC}',tab:'{TAB}',up:'{UP}',down:'{DOWN}',left:'{LEFT}',right:'{RIGHT}',backspace:'{BACKSPACE}',space:' '}
   if(!Object.hasOwn(keys,params.key))throw problem(400,'Unsupported desktop key')
   script="$w=New-Object -ComObject WScript.Shell;$w.SendKeys('"+keys[params.key]+"');'true'"
+ }else if(['inspect','invoke','set_text'].includes(action)){
+  if(!Number.isInteger(params.pid)||params.pid<1||params.pid>2147483647)throw problem(400,'Invalid process ID')
+  const encode=value=>Buffer.from(value,'utf8').toString('base64')
+  const field=(value,max)=>typeof value==='string'&&value.length<=max&&!value.includes('\0')
+  if(action!=='inspect'&&(!field(params.automationId,256)||!field(params.name,256)||(!params.automationId&&!params.name)||!field(params.controlType,80)))throw problem(400,'Exact control selector required')
+  if(action==='set_text'&&!field(params.text,2000))throw problem(400,'Invalid text')
+  const common="Add-Type -AssemblyName UIAutomationClient;Add-Type -AssemblyName UIAutomationTypes;$ErrorActionPreference='Stop';$p=Get-Process -Id "+params.pid+";if(!$p.MainWindowHandle){throw 'Window not available'};$root=[System.Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle);$els=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition);"
+  if(action==='inspect'){
+   script=common+"$rows=@();for($i=0;$i -lt [Math]::Min($els.Count,500);$i++){try{$e=$els.Item($i);$c=$e.Current;if($c.IsPassword -or !$c.IsEnabled -or $c.IsOffscreen){continue};$a=$null;$v=$null;$invoke=$e.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern,[ref]$a);$value=$e.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern,[ref]$v);if(!$invoke -and !$value -and !$c.Name){continue};$rows+=@{name=([string]$c.Name).Substring(0,[Math]::Min(256,([string]$c.Name).Length));automationId=([string]$c.AutomationId).Substring(0,[Math]::Min(256,([string]$c.AutomationId).Length));controlType=$c.ControlType.ProgrammaticName;canInvoke=$invoke;canSetText=($value -and !$v.Current.IsReadOnly)};if($rows.Count -ge 100){break}}catch{}};ConvertTo-Json -InputObject @($rows) -Compress -Depth 4"
+  }else{
+   const decode=value=>"[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('"+encode(value)+"'))"
+   script=common+"$wantedId="+decode(params.automationId)+";$wantedName="+decode(params.name)+";$wantedType="+decode(params.controlType)+";$matchesFound=@();for($i=0;$i -lt [Math]::Min($els.Count,500);$i++){try{$e=$els.Item($i);$c=$e.Current;if(!$c.IsPassword -and $c.IsEnabled -and !$c.IsOffscreen -and $c.AutomationId -ceq $wantedId -and $c.Name -ceq $wantedName -and $c.ControlType.ProgrammaticName -ceq $wantedType){$matchesFound+= $e}}catch{}};if($els.Count -gt 500 -or $matchesFound.Count -ne 1){throw 'Control unavailable or ambiguous'};$e=$matchesFound[0];$pat=$null;"
+   if(action==='invoke')script+="if(!$e.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern,[ref]$pat)){throw 'Control does not support Invoke'};$pat.Invoke();'true'"
+   else script+="if(!$e.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern,[ref]$pat) -or $pat.Current.IsReadOnly -or $e.Current.IsPassword){throw 'Control does not support text input'};$pat.SetValue("+decode(params.text)+");'true'"
+  }
  }else if(action==='screenshot'){
   script="Add-Type -AssemblyName System.Windows.Forms;Add-Type -AssemblyName System.Drawing;$b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds;$bmp=New-Object Drawing.Bitmap($b.Width,$b.Height);$g=[Drawing.Graphics]::FromImage($bmp);try{$g.CopyFromScreen($b.Location,[Drawing.Point]::Empty,$b.Size);$scale=[Math]::Min(1,1280.0/[Math]::Max($b.Width,$b.Height));$small=New-Object Drawing.Bitmap($bmp,[int]($b.Width*$scale),[int]($b.Height*$scale));$ms=New-Object IO.MemoryStream;try{$small.Save($ms,[Drawing.Imaging.ImageFormat]::Jpeg);[Convert]::ToBase64String($ms.ToArray())}finally{$ms.Dispose();$small.Dispose()}}finally{$g.Dispose();$bmp.Dispose()}"
  }else throw problem(400,'Unknown desktop action')
- try{const {stdout}=await exec(ps(),psArgs('[Console]::OutputEncoding=[Text.UTF8Encoding]::new();'+script),{timeout:12000,maxBuffer:3*1024*1024,windowsHide:true,env:commandEnv()});const text=stdout.trim();return action==='screenshot'?{jpeg:text}:action==='windows'?{windows:text?JSON.parse(text):[]}:{performed:text.toLowerCase()==='true'}}
+ try{const {stdout}=await exec(ps(),psArgs('[Console]::OutputEncoding=[Text.UTF8Encoding]::new();'+script),{timeout:12000,maxBuffer:3*1024*1024,windowsHide:true,env:commandEnv()});const text=stdout.trim();return action==='screenshot'?{jpeg:text}:action==='windows'?{windows:text?JSON.parse(text):[]}:action==='inspect'?{controls:text?JSON.parse(text):[]}:{performed:text.toLowerCase()==='true'}}
  catch{throw problem(503,'Desktop unavailable in this Windows session')}
 }
 function createRemoteControl({dir,readState,clock=Date.now}){
@@ -122,7 +137,7 @@ function createRemoteControl({dir,readState,clock=Date.now}){
    try{await fd.writeFile(data);await fd.sync()}catch(e){await fd.close();await fs.rm(file,{force:true}).catch(()=>{});throw e}finally{await fd.close().catch(()=>{})}
    return {bytes:data.length,sha256:hash}
   }
-  if(action==='shell'||['windows','activate','screenshot','click','key'].includes(action)){
+  if(action==='shell'||['windows','activate','screenshot','click','key','inspect','invoke','set_text'].includes(action)){
    if(action==='shell'?!p.shell:!p.desktop)throw problem(403,'Capability disabled on computer')
    if(typeof body.id!=='string'||!(/^[0-9a-f-]{36}$/i).test(body.id))throw problem(400,'Action ID required')
    if(ids.has(body.id))throw problem(409,'Action already accepted; do not repeat automatically')
