@@ -354,7 +354,7 @@ function run(opts, io) {
     const launcherJs = path.join(dir, 'launcher.js')
     const bundled = path.join(__dirname, 'launcher.js')
     if (path.resolve(bundled) !== path.resolve(launcherJs) && fs.existsSync(bundled)) fs.copyFileSync(bundled, launcherJs)
-    for (const extra of ['acp-bridge.js', 'llm-control.js', 'git-workspace.js', 'launcher-update.js', ...(phoneTools ? ['phone-bridge.js', 'phone-mcp.js', 'phone-tools.md'] : []), ...(mode === 'tunnel' ? ['gateway.js', 'tunnel.js'] : [])]) {
+    for (const extra of ['acp-bridge.js', 'llm-control.js', 'git-workspace.js', 'remote-control.js', 'launcher-update.js', ...(phoneTools ? ['phone-bridge.js', 'phone-mcp.js', 'phone-tools.md'] : []), ...(mode === 'tunnel' ? ['gateway.js', 'tunnel.js'] : [])]) {
       const src = path.join(__dirname, extra)
       const dest = path.join(dir, extra)
       if (path.resolve(src) !== path.resolve(dest) && fs.existsSync(src)) fs.copyFileSync(src, dest)
