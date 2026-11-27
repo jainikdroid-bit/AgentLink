@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import {Alert,ScrollView,Text,TextInput,TouchableOpacity,View} from "react-native"
 import {useTranslation} from "react-i18next"
 import {useTheme} from "../src/theme/useTheme"
-import {phoneStats,localProgress,cancelLocal,installedModel,downloadModel,removeModel,generateLocal,vaultRead,vaultWrite,vaultRemove,type LocalMessage,type BackendPreference,type PhoneStats,type LocalProgress} from "../src/lib/native-local-models"
+import {modelCatalog,phoneStats,localProgress,cancelLocal,installedModel,downloadModel,removeModel,generateLocal,vaultRead,vaultWrite,vaultRemove,type LocalMessage,type BackendPreference,type PhoneStats,type LocalProgress} from "../src/lib/native-local-models"
 import {localPreset,appendBenchmark,validBenchmark,BENCHMARK_PROMPT,type LocalBenchmark,type LocalPreset} from "../src/lib/local-benchmark"
 import {screenModelFit} from "../src/lib/local-model-fit"
 import {modelFiles,validModel,type HfFile} from "../src/lib/phone-models"
@@ -34,7 +34,7 @@ export default function PhoneModels(){
  useEffect(()=>{let alive=true;setChatReady(false);setChat([]);setAnswer("");setRate(null);if(chosen)void vaultRead<{history:LocalMessage[];context:number;threads:number;limit:number;preset:LocalPreset;backend?:BackendPreference}>(vaultName(chosen)).then(data=>{if(!alive)return;if(data){const h=data.history;if(Array.isArray(h)&&h.length<=100&&h.length%2===0&&h.every((m,i)=>m&&m.role===(i%2===0?"user":"assistant")&&typeof m.content==="string"&&m.content.length<=32000))setChat(h);else throw Error("Invalid encrypted conversation");if(data.backend&&["auto","cpu","gpu","npu"].includes(data.backend))setBackend(data.backend);if([1024,2048,4096].includes(data.context))setContext(data.context);if(Number.isInteger(data.threads)&&data.threads>=1&&data.threads<=8)setThreads(data.threads);if([128,256,512].includes(data.limit))setLimit(data.limit);if(["eco","balanced","quality"].includes(data.preset))setPreset(data.preset)}setChatReady(true)}).catch(e=>{if(alive)setStatus(String(e))});return()=>{alive=false}},[chosen])
  const saveChat=async(model:HfFile,history:LocalMessage[])=>{await vaultWrite(vaultName(model),{history,context,threads,limit,preset,backend});setChat(history)}
  const run=async(fn:()=>Promise<void>)=>{if(lock.current)return;lock.current=true;setBusy(true);setStatus("");try{await fn()}catch(e){setStatus(e instanceof Error?e.message:String(e))}finally{lock.current=false;setBusy(false)}}
- const fetchJson=async(url:string)=>{const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);try{const r=await fetch(url,{signal:controller.signal});if(!r.ok)throw Error("HTTP "+r.status);return await r.json()}finally{clearTimeout(timer)}}
+ const fetchJson=modelCatalog
  const search=()=>void run(async()=>{const raw=await fetchJson("https://huggingface.co/api/models?filter=gguf&limit=20&sort=downloads&search="+encodeURIComponent(query.trim()));setRepos(Array.isArray(raw)?raw.filter(x=>!x.private&&!x.gated&&typeof x.id==="string").map(x=>x.id):[]);setFiles([]);setChosen(null)})
  const browse=(name:string)=>void run(async()=>{if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(name))throw Error(w("failed"));const data=await fetchJson("https://huggingface.co/api/models/"+name+"?blobs=true");setRepo(name);setFiles(modelFiles(name,data));setChosen(null)})
  const probe=()=>void run(async()=>{const data=await phoneStats();setStats(data);setThreads(Math.max(1,Math.min(4,data.cores)))})
