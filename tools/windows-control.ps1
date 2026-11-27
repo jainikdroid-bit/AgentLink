@@ -188,26 +188,35 @@ $null=Button 'Stop using exit node' {
  $ts=Get-Command tailscale.exe -ErrorAction SilentlyContinue
  if($ts){& $ts.Source set --exit-node=;if($LASTEXITCODE -ne 0){Notify 'Tailscale rejected the change.'}}
 }
-$timer=New-Object Windows.Forms.Timer;$timer.Interval=2000
+$timer=New-Object Windows.Forms.Timer
+$timer.Interval=2000
 $timer.Add_Tick({
- try{
+ try {
   $s=Get-Content -LiteralPath $stateFile -Raw | ConvertFrom-Json
   $p=if(Test-Path -LiteralPath $policy){Get-Content -LiteralPath $policy -Raw | ConvertFrom-Json}else{$null}
   $enabled=$p -and [long]$p.until -gt [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
   $port=if($s.launcherPort){[int]$s.launcherPort}else{4095}
   $bind=if($s.launcherHost){[string]$s.launcherHost}else{'127.0.0.1'}
-  $listening=@(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue|Where-Object {$_.LocalAddress -eq $bind}).Count -gt 0
+  $listening=@(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Where-Object {$_.LocalAddress -eq $bind}).Count -gt 0
   $address.Text=$(if($Language -eq 'ru'){'Адрес: '}else{'Address: '})+$s.linkHost+':'+$s.port+' | '+$(if($Language -eq 'ru'){'Порт Launcher: '}else{'Launcher port: '})+$port
   $pairLabel.Text=(L 'Pairing code: —')
-  if(Test-Path -LiteralPath $pairFile){try{$pair=Get-Content -LiteralPath $pairFile -Raw|ConvertFrom-Json;if([long]$pair.expires -gt [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -and [string]$pair.code -match '^\d{6} '+$(if($listening){'present'}else{'not detected'})+' | '+$s.mode+' | Remote: '+$(if($enabled){'enabled until '+[DateTimeOffset]::FromUnixTimeMilliseconds([long]$p.until).ToLocalTime().ToString('HH:mm')}else{'off'}))
- }catch{$status.Text=(L 'Launcher setup not detected | Remote permissions unknown');$address.Text=(L 'Address: —');$pairLabel.Text=(L 'Pairing code: —')}
-})
-$timer.Start()
-$form.Add_FormClosed({$timer.Stop();$timer.Dispose()})
-[void]$form.ShowDialog()
-){$pairLabel.Text=$(if($Language -eq 'ru'){'Код подключения: '}else{'Pairing code: '})+$pair.code.Substring(0,3)+' '+$pair.code.Substring(3,3)}}catch{}}
-  $status.Text=('Launcher listener: '+$(if($listening){'present'}else{'not detected'})+' | '+$s.mode+' | Remote: '+$(if($enabled){'enabled until '+[DateTimeOffset]::FromUnixTimeMilliseconds([long]$p.until).ToLocalTime().ToString('HH:mm')}else{'off'}))
- }catch{$status.Text='Launcher setup not detected | Remote permissions unknown'}
+  if(Test-Path -LiteralPath $pairFile){
+   try {
+    $pair=Get-Content -LiteralPath $pairFile -Raw | ConvertFrom-Json
+    if([long]$pair.expires -gt [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() -and [string]$pair.code -match '^\d{6}$'){
+     $code=[string]$pair.code
+     $pairLabel.Text=$(if($Language -eq 'ru'){'Код подключения: '}else{'Pairing code: '})+$code.Substring(0,3)+' '+$code.Substring(3,3)
+    }
+   }catch{}
+  }
+  $listenerText=if($listening){if($Language -eq 'ru'){'активен'}else{'present'}}else{if($Language -eq 'ru'){'не обнаружен'}else{'not detected'}}
+  $remoteText=if($enabled){$(if($Language -eq 'ru'){'разрешён до '}else{'enabled until '})+[DateTimeOffset]::FromUnixTimeMilliseconds([long]$p.until).ToLocalTime().ToString('HH:mm')}else{if($Language -eq 'ru'){'выключен'}else{'off'}}
+  $status.Text=$(if($Language -eq 'ru'){'Launcher: '}else{'Launcher listener: '})+$listenerText+' | '+$s.mode+' | '+$(if($Language -eq 'ru'){'Удалённый доступ: '}else{'Remote: '})+$remoteText
+ }catch{
+  $status.Text=(L 'Launcher setup not detected | Remote permissions unknown')
+  $address.Text=(L 'Address: —')
+  $pairLabel.Text=(L 'Pairing code: —')
+ }
 })
 $timer.Start()
 $form.Add_FormClosed({$timer.Stop();$timer.Dispose()})
