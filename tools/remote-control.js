@@ -101,14 +101,14 @@ async function desktopAction(action,params={}){
  catch{throw problem(503,'Desktop unavailable in this Windows session')}
 }
 function createRemoteControl({dir,readState,clock=Date.now}){
- let running=false
+ let running=false, activeOperations=0
  const ids=new Map()
  async function status(req){
-  if(!privateAddress(req.socket.remoteAddress)||readState().mode==='tunnel')throw problem(403,'Remote control requires a trusted LAN or private tailnet')
+  if(!privateAddress(req.socket.remoteAddress)||readState()?.mode==='tunnel')throw problem(403,'Remote control requires a trusted LAN or private tailnet')
   const p=await policy(dir,clock())
   return {enabled:!!p,platform:process.platform,until:p?.until||0,roots:p?.roots||[],shell:!!p?.shell,files:!!p?.files,desktop:!!p?.desktop,maxFileBytes:MAX_FILE}
  }
- async function act(req,body){
+ async function perform(req,body){
   const p=await status(req)
   if(!p.enabled)throw problem(403,'Enable remote control on the computer first')
   if(!body||typeof body!=='object')throw problem(400,'Invalid action')
@@ -156,6 +156,11 @@ function createRemoteControl({dir,readState,clock=Date.now}){
   }
   throw problem(400,'Unsupported remote action')
  }
- return {status,act}
+ async function act(req,body){
+  if(activeOperations>=4)throw problem(429,"Too many remote operations")
+  activeOperations++
+  try{return await perform(req,body)}finally{activeOperations--}
+ }
+ return {status,act,isWorking:()=>activeOperations>0}
 }
 module.exports={createRemoteControl,privateAddress,relative,locate,policy,shellRun}
