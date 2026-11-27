@@ -12,11 +12,11 @@ import {validModel,type HfFile} from "../src/lib/phone-models"
 import {generateLocal,installedModel,cancelLocal} from "../src/lib/native-local-models"
 import {parseRemoteProposal,privateRemoteUrl,toolPrompt,type RemoteProposal} from "../src/lib/remote-proposal"
 
-type Status={enabled:boolean;platform:string;until:number;roots:string[];shell:boolean;files:boolean;desktop:boolean;maxFileBytes:number}
+type Status={enabled:boolean;platform:string;until:number;roots:string[];shell:boolean;files:boolean;desktop:boolean;maxFileBytes:number;maxDownloadBytes?:number;downloadChunkBytes?:number}
 type Picked={name:string;base64:string;bytes:number;sha256:string}
-type Result={stdout?:string;stderr?:string;exitCode?:number|null;timedOut?:boolean;truncated?:boolean;entries?:{name:string;directory:boolean}[];jpeg?:string;base64?:string;sha256?:string;bytes?:number;windows?:unknown;controls?:unknown;performed?:boolean}
+type Result={stdout?:string;stderr?:string;exitCode?:number|null;timedOut?:boolean;truncated?:boolean;entries?:{name:string;directory:boolean}[];jpeg?:string;base64?:string;sha256?:string;bytes?:number;windows?:unknown;controls?:unknown;performed?:boolean;version?:string;offset?:number;chunkBytes?:number}
 const libraryKey="agentlink-local-model-library-v1"
-const nativeFiles=()=>{const n=NativeModules.AgentLinkRemoteFiles;if(!n)throw Error("File picker unavailable");return n as {pick():Promise<Picked|null>;save(name:string,base64:string,sha256:string):Promise<boolean|null>}}
+const nativeFiles=()=>{const n=NativeModules.AgentLinkRemoteFiles;if(!n)throw Error("File picker unavailable");return n as {pick():Promise<Picked|null>;save(name:string,base64:string,sha256:string):Promise<boolean|null>;beginDownload?(total:number,hash:string):Promise<string>;appendDownload?(id:string,offset:number,base64:string,hash:string):Promise<number>;finishDownload?(id:string,name:string):Promise<boolean|null>;discardDownload?(id:string):Promise<boolean>}}
 export default function RemoteControl(){
  const p=useTheme(),{t}=useTranslation(),w=(key:string)=>t("workspace."+key)
  const params=useLocalSearchParams<{hash?:string;connectionId?:string}>()
@@ -30,6 +30,9 @@ export default function RemoteControl(){
  const [exit,setExit]=useState<ExitInfo|null>(null),[lan,setLan]=useState<string[]>([]),[exitError,setExitError]=useState("")
  const lock=useRef(false),hostRef=useRef(host);hostRef.current=host
  const exitEpoch=useRef(0),exitRead=useRef(false)
+ const [transfer,setTransfer]=useState<{done:number;total:number}|null>(null)
+ const transferCancel=useRef(false)
+ useEffect(()=>()=>{transferCancel.current=true},[])
  // Never let a delayed poll overwrite the state after a mode change.
  const refreshExit=()=>void run(async()=>{
   const epoch=++exitEpoch.current
@@ -110,7 +113,41 @@ export default function RemoteControl(){
   const yes=await new Promise<boolean>(resolve=>Alert.alert(w("remoteUpload"),dest+" · "+picked.bytes+" bytes",[{text:t("common.cancel"),style:"cancel",onPress:()=>resolve(false)},{text:w("confirm"),onPress:()=>resolve(true)}],{cancelable:false}))
   if(!yes)return;const r=await perform({action:"upload",path:dest,base64:picked.base64,sha256:picked.sha256});setOutput(summarize(r))
  })
- const download=()=>void run(async()=>{const r=await perform({action:"download",path:[folder,file].filter(Boolean).join("/")});if(typeof r.base64!=="string"||!r.sha256)throw Error(w("failed"));const saved=await nativeFiles().save(file.split("/").pop()||"file",r.base64,r.sha256);if(saved)setOutput(w("done"))})
+ const download=()=>void run(async()=>{
+  const path=[folder,file].filter(Boolean).join("/"),name=file.split("/").pop()||"file",native=nativeFiles()
+  if(!status?.downloadChunkBytes||!native.beginDownload||!native.appendDownload||!native.finishDownload||!native.discardDownload){
+   const r=await perform({action:"download",path})
+   if(typeof r.base64!=="string"||!r.sha256)throw Error(w("failed"))
+   if(await native.save(name,r.base64,r.sha256))setOutput(w("done"))
+   return
+  }
+  transferCancel.current=false
+  setTransfer({done:0,total:0})
+  let id:string|undefined
+  try{
+   const info=await perform({action:"download_info",path})
+   const total=info.bytes,chunk=info.chunkBytes,version=info.version,hash=info.sha256
+   if(typeof total!=="number"||!Number.isSafeInteger(total)||total<0||total>Math.min(status.maxDownloadBytes||0,256*1024*1024)||chunk!==512*1024||!version||!hash||!/^([0-9a-f]{64})$/.test(hash))throw Error(w("failed"))
+   if(transferCancel.current)return
+   id=await native.beginDownload(total,hash)
+   setTransfer({done:0,total})
+   for(let offset=0;offset<total;){
+    if(transferCancel.current)return
+    const r=await perform({action:"download_chunk",path,version,offset})
+    if(transferCancel.current)return
+    const expected=Math.min(chunk,total-offset)
+    if(r.offset!==offset||r.version!==version||r.bytes!==expected||typeof r.base64!=="string"||!r.sha256)throw Error(w("failed"))
+    const next=await native.appendDownload(id,offset,r.base64,r.sha256)
+    if(next!==offset+expected)throw Error(w("failed"))
+    offset=next
+    setTransfer({done:offset,total})
+   }
+   if(!transferCancel.current&&await native.finishDownload(id,name))setOutput(w("done"))
+  }finally{
+   if(id)await native.discardDownload(id).catch(()=>{})
+   setTransfer(null)
+  }
+ })
  const box={backgroundColor:p.surface,borderRadius:12,borderWidth:1,borderColor:p.border,padding:12,gap:8} as const
  const txt={color:p.text,fontSize:14} as const,title={color:p.cyan,fontSize:17,fontWeight:"700"} as const
  const btn=(label:string,fn:()=>void,disabled=false)=><TouchableOpacity key={label} disabled={busy||disabled} onPress={fn} style={{borderWidth:1,borderColor:p.border,padding:10,borderRadius:8,opacity:busy||disabled?0.5:1}}><Text style={{color:p.cyan}}>{label}</Text></TouchableOpacity>
@@ -121,7 +158,7 @@ export default function RemoteControl(){
  {error?<Text selectable style={{color:p.red}}>{error}</Text>:null}
  <View style={box}><Text style={title}>{w("remoteLocalAgent")}</Text>{models.map(m=>btn((model?.sha256===m.sha256?"✓ ":"")+m.file,()=>{setModel(m);setProposal(null);setResults([])}))}{field(task,v=>{setTask(v);setProposal(null);setResults([]);setAnswer("")},w("taskDescription"),true)}{btn(w("remotePropose"),propose,!enabled||!model||!task.trim()||!!proposal||results.length>=6)}{proposal&&<><Text selectable style={txt}>{JSON.stringify(proposal,null,2)}</Text>{btn(w("remoteApprove"),executeProposal)}{btn(t("common.cancel"),()=>setProposal(null))}</>}{answer?<Text selectable style={txt}>{answer}</Text>:null}<Text style={{color:p.muted}}>{results.length}/6</Text>{results.map((r,i)=><Text key={i} selectable style={{color:p.muted,fontSize:12}}>{r}</Text>)}</View>
  <View style={box}><Text style={title}>{w("remoteShell")}</Text>{field(folder,v=>{setFolder(v);setEntries([]);setProposal(null);setResults([])},w("remoteFolder"))}{field(command,setCommand,status?.platform==="win32"?"Get-Location":"pwd",true)}{btn(w("remoteApprove"),()=>approve({action:"shell",command,path:folder}),!enabled||!status?.shell||!command.trim())}</View>
- <View style={box}><Text style={title}>{w("remoteFiles")}</Text><Text style={{color:p.muted}}>{w("remoteFileLimit")}</Text>{btn(w("browseFiles"),browse,!enabled||!status?.files)}{entries.map(e=>btn((e.directory?"📁 ":"")+e.name,()=>{if(e.directory){setFolder([folder,e.name].filter(Boolean).join("/"));setEntries([]);setFile("")}else setFile(e.name)}))}{field(file,setFile,w("file"))}{btn(w("remoteDownload"),download,!enabled||!status?.files||!file.trim())}{btn(w("remoteUpload"),upload,!enabled||!status?.files)}</View>
+ <View style={box}><Text style={title}>{w("remoteFiles")}</Text><Text style={{color:p.muted}}>{w("remoteFileLimit")}{status?.maxDownloadBytes&&status.downloadChunkBytes?" · ↓ "+Math.floor(status.maxDownloadBytes/1048576)+" MiB":""}</Text>{transfer&&<><Text style={txt}>{(transfer.done/1048576).toFixed(1)} / {(transfer.total/1048576).toFixed(1)} MiB</Text><View style={{height:6,backgroundColor:p.surface2,borderRadius:4,overflow:"hidden"}}><View style={{height:6,backgroundColor:p.cyan,width:(transfer.total>0?Math.min(100,100*transfer.done/transfer.total)+"%":"0%") as `${number}%`}}/></View><TouchableOpacity onPress={()=>{transferCancel.current=true}}><Text style={{color:p.amber}}>{t("common.cancel")}</Text></TouchableOpacity></>}{btn(w("browseFiles"),browse,!enabled||!status?.files)}{entries.map(e=>btn((e.directory?"📁 ":"")+e.name,()=>{if(e.directory){setFolder([folder,e.name].filter(Boolean).join("/"));setEntries([]);setFile("")}else setFile(e.name)}))}{field(file,setFile,w("file"))}{btn(w("remoteDownload"),download,!enabled||!status?.files||!file.trim())}{btn(w("remoteUpload"),upload,!enabled||!status?.files)}</View>
  <View style={box}><Text style={title}>{w("remoteDesktop")}</Text>{btn(w("remoteWindows"),()=>approve({action:"windows"}),!enabled||!status?.desktop)}{field(pid,setPid,"PID")}{btn(w("remoteActivate"),()=>approve({action:"activate",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteInspect"),()=>approve({action:"inspect",pid:Number(pid)}),!enabled||!status?.desktop||!pid.trim())}{btn(w("remoteScreenshot"),()=>approve({action:"screenshot"}),!enabled||!status?.desktop)}{jpeg?<Image resizeMode="contain" source={{uri:"data:image/jpeg;base64,"+jpeg}} style={{width:"100%",height:220}}/>:null}{field(x,setX,"X 0–1000")}{field(y,setY,"Y 0–1000")}{btn(w("remoteClick"),()=>approve({action:"click",x:Number(x),y:Number(y)}),!enabled||!status?.desktop||!x.trim()||!y.trim())}<View style={{flexDirection:"row",flexWrap:"wrap",gap:6}}>{["enter","escape","tab","up","down","left","right","backspace","space"].map(key=>btn(key,()=>approve({action:"key",key}),!enabled||!status?.desktop))}</View></View>
  {output?<Text selectable style={{color:p.text,fontFamily:p.mono,fontSize:12}}>{output}</Text>:null}
  {busy&&<TouchableOpacity onPress={()=>void cancelLocal().catch(()=>{})}><Text style={{color:p.amber,padding:10}}>{t("common.cancel")} · {w("remoteLocalAgent")}</Text></TouchableOpacity>}
