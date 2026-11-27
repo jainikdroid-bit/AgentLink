@@ -60,6 +60,8 @@ interface TailnetNative {
   stop(): Promise<void>
   logTail(lines: number): Promise<string>
   peers(): Promise<string>
+  exitInfo(): Promise<string>
+  setExitMode(mode:string,id:string): Promise<void>
   localAddresses(): Promise<string[]>
 }
 
@@ -197,4 +199,16 @@ export async function routeUrl(url: string): Promise<string> {
   } catch {
     return url
   }
+}
+
+export interface ExitInfo {peers:{id:string;name:string;ip:string;online:boolean}[];selected:string;online:boolean;sharing:boolean;until:number}
+export async function tailnetExitInfo():Promise<ExitInfo>{
+ if(!native||!enabled||!started)throw Error("Built-in Tailscale is not enabled")
+ const data=JSON.parse(await native.exitInfo())
+ if(!data||!Array.isArray(data.peers))throw Error("Invalid exit node status")
+ return data as ExitInfo
+}
+export async function setTailnetExitMode(mode:"off"|"receive"|"share",id=""):Promise<void>{
+ if(!native||!enabled||!started)throw Error("Built-in Tailscale is not enabled")
+ await native.setExitMode(mode,id)
 }
