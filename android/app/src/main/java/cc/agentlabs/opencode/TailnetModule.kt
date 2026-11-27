@@ -63,6 +63,14 @@ class TailnetModule(private val ctx: ReactApplicationContext) : ReactContextBase
     forwards.getOrPut(target) { tsnetbridge.Tsnetbridge.forward(target).toInt() }
   }
 
+  @ReactMethod fun exitInfo(promise: Promise) = run(promise) {
+    tsnetbridge.Tsnetbridge.exitInfo().orEmpty()
+  }
+
+  @ReactMethod fun setExitMode(mode: String, id: String, promise: Promise) = run(promise) {
+    tsnetbridge.Tsnetbridge.setExitMode(mode, id); null
+  }
+
   @ReactMethod fun refreshNetwork(promise: Promise) = run(promise) {
     tsnetbridge.Tsnetbridge.setInterfaces(interfacesJson()); null
   }
