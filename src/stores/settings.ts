@@ -17,6 +17,7 @@ interface Settings {
   locale: LocalePreference
   mascot: MascotKind
   theme: ThemeId
+  autoUpdateApk: boolean
   avatarCharacter: "cheri" | "byte" | "orbit"
   /** Show the agent's reasoning open instead of folded. */
   showThinking: boolean
@@ -44,6 +45,7 @@ const DEFAULTS: Settings = {
   locale: "system",
   mascot: DEFAULT_MASCOT,
   theme: "cyber",
+  autoUpdateApk: false,
   avatarCharacter: "cheri",
   showThinking: true,
   showActions: false,
@@ -59,6 +61,7 @@ interface SettingsState extends Settings {
   setLocale: (locale: LocalePreference) => Promise<void>
   setAvatarCharacter: (avatarCharacter: Settings["avatarCharacter"]) => Promise<void>
   setTheme: (theme: ThemeId) => Promise<void>
+  setAutoUpdateApk: (autoUpdateApk: boolean) => Promise<void>
   setMascot: (mascot: MascotKind) => Promise<void>
   setShowThinking: (value: boolean) => Promise<void>
   setShowActions: (value: boolean) => Promise<void>
@@ -67,8 +70,8 @@ interface SettingsState extends Settings {
 }
 
 function snapshot(get: () => SettingsState): Settings {
-  const { pageSize, notifications, locale, mascot, theme, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar } = get()
-  return { pageSize, notifications, locale, mascot, theme, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar }
+  const { pageSize, notifications, locale, mascot, theme, autoUpdateApk, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar } = get()
+  return { pageSize, notifications, locale, mascot, theme, autoUpdateApk, avatarCharacter, showThinking, showActions, replyInMyLanguage, avatar }
 }
 
 async function persist(settings: Settings) {
@@ -117,6 +120,11 @@ export const useSettings = create<SettingsState>((set, get) => ({
 
   setTheme: async (theme) => {
     set({ theme })
+    await persist(snapshot(get))
+  },
+
+  setAutoUpdateApk: async (autoUpdateApk) => {
+    set({ autoUpdateApk })
     await persist(snapshot(get))
   },
 

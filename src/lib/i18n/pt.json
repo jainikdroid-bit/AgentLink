@@ -528,6 +528,8 @@
     "setupGuideLink": "Como configurar um servidor"
   },
   "update": {
+    "automatic": "Atualizações automáticas do app",
+    "automaticDescription": "Baixa atualizações na tela Sessões quando não há atividade. O Android pede confirmação para instalar.",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",

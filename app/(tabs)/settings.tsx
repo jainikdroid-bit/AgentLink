@@ -29,6 +29,7 @@ import {
 import type { Category } from "../../src/lib/notifications"
 import { PRIVACY_POLICY_URL } from "../../src/lib/links"
 import { useAppUpdate } from "../../src/lib/useAppUpdate"
+import { canInstallApps, installerAvailable, openInstallSettings } from "../../src/lib/termux-installer"
 import { CURRENT_VERSION, checkForUpdate, type AvailableUpdate } from "../../src/lib/update-check"
 import { MascotOf } from "../../src/components/Mascot"
 import { AvatarControls } from "../../src/components/FloatingCheri"
@@ -95,6 +96,7 @@ export default function SettingsScreen() {
   const {
     notifications, setNotification, locale, setLocale, mascot, setMascot, theme, setTheme, avatarCharacter, setAvatarCharacter,
     showThinking, setShowThinking, showActions, setShowActions, replyInMyLanguage, setReplyInMyLanguage, avatar, setAvatar,
+    autoUpdateApk, setAutoUpdateApk,
   } = useSettings()
   const [osGranted, setOsGranted] = useState<boolean | null>(null)
 
@@ -378,6 +380,23 @@ export default function SettingsScreen() {
             ) : undefined
           }
         />
+        {installerAvailable && (
+          <SettingRow
+            icon="download-outline"
+            label={t("update.automatic")}
+            description={t("update.automaticDescription")}
+            isDark={isDark}
+            right={
+              <Switch
+                value={autoUpdateApk}
+                onValueChange={(enabled) => void (async () => {
+                  await setAutoUpdateApk(enabled)
+                  if (enabled && !(await canInstallApps())) await openInstallSettings()
+                })().catch(() => Alert.alert(t("update.failed")))}
+              />
+            }
+          />
+        )}
         <SettingRow
           icon="logo-github"
           label={t("settings.about.github.label")}

@@ -570,6 +570,7 @@ export default function SessionsScreen() {
   if (!activeConnection) {
     return (
       <View style={[styles.emptyContainer, isDark && styles.containerDark]}>
+        <UpdateBanner isDark={isDark} />
         {playOffline ? (
           <View style={{ width: "100%", paddingHorizontal: 16 }}>
             <RunnerGame />

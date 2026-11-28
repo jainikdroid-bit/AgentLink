@@ -528,6 +528,8 @@
     "setupGuideLink": "サーバーのセットアップ方法"
   },
   "update": {
+    "automatic": "アプリの自動更新",
+    "automaticDescription": "セッション画面で待機中に更新をダウンロードします。インストールは Android で確認します。",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",

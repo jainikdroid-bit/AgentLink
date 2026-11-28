@@ -528,6 +528,8 @@
     "setupGuideLink": "Sunucu kurulum kılavuzu"
   },
   "update": {
+    "automatic": "Otomatik uygulama güncellemeleri",
+    "automaticDescription": "Oturumlar ekranı boşta olduğunda güncellemeleri indirir. Android kurulum için onay ister.",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",

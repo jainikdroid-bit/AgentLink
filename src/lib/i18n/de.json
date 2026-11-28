@@ -528,6 +528,8 @@
     "setupGuideLink": "So richten Sie einen Server ein"
   },
   "update": {
+    "automatic": "Automatische App-Updates",
+    "automaticDescription": "Updates werden bei inaktiven Sitzungen geladen. Android fragt vor der Installation nach.",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",

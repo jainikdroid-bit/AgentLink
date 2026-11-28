@@ -13,16 +13,26 @@
 import { useCallback, useEffect, useState } from "react"
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, AppState } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
+import { useIsFocused, useNavigation } from "@react-navigation/native"
 import { useTranslation } from "react-i18next"
 import { checkForUpdate, dismissUpdate, CURRENT_VERSION, type AvailableUpdate } from "../lib/update-check"
 
-import { useAppUpdate } from "../lib/useAppUpdate"
+import { tryAutomaticUpdate, useAppUpdate } from "../lib/useAppUpdate"
+import { useSettings } from "../stores/settings"
+import { useEvents } from "../stores/events"
+import { useSessions } from "../stores/sessions"
 
 export function UpdateBanner({ isDark }: { isDark: boolean }) {
   const { t } = useTranslation()
   const [update, setUpdate] = useState<AvailableUpdate | null>(null)
 
   const { openUpdate, busy } = useAppUpdate()
+  const [autoBusy, setAutoBusy] = useState(false)
+  const autoEnabled = useSettings((s) => s.autoUpdateApk)
+  const focused = useIsFocused()
+  const navigation = useNavigation()
+  const serverBusy = useEvents((s) => Object.values(s.sessionStatus).some((status) => status.type !== "idle"))
+  const sending = useSessions((s) => Object.values(s.sending).some(Boolean))
 
   useEffect(() => {
     let cancelled = false
@@ -38,6 +48,17 @@ export function UpdateBanner({ isDark }: { isDark: boolean }) {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!autoEnabled || !focused || serverBusy || sending || !update) return
+    const canInstallNow = () =>
+      AppState.currentState === "active" && navigation.isFocused() &&
+      useSettings.getState().autoUpdateApk === true &&
+      !Object.values(useEvents.getState().sessionStatus).some((status) => status.type !== "idle") &&
+      !Object.values(useSessions.getState().sending).some(Boolean)
+    setAutoBusy(true)
+    void tryAutomaticUpdate(update, canInstallNow).finally(() => setAutoBusy(false))
+  }, [autoEnabled, focused, navigation, sending, serverBusy, update])
 
   const onDismiss = useCallback(() => {
     if (update) void dismissUpdate(update.version)
@@ -60,8 +81,8 @@ export function UpdateBanner({ isDark }: { isDark: boolean }) {
           {t("update.body", { version: update.version, current: CURRENT_VERSION })}
         </Text>
       </View>
-      <TouchableOpacity onPress={onOpen} disabled={busy} testID="update-banner-open" hitSlop={8}>
-        <Text style={[styles.action, isDark && styles.actionDark]}>{busy ? <ActivityIndicator size="small" /> : t("update.install")}</Text>
+      <TouchableOpacity onPress={onOpen} disabled={busy || autoBusy} testID="update-banner-open" hitSlop={8}>
+        <Text style={[styles.action, isDark && styles.actionDark]}>{busy || autoBusy ? <ActivityIndicator size="small" /> : t("update.install")}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={onDismiss} testID="update-banner-dismiss" hitSlop={8}>
         <Ionicons name="close" size={18} color={isDark ? "#94a3b8" : "#64748b"} />

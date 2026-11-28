@@ -14,4 +14,10 @@ const asset = join(dir, "AgentLink-launcher-" + VERSION + ".cjs")
 mkdirSync(dir, { recursive: true })
 execFileSync(bin, ["tools/launcher.js", "--bundle", "--platform=node", "--format=cjs", "--target=node18", "--external:./launcher-update.js", "--outfile=" + asset], { cwd: root, stdio: "inherit" })
 execFileSync(process.execPath, ["--check", asset])
+execFileSync(process.execPath, [
+  "-e",
+  "if (require(process.argv[1]).VERSION !== Number(process.argv[2])) process.exit(1)",
+  asset,
+  String(VERSION),
+])
 console.log(asset)

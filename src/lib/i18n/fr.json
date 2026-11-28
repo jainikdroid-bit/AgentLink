@@ -528,6 +528,8 @@
     "setupGuideLink": "Comment configurer un serveur"
   },
   "update": {
+    "automatic": "Mises à jour automatiques",
+    "automaticDescription": "Télécharge les mises à jour sur l’écran Sessions au repos. Android demande de confirmer l’installation.",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",

@@ -1,0 +1,2 @@
+v0.27.1 — automatic update downloads
+- Enable automatic updates in Settings to download verified AgentLink APKs and open the Android installer. Android asks for confirmation.

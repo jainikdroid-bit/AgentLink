@@ -528,6 +528,8 @@
     "setupGuideLink": "Як налаштувати сервер"
   },
   "update": {
+    "automatic": "Автооновлення застосунку",
+    "automaticDescription": "Оновлення завантажуються на екрані «Сесії», коли агент вільний. Android просить підтвердити встановлення.",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",

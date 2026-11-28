@@ -528,6 +528,8 @@
     "setupGuideLink": "How to set up a server"
   },
   "update": {
+    "automatic": "Automatic app updates",
+    "automaticDescription": "Download updates on the Sessions screen when idle. Android asks you to confirm installation.",
     "install": "Update",
     "downloading": "Downloading update…",
     "permission": "Allow installation from AgentLink",
