@@ -1,0 +1,2 @@
+v0.27.2 — automatic updates on by default
+- Automatic APK updates are enabled when there is no saved preference. Android still asks for installation confirmation.

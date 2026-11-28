@@ -28,7 +28,7 @@ export function UpdateBanner({ isDark }: { isDark: boolean }) {
 
   const { openUpdate, busy } = useAppUpdate()
   const [autoBusy, setAutoBusy] = useState(false)
-  const autoEnabled = useSettings((s) => s.autoUpdateApk)
+  const autoEnabled = useSettings((s) => s.loaded && s.autoUpdateApk)
   const focused = useIsFocused()
   const navigation = useNavigation()
   const serverBusy = useEvents((s) => Object.values(s.sessionStatus).some((status) => status.type !== "idle"))
@@ -51,11 +51,13 @@ export function UpdateBanner({ isDark }: { isDark: boolean }) {
 
   useEffect(() => {
     if (!autoEnabled || !focused || serverBusy || sending || !update) return
-    const canInstallNow = () =>
-      AppState.currentState === "active" && navigation.isFocused() &&
-      useSettings.getState().autoUpdateApk === true &&
-      !Object.values(useEvents.getState().sessionStatus).some((status) => status.type !== "idle") &&
-      !Object.values(useSessions.getState().sending).some(Boolean)
+    const canInstallNow = () => {
+      const { loaded, autoUpdateApk } = useSettings.getState()
+      return loaded && autoUpdateApk === true &&
+        AppState.currentState === "active" && navigation.isFocused() &&
+        !Object.values(useEvents.getState().sessionStatus).some((status) => status.type !== "idle") &&
+        !Object.values(useSessions.getState().sending).some(Boolean)
+    }
     setAutoBusy(true)
     void tryAutomaticUpdate(update, canInstallNow).finally(() => setAutoBusy(false))
   }, [autoEnabled, focused, navigation, sending, serverBusy, update])

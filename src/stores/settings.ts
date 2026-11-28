@@ -45,7 +45,7 @@ const DEFAULTS: Settings = {
   locale: "system",
   mascot: DEFAULT_MASCOT,
   theme: "cyber",
-  autoUpdateApk: false,
+  autoUpdateApk: true,
   avatarCharacter: "cheri",
   showThinking: true,
   showActions: false,
