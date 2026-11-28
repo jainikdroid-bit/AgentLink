@@ -498,5 +498,5 @@ function main() {
   })
 }
 
-module.exports = { createHardwareSampler, VERSION, writePairFile, createLauncher, passwordMatches, parseBasic, listenerPids, stopPort, realDeps, bindHostOf, lanAddresses, startLanForward, helloProof }
+module.exports = { createHardwareSampler, VERSION, writePairFile, createLauncher, passwordMatches, parseBasic, listenerPids, stopPort, realDeps, bindHostOf, lanAddresses, startLanForward, helloProof, main }
 if (require.main === module) main()
